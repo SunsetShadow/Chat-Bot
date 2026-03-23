@@ -1,0 +1,177 @@
+// 消息相关类型
+export interface Message {
+  id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  created_at: string;
+}
+
+// 会话相关类型
+export interface Session {
+  id: string;
+  title: string;
+  messages: Message[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SessionResponse {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+}
+
+export interface SessionDetailResponse extends SessionResponse {
+  messages: Message[];
+}
+
+// Agent 相关类型
+export interface Agent {
+  id: string;
+  name: string;
+  description: string;
+  system_prompt: string;
+  traits: string[];
+  is_builtin: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentCreate {
+  name: string;
+  description?: string;
+  system_prompt?: string;
+  traits?: string[];
+}
+
+export interface AgentUpdate {
+  name?: string;
+  description?: string;
+  system_prompt?: string;
+  traits?: string[];
+}
+
+// 规则相关类型
+export type RuleCategory = "behavior" | "format" | "constraint";
+
+export interface Rule {
+  id: string;
+  name: string;
+  content: string;
+  enabled: boolean;
+  category: RuleCategory;
+  is_builtin: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RuleCreate {
+  name: string;
+  content: string;
+  category?: RuleCategory;
+}
+
+export interface RuleUpdate {
+  name?: string;
+  content?: string;
+  enabled?: boolean;
+  category?: RuleCategory;
+}
+
+// 记忆相关类型
+export type MemoryType = "fact" | "preference" | "event";
+
+export interface Memory {
+  id: string;
+  content: string;
+  type: MemoryType;
+  source_session_id?: string;
+  importance: number;
+  created_at: string;
+  last_accessed: string;
+}
+
+export interface MemoryCreate {
+  content: string;
+  type?: MemoryType;
+  source_session_id?: string;
+  importance?: number;
+}
+
+export interface MemoryUpdate {
+  content?: string;
+  type?: MemoryType;
+  importance?: number;
+}
+
+// 聊天请求相关类型
+export interface ChatCompletionRequest {
+  message: string;
+  session_id?: string;
+  stream?: boolean;
+  model?: string;
+  agent_id?: string;
+  rule_ids?: string[];
+}
+
+export interface ChatCompletionResponse {
+  session_id: string;
+  message_id: string;
+  role: "assistant";
+  content: string;
+  created_at: string;
+}
+
+// SSE 事件类型
+export interface SSEMessageStart {
+  session_id: string;
+  message_id: string;
+  role: "assistant";
+}
+
+export interface SSEContentDelta {
+  session_id: string;
+  message_id: string;
+  content: string;
+}
+
+export interface SSEMessageDone {
+  session_id: string;
+  message_id: string;
+  finish_reason: string;
+}
+
+export interface SSEDone {
+  session_id: string;
+}
+
+export interface SSEError {
+  session_id?: string;
+  error: string;
+  code: string;
+}
+
+// API 响应类型
+export interface BaseResponse {
+  success: boolean;
+  message: string;
+  code: string;
+}
+
+export interface DataResponse<T = unknown> extends BaseResponse {
+  data: T;
+}
+
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface PaginatedResponse<T = unknown> extends BaseResponse {
+  data: T[];
+  pagination: PaginationMeta;
+}

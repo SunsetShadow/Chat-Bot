@@ -1,0 +1,86 @@
+[
+  {
+    "number": 1,
+    "category": "阶段 1：Critical 修复",
+    "task": "修复 memory_service.py 重复定义",
+    "steps": [
+      { "step": "删除 memory_service.py 第 154-198 行的重复方法定义", "completed": true },
+      { "step": "验证文件语法正确（python -m py_compile）", "completed": true }
+    ],
+    "passes": true
+  },
+  {
+    "number": 2,
+    "category": "阶段 2：High 优先级修复",
+    "task": "服务依赖注入单例化",
+    "steps": [
+      { "step": "在 chat_service.py 中为 get_chat_service 添加 @lru_cache 装饰器", "completed": true },
+      { "step": "在 memory_service.py 中为 get_memory_service 添加 @lru_cache 装饰器", "completed": true },
+      { "step": "在 agent_service.py 中为 get_agent_service 添加 @lru_cache 装饰器", "completed": true },
+      { "step": "在 rule_service.py 中为 get_rule_service 添加 @lru_cache 装饰器", "completed": true }
+    ],
+    "passes": true
+  },
+  {
+    "number": 3,
+    "category": "阶段 2：High 优先级修复",
+    "task": "CORS 安全配置",
+    "steps": [
+      { "step": "修改 config.py 中 cors_origins 默认值为 ['http://localhost:3000']", "completed": true },
+      { "step": "添加 CORS_ORIGINS 环境变量支持（逗号分隔的域名列表）", "completed": true }
+    ],
+    "passes": true
+  },
+  {
+    "number": 4,
+    "category": "阶段 2：High 优先级修复",
+    "task": "API_BASE_URL 统一",
+    "steps": [
+      { "step": "在 request.ts 中导出 API_BASE_URL", "completed": true },
+      { "step": "删除 chat.ts 中的 API_BASE_URL 定义，改为从 request.ts 导入", "completed": true },
+      { "step": "运行 pnpm lint 验证无错误", "completed": true }
+    ],
+    "passes": true
+  },
+  {
+    "number": 5,
+    "category": "阶段 3：Medium 优先级修复",
+    "task": "会话创建逻辑修正",
+    "steps": [
+      { "step": "修改 useChatStream.ts，在 onMessageStart 中使用后端返回的 session_id", "completed": true },
+      { "step": "删除前端重复创建会话的逻辑", "completed": true }
+    ],
+    "passes": true
+  },
+  {
+    "number": 6,
+    "category": "阶段 3：Medium 优先级修复",
+    "task": "添加异常日志",
+    "steps": [
+      { "step": "在 chat_service.py 第 52、63 行的 except 块中添加 logger.warning", "completed": true }
+    ],
+    "passes": true
+  },
+  {
+    "number": 7,
+    "category": "阶段 3：Medium 优先级修复",
+    "task": "chunk 逻辑修复",
+    "steps": [
+      { "step": "使用 received_finish 布尔标志替代 chunk 变量检查", "completed": true },
+      { "step": "避免重复发送 message_done 事件", "completed": true }
+    ],
+    "passes": true
+  },
+  {
+    "number": 8,
+    "category": "阶段 4：验证",
+    "task": "验证所有修复",
+    "steps": [
+      { "step": "运行后端 Python 语法检查", "completed": true },
+      { "step": "运行前端 pnpm lint 检查", "completed": true },
+      { "step": "运行前端 pnpm build 验证构建成功", "completed": true },
+      { "step": "启动开发服务器验证功能正常", "completed": false }
+    ],
+    "passes": false
+  }
+]

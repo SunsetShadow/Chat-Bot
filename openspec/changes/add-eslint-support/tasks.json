@@ -1,0 +1,54 @@
+[
+  {
+    "number": 1,
+    "category": "阶段 1：依赖安装",
+    "task": "安装 ESLint 及相关插件",
+    "steps": [
+      { "step": "安装 ESLint 9 和核心依赖：eslint、@eslint/js、typescript-eslint", "completed": true },
+      { "step": "安装 Vue 相关插件：eslint-plugin-vue、@vue/eslint-config-typescript、@vue/eslint-config-prettier", "completed": true }
+    ],
+    "passes": true
+  },
+  {
+    "number": 2,
+    "category": "阶段 2：配置文件",
+    "task": "创建 ESLint 扁平化配置",
+    "steps": [
+      { "step": "创建 eslint.config.js 文件，配置 Vue + TypeScript 规则", "completed": true },
+      { "step": "配置忽略文件和目录（node_modules、dist 等）", "completed": true },
+      { "step": "在 package.json 中添加 lint 和 lint:fix 脚本", "completed": true }
+    ],
+    "passes": true
+  },
+  {
+    "number": 3,
+    "category": "阶段 3：编辑器集成",
+    "task": "配置 VS Code ESLint 集成",
+    "steps": [
+      { "step": "创建/更新 .vscode/settings.json，启用 ESLint 对 Vue 文件的支持", "completed": true }
+    ],
+    "passes": true
+  },
+  {
+    "number": 4,
+    "category": "阶段 4：代码修复",
+    "task": "运行 lint 检查并修复现有代码",
+    "steps": [
+      { "step": "运行 pnpm lint 查看所有 lint 问题", "completed": true },
+      { "step": "使用 pnpm lint:fix 自动修复可修复的问题", "completed": true },
+      { "step": "手动修复剩余的 lint 问题（如有）", "completed": true }
+    ],
+    "passes": true
+  },
+  {
+    "number": 5,
+    "category": "阶段 5：验证",
+    "task": "验证 ESLint 配置正确工作",
+    "steps": [
+      { "step": "运行 pnpm lint 确认无错误（允许有 warnings）", "completed": true },
+      { "step": "确认 VS Code 中 ESLint 正常提示", "completed": true },
+      { "step": "确认 pnpm build 仍然正常工作", "completed": true }
+    ],
+    "passes": true
+  }
+]
