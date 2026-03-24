@@ -4,18 +4,6 @@
 
 Chat Bot 的聊天系统是基于 Server-Sent Events (SSE) 的实时流式聊天系统，支持多 Agent 角色切换和规则系统。
 
-## 技术架构
-
-### 前端 (Vue 3)
-- **框架**: Vue 3 + TypeScript + Pinia
-- **UI 主题**: 赛博朋克/霓虹未来主义
-- **流式传输**: 通过 SSE 接收实时消息
-
-### 后端 (FastAPI)
-- **框架**: FastAPI + Python
-- **LLM Provider**: 抽象提供者模式，支持 OpenAI 兼容接口
-- **事件格式**: SSE 事件流
-
 ## 数据流
 
 ```

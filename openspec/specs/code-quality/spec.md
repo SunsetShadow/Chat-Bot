@@ -4,13 +4,14 @@
 
 本规范定义 Chat Bot 项目的代码质量标准，基于 Martin Fowler 重构原则和 Robert C. Martin (Uncle Bob) Clean Code 原则。
 
+> **具体命名规范和组件结构**请参考 [开发指南](../development-guide/spec.md)。
+
 ## 核心原则
 
 ### 1. Clean Code 原则 (Uncle Bob)
 
-#### 命名规范
+#### 有意义的命名
 
-**有意义的命名**
 - 名称应表达意图，而非实现
 - 避免误导性名称
 - 使用可搜索的名称
@@ -24,39 +25,6 @@ const x = users.filter(u => u.a)
 // Good
 const registrationDate = new Date()
 const activeUsers = users.filter(user => user.isActive)
-```
-
-**前端命名约定**
-```typescript
-// 组件：PascalCase
-ChatView.vue
-MessageItem.vue
-
-// Composables：use 前缀
-useChatStream.ts
-useAgent.ts
-
-// 变量/函数：camelCase
-const messageList = ref([])
-function sendMessage() {}
-
-// 常量：UPPER_SNAKE_CASE
-const MAX_RETRY_COUNT = 3
-const API_BASE_URL = '/api/v1'
-```
-
-**后端命名约定**
-```python
-# 类：PascalCase
-class ChatService:
-    pass
-
-# 函数/变量：snake_case
-def get_chat_messages():
-    pass
-
-# 常量：UPPER_SNAKE_CASE
-MAX_RETRY_COUNT = 3
 ```
 
 #### 函数规范
@@ -332,128 +300,9 @@ class ChatService {
 }
 ```
 
-## 前端规范
-
-### Vue 组件结构
-
-```vue
-<script setup lang="ts">
-// 1. 导入
-import { ref, computed, onMounted } from 'vue'
-import { useChatStore } from '@/stores/chat'
-
-// 2. Props/Emits 定义
-const props = defineProps<{
-  messageId: string
-}>()
-
-const emit = defineEmits<{
-  delete: [id: string]
-}>()
-
-// 3. 响应式状态
-const isLoading = ref(false)
-const chatStore = useChatStore()
-
-// 4. 计算属性
-const message = computed(() => chatStore.getMessage(props.messageId))
-
-// 5. 方法
-async function handleDelete() {
-  isLoading.value = true
-  try {
-    emit('delete', props.messageId)
-  } finally {
-    isLoading.value = false
-  }
-}
-
-// 6. 生命周期钩子
-onMounted(() => {
-  // 初始化逻辑
-})
-</script>
-
-<template>
-  <div class="message-item">
-    <!-- 模板内容 -->
-  </div>
-</template>
-
-<style scoped>
-/* 样式 */
-</style>
-```
-
-### Composables 规范
-
-```typescript
-// composables/useChatStream.ts
-export function useChatStream(conversationId: Ref<string>) {
-  // 状态
-  const messages = ref<Message[]>([])
-  const isConnected = ref(false)
-
-  // 方法
-  function connect() { /* ... */ }
-  function disconnect() { /* ... */ }
-
-  // 副作用
-  watch(conversationId, () => {
-    disconnect()
-    connect()
-  })
-
-  // 清理
-  onUnmounted(() => {
-    disconnect()
-  })
-
-  return {
-    messages: readonly(messages),
-    isConnected: readonly(isConnected),
-    connect,
-    disconnect
-  }
-}
-```
-
-### Store 规范
-
-```typescript
-// stores/chat.ts
-export const useChatStore = defineStore('chat', () => {
-  // State
-  const conversations = ref<Map<string, Conversation>>(new Map())
-  const activeId = ref<string | null>(null)
-
-  // Getters
-  const activeConversation = computed(() => {
-    if (!activeId.value) return null
-    return conversations.value.get(activeId.value)
-  })
-
-  // Actions
-  async function sendMessage(content: string) {
-    // 调用 API，不在此处直接 fetch
-    const response = await chatApi.sendMessage(activeId.value!, content)
-    // 更新状态
-  }
-
-  return {
-    // State (只读暴露)
-    conversations: readonly(conversations),
-    activeId: readonly(activeId),
-    // Getters
-    activeConversation,
-    // Actions
-    sendMessage,
-    setActiveConversation
-  }
-})
-```
-
 ## 后端规范
+
+> **分层架构和命名规范**详见 [开发指南](../development-guide/spec.md)。
 
 ### Service 层规范
 
