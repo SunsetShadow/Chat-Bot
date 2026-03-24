@@ -38,14 +38,14 @@ const emit = defineEmits<{
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-subtle);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  transition: all var(--transition-smooth);
+  transition: all var(--transition-fast);
 }
 
 .rule-item:hover {
-  border-color: var(--border-glow);
+  border-color: var(--color-primary);
 }
 
 .rule-item.disabled {
@@ -73,12 +73,12 @@ const emit = defineEmits<{
 
 .builtin-badge {
   padding: 2px 6px;
-  background: rgba(155, 93, 229, 0.15);
-  border: 1px solid rgba(155, 93, 229, 0.3);
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.3);
   border-radius: 4px;
   font-family: var(--font-mono);
   font-size: 9px;
-  color: var(--neon-purple);
+  color: #8b5cf6;
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
@@ -100,11 +100,11 @@ const emit = defineEmits<{
 
 .category-tag {
   padding: 2px 8px;
-  background: rgba(0, 245, 212, 0.08);
+  background: var(--color-primary-light);
   border-radius: 4px;
   font-family: var(--font-mono);
   font-size: 10px;
-  color: var(--neon-cyan);
+  color: var(--color-primary);
   letter-spacing: 0.5px;
 }
 

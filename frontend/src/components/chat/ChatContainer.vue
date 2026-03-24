@@ -58,18 +58,6 @@ import RuleEditor from "@/components/rules/RuleEditor.vue";
   position: relative;
 }
 
-.chat-sidebar::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 80px;
-  background: linear-gradient(180deg, var(--bg-glass) 0%, transparent 100%);
-  pointer-events: none;
-  z-index: 1;
-}
-
 .chat-main {
   flex: 1;
   display: flex;
@@ -83,22 +71,6 @@ import RuleEditor from "@/components/rules/RuleEditor.vue";
   align-items: center;
   justify-content: space-between;
   padding: 16px 24px;
-  position: relative;
-}
-
-.chat-toolbar::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 24px;
-  right: 24px;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--border-glow),
-    transparent
-  );
 }
 
 .toolbar-left,
@@ -130,17 +102,5 @@ import RuleEditor from "@/components/rules/RuleEditor.vue";
 
 .input-wrapper {
   position: relative;
-}
-
-.input-wrapper::before {
-  content: "";
-  position: absolute;
-  top: -16px;
-  left: 0;
-  right: 0;
-  height: 32px;
-  background: linear-gradient(180deg, transparent, var(--bg-primary));
-  pointer-events: none;
-  z-index: 1;
 }
 </style>

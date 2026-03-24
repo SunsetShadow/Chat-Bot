@@ -110,15 +110,15 @@ function handleCancel() {
   width: 100%;
   height: 50px;
   padding: 14px 18px;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-subtle);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-family: var(--font-display);
   font-size: 15px;
   line-height: 1.5;
   resize: none;
-  transition: all var(--transition-smooth);
+  transition: all var(--transition-fast);
 }
 
 .input-textarea::placeholder {
@@ -127,10 +127,8 @@ function handleCancel() {
 
 .input-textarea:focus {
   outline: none;
-  border-color: var(--neon-cyan);
-  box-shadow:
-    0 0 0 3px rgba(0, 245, 212, 0.1),
-    0 0 30px rgba(0, 245, 212, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .input-textarea:disabled {
@@ -164,39 +162,33 @@ function handleCancel() {
   font-weight: 500;
   letter-spacing: 0.5px;
   cursor: pointer;
-  transition: all var(--transition-smooth);
+  transition: all var(--transition-fast);
 }
 
 .action-btn.send {
   background: var(--bg-tertiary);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-color);
   color: var(--text-muted);
 }
 
 .action-btn.send.active {
-  background: linear-gradient(
-    135deg,
-    var(--neon-cyan) 0%,
-    var(--neon-cyan-dim) 100%
-  );
-  border-color: var(--neon-cyan);
-  color: var(--bg-primary);
-  box-shadow: 0 0 30px rgba(0, 245, 212, 0.3);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--text-inverse);
 }
 
 .action-btn.send.active:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 0 40px rgba(0, 245, 212, 0.4);
+  background: var(--color-primary-hover);
 }
 
 .action-btn.stop {
-  background: rgba(247, 37, 133, 0.15);
-  border: 1px solid rgba(247, 37, 133, 0.3);
-  color: var(--neon-pink);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--color-error);
 }
 
 .action-btn.stop:hover {
-  background: rgba(247, 37, 133, 0.25);
+  background: rgba(239, 68, 68, 0.2);
 }
 
 .input-hint {
@@ -218,7 +210,7 @@ function handleCancel() {
 .hint-item kbd {
   padding: 2px 6px;
   background: var(--bg-tertiary);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 10px;
 }

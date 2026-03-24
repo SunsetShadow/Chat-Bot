@@ -2,11 +2,14 @@ from functools import lru_cache
 
 from app.core.exceptions import ValidationException, raise_not_found
 from app.schemas.base import get_current_timestamp
-from app.schemas.rule import Rule, RuleCreate, RuleResponse, RuleUpdate, BUILTIN_RULES
+from app.schemas.rule import Rule, RuleCreate, RuleResponse, RuleUpdate, BUILTIN_RULES, ConflictStrategy
 
 
 class RuleService:
     """规则服务"""
+
+    # 规则类别优先级顺序
+    CATEGORY_ORDER = {"behavior": 1, "constraint": 2, "format": 3}
 
     def __init__(self):
         # 初始化预设规则和自定义规则存储
@@ -17,6 +20,8 @@ class RuleService:
         rules = list(self._rules.values())
         if enabled_only:
             rules = [r for r in rules if r.enabled]
+        # 按优先级和类别排序
+        rules.sort(key=lambda r: (-r.priority, self.CATEGORY_ORDER.get(r.category.value, 99)))
         return [
             RuleResponse(
                 id=rule.id,
@@ -24,6 +29,8 @@ class RuleService:
                 content=rule.content,
                 enabled=rule.enabled,
                 category=rule.category,
+                priority=rule.priority,
+                conflict_strategy=rule.conflict_strategy,
                 is_builtin=rule.is_builtin,
                 created_at=rule.created_at,
                 updated_at=rule.updated_at,
@@ -80,8 +87,11 @@ class RuleService:
         return True
 
     def get_enabled_rules_content(self) -> list[str]:
-        """获取所有启用的规则内容"""
-        return [rule.content for rule in self._rules.values() if rule.enabled]
+        """获取所有启用的规则内容，按优先级和类别排序"""
+        rules = [rule for rule in self._rules.values() if rule.enabled]
+        # 按优先级（高到低）和类别顺序排序
+        rules.sort(key=lambda r: (-r.priority, self.CATEGORY_ORDER.get(r.category.value, 99)))
+        return [rule.content for rule in rules]
 
     def rule_to_response(self, rule: Rule) -> RuleResponse:
         """将 Rule 转换为响应格式"""
@@ -91,6 +101,8 @@ class RuleService:
             content=rule.content,
             enabled=rule.enabled,
             category=rule.category,
+            priority=rule.priority,
+            conflict_strategy=rule.conflict_strategy,
             is_builtin=rule.is_builtin,
             created_at=rule.created_at,
             updated_at=rule.updated_at,

@@ -31,6 +31,13 @@ class ValidationException(AppException):
         super().__init__(message, "VALIDATION_ERROR")
 
 
+class RateLimitException(AppException):
+    """速率限制异常"""
+
+    def __init__(self, message: str = "请求过于频繁，请稍后再试"):
+        super().__init__(message, "RATE_LIMIT_EXCEEDED")
+
+
 def raise_not_found(resource: str, resource_id: str):
     """抛出 404 异常"""
     raise HTTPException(

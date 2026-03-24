@@ -181,19 +181,47 @@ OPENAI_MODEL=gpt-4o
 
 ## UI 主题
 
-赛博朋克/霓虹未来主义主题，CSS 变量定义在 `frontend/src/assets/main.css`：
+清新现代主题，CSS 变量定义在 `frontend/src/assets/main.css`：
+
+### 配色方案
 
 | 变量 | 用途 | 色值 |
 |------|------|------|
-| `--neon-cyan` | 主强调色 | #00f5ff |
-| `--neon-purple` | 次强调色 | #bf00ff |
-| `--bg-primary` | 主背景 | #0a0a0f |
-| `--bg-secondary` | 次背景 | #1a1a2e |
+| `--color-primary` | 主强调色 | #3b82f6 |
+| `--color-primary-hover` | 主强调悬停 | #2563eb |
+| `--color-secondary` | 次强调色 | #10b981 |
+| `--bg-primary` | 主背景 | #f8fafc |
+| `--bg-secondary` | 次背景 (卡片) | #ffffff |
+| `--bg-tertiary` | 三级背景 | #f1f5f9 |
+| `--text-primary` | 主文字 | #1e293b |
+| `--text-secondary` | 次文字 | #64748b |
+| `--text-muted` | 弱文字 | #94a3b8 |
+| `--border-color` | 边框色 | #e2e8f0 |
+
+### 阴影规范
+
+| 变量 | 用途 |
+|------|------|
+| `--shadow-xs` | 微阴影 |
+| `--shadow-sm` | 小阴影 |
+| `--shadow-md` | 中阴影 |
+| `--shadow-lg` | 大阴影 |
+| `--shadow-primary` | 主色阴影 |
+
+### 圆角规范
+
+| 变量 | 色值 |
+|------|------|
+| `--radius-sm` | 6px |
+| `--radius-md` | 10px |
+| `--radius-lg` | 16px |
+| `--radius-xl` | 24px |
 
 **样式类**
-- `.glass-card` - 玻璃拟态效果
-- `.neon-text` - 发光文字效果
-- `.neon-border` - 霓虹边框
+- `.glass-card` - 白底卡片，柔和阴影和边框
+- `.accent-text` - 主强调色文字
+- `.btn-primary` - 主按钮样式
+- `.btn-secondary` - 次按钮样式
 
 ## 关键文件
 

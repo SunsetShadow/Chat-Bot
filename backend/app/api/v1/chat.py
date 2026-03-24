@@ -1,7 +1,12 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 
+from app.middleware.security import (
+    chat_limiter,
+    check_rate_limit,
+    validate_chat_input,
+)
 from app.schemas.base import DataResponse, PaginatedResponse, PaginationMeta
 from app.schemas.chat import (
     ChatCompletionRequest,
@@ -23,6 +28,7 @@ ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
 async def chat_completions(
     request: ChatCompletionRequest,
     service: ChatServiceDep,
+    http_request: Request,
 ):
     """
     聊天补全接口
@@ -32,6 +38,13 @@ async def chat_completions(
     - **stream**: 是否使用流式响应
     - **model**: 指定模型（可选）
     """
+    # 速率限制
+    client_ip = http_request.client.host if http_request.client else "unknown"
+    check_rate_limit(chat_limiter, f"chat:{client_ip}")
+
+    # 输入验证
+    validate_chat_input(request.message)
+
     if request.stream:
         return SSEStreamingResponse(service.chat_stream(request))
     else:

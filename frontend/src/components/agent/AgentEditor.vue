@@ -201,7 +201,7 @@ async function handleDelete(agentId: string) {
   justify-content: space-between;
   margin-bottom: 24px;
   padding-bottom: 16px;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .header-info {
@@ -222,24 +222,19 @@ async function handleDelete(agentId: string) {
   align-items: center;
   gap: 8px;
   padding: 10px 18px;
-  background: linear-gradient(
-    135deg,
-    var(--neon-cyan) 0%,
-    var(--neon-cyan-dim) 100%
-  );
+  background: var(--color-primary);
   border: none;
   border-radius: var(--radius-sm);
-  color: var(--bg-primary);
+  color: var(--text-inverse);
   font-family: var(--font-mono);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all var(--transition-smooth);
+  transition: all var(--transition-fast);
 }
 
 .create-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 0 30px rgba(0, 245, 212, 0.4);
+  background: var(--color-primary-hover);
 }
 
 .agent-list {
@@ -252,17 +247,17 @@ async function handleDelete(agentId: string) {
   display: flex;
   gap: 16px;
   padding: 20px;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-subtle);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  transition: all var(--transition-smooth);
+  transition: all var(--transition-fast);
   opacity: 0;
-  animation: fadeInUp 0.4s ease-out forwards;
+  animation: fadeInUp 0.3s ease-out forwards;
 }
 
 .agent-card:hover {
-  border-color: var(--border-glow);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-primary);
 }
 
 .agent-icon {
@@ -271,14 +266,10 @@ async function handleDelete(agentId: string) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(
-    135deg,
-    rgba(0, 245, 212, 0.15) 0%,
-    rgba(0, 245, 212, 0.05) 100%
-  );
-  border: 1px solid rgba(0, 245, 212, 0.2);
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary);
   border-radius: var(--radius-md);
-  color: var(--neon-cyan);
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 
@@ -299,12 +290,12 @@ async function handleDelete(agentId: string) {
 
 .builtin-badge {
   padding: 3px 8px;
-  background: rgba(155, 93, 229, 0.15);
-  border: 1px solid rgba(155, 93, 229, 0.3);
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.3);
   border-radius: 4px;
   font-family: var(--font-mono);
   font-size: 10px;
-  color: var(--neon-purple);
+  color: #8b5cf6;
   letter-spacing: 0.5px;
 }
 
@@ -323,12 +314,12 @@ async function handleDelete(agentId: string) {
 
 .trait-tag {
   padding: 4px 10px;
-  background: rgba(0, 245, 212, 0.08);
-  border: 1px solid rgba(0, 245, 212, 0.15);
+  background: var(--color-primary-light);
+  border: 1px solid rgba(59, 130, 246, 0.2);
   border-radius: 4px;
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--neon-cyan);
+  color: var(--color-primary);
   letter-spacing: 0.3px;
 }
 
@@ -351,7 +342,7 @@ async function handleDelete(agentId: string) {
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   color: var(--text-muted);
   cursor: pointer;
@@ -359,14 +350,14 @@ async function handleDelete(agentId: string) {
 }
 
 .action-btn:hover {
-  border-color: var(--neon-cyan);
-  color: var(--neon-cyan);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .action-btn.delete:hover {
-  border-color: var(--neon-pink);
-  color: var(--neon-pink);
-  background: rgba(247, 37, 133, 0.1);
+  border-color: var(--color-error);
+  color: var(--color-error);
+  background: rgba(239, 68, 68, 0.1);
 }
 
 .empty-state {
@@ -384,7 +375,7 @@ async function handleDelete(agentId: string) {
   align-items: center;
   justify-content: center;
   background: var(--bg-tertiary);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   color: var(--text-muted);
   margin-bottom: 20px;
@@ -421,7 +412,7 @@ async function handleDelete(agentId: string) {
 
 .btn-cancel {
   background: var(--bg-tertiary);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-color);
   color: var(--text-secondary);
 }
 
@@ -430,16 +421,12 @@ async function handleDelete(agentId: string) {
 }
 
 .btn-submit {
-  background: linear-gradient(
-    135deg,
-    var(--neon-cyan) 0%,
-    var(--neon-cyan-dim) 100%
-  );
+  background: var(--color-primary);
   border: none;
-  color: var(--bg-primary);
+  color: var(--text-inverse);
 }
 
 .btn-submit:hover {
-  box-shadow: 0 0 30px rgba(0, 245, 212, 0.4);
+  background: var(--color-primary-hover);
 }
 </style>

@@ -15,7 +15,7 @@ function goToSettings() {
   <header class="app-header">
     <div class="header-left">
       <div class="logo">
-        <NIcon :component="ChatbubblesOutline" size="24" color="#18a058" />
+        <NIcon :component="ChatbubblesOutline" size="24" class="logo-icon" />
         <span class="logo-text">Chat Bot</span>
       </div>
     </div>
@@ -25,7 +25,7 @@ function goToSettings() {
       </span>
     </div>
     <div class="header-right">
-      <NButton text @click="goToSettings">
+      <NButton text class="settings-btn" @click="goToSettings">
         <template #icon>
           <NIcon :component="SettingsOutline" size="20" />
         </template>
@@ -40,8 +40,8 @@ function goToSettings() {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: white;
-  border-bottom: 1px solid #eee;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .header-left,
@@ -57,13 +57,29 @@ function goToSettings() {
   gap: 8px;
 }
 
+.logo-icon {
+  color: var(--color-primary);
+}
+
 .logo-text {
   font-size: 16px;
   font-weight: 600;
+  color: var(--text-primary);
 }
 
 .current-agent {
   font-size: 14px;
-  color: #666;
+  color: var(--text-secondary);
+  padding: 4px 12px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+.settings-btn {
+  color: var(--text-secondary);
+}
+
+.settings-btn:hover {
+  color: var(--color-primary);
 }
 </style>

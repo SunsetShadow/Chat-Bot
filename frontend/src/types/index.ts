@@ -55,6 +55,7 @@ export interface AgentUpdate {
 
 // 规则相关类型
 export type RuleCategory = "behavior" | "format" | "constraint";
+export type ConflictStrategy = "override" | "merge" | "reject";
 
 export interface Rule {
   id: string;
@@ -62,6 +63,8 @@ export interface Rule {
   content: string;
   enabled: boolean;
   category: RuleCategory;
+  priority: number;
+  conflict_strategy: ConflictStrategy;
   is_builtin: boolean;
   created_at: string;
   updated_at: string;
@@ -71,6 +74,8 @@ export interface RuleCreate {
   name: string;
   content: string;
   category?: RuleCategory;
+  priority?: number;
+  conflict_strategy?: ConflictStrategy;
 }
 
 export interface RuleUpdate {
@@ -78,6 +83,8 @@ export interface RuleUpdate {
   content?: string;
   enabled?: boolean;
   category?: RuleCategory;
+  priority?: number;
+  conflict_strategy?: ConflictStrategy;
 }
 
 // 记忆相关类型

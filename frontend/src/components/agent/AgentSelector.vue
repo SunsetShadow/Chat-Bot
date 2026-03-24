@@ -88,7 +88,7 @@ function handleChange(agentId: string) {
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   color: var(--text-muted);
   cursor: pointer;
@@ -96,8 +96,8 @@ function handleChange(agentId: string) {
 }
 
 .info-btn:hover {
-  border-color: var(--neon-cyan);
-  color: var(--neon-cyan);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .agent-tooltip {
@@ -125,12 +125,12 @@ function handleChange(agentId: string) {
 
 .trait-tag {
   padding: 3px 8px;
-  background: rgba(0, 245, 212, 0.1);
-  border: 1px solid rgba(0, 245, 212, 0.2);
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary);
   border-radius: 4px;
   font-family: var(--font-mono);
   font-size: 10px;
-  color: var(--neon-cyan);
+  color: var(--color-primary);
   letter-spacing: 0.5px;
 }
 </style>

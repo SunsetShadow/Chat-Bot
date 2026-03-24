@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import type { Message } from "@/types";
 import { formatRelativeTime } from "@/utils/id";
+import { renderMarkdownSafe } from "@/utils/markdown";
 import { PersonOutline, SparklesOutline } from "@vicons/ionicons5";
 
 const props = defineProps<{
@@ -14,6 +15,15 @@ const isUser = computed(() => props.message.role === "user");
 const displayContent = computed(() =>
   props.isStreaming ? props.streamingContent : props.message.content,
 );
+
+// 渲染 Markdown 内容
+const renderedContent = computed(() => {
+  if (isUser.value) {
+    // 用户消息不渲染 Markdown
+    return displayContent.value;
+  }
+  return renderMarkdownSafe(displayContent.value || "");
+});
 </script>
 
 <template>
@@ -46,10 +56,13 @@ const displayContent = computed(() =>
         </div>
 
         <!-- Content -->
-        <div v-else class="message-text">
-          {{ displayContent }}
-          <span v-if="isStreaming" class="typing-cursor"></span>
-        </div>
+        <div
+          v-else
+          class="message-text"
+          :class="{ 'markdown-body': !isUser }"
+          v-html="renderedContent"
+        ></div>
+        <span v-if="isStreaming && displayContent" class="typing-cursor"></span>
       </div>
     </div>
   </div>
@@ -61,7 +74,7 @@ const displayContent = computed(() =>
   gap: 16px;
   padding: 20px 0;
   opacity: 0;
-  animation: fadeInUp 0.4s ease-out forwards;
+  animation: fadeInUp 0.3s ease-out forwards;
 }
 
 .message-item.user {
@@ -84,27 +97,18 @@ const displayContent = computed(() =>
   flex-shrink: 0;
   background: var(--bg-tertiary);
   color: var(--text-secondary);
-  transition: all var(--transition-smooth);
+  transition: all var(--transition-fast);
 }
 
 .message-avatar.user {
-  background: linear-gradient(
-    135deg,
-    var(--neon-cyan) 0%,
-    var(--neon-cyan-dim) 100%
-  );
-  color: var(--bg-primary);
-  box-shadow: 0 0 20px rgba(0, 245, 212, 0.3);
+  background: var(--color-primary);
+  color: var(--text-inverse);
 }
 
 .message-avatar:not(.user) {
-  background: linear-gradient(
-    135deg,
-    rgba(155, 93, 229, 0.3) 0%,
-    rgba(155, 93, 229, 0.1) 100%
-  );
-  border: 1px solid rgba(155, 93, 229, 0.3);
-  color: var(--neon-purple);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--color-secondary);
 }
 
 /* Content */
@@ -146,31 +150,19 @@ const displayContent = computed(() =>
 .message-body {
   padding: 16px 20px;
   border-radius: var(--radius-lg);
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-subtle);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   position: relative;
-  overflow: hidden;
-}
-
-.message-body::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.02) 0%,
-    transparent 50%
-  );
-  pointer-events: none;
 }
 
 .message-body.user {
   background: linear-gradient(
     135deg,
-    rgba(0, 245, 212, 0.15) 0%,
-    rgba(0, 245, 212, 0.05) 100%
+    var(--color-primary) 0%,
+    var(--color-primary-hover) 100%
   );
-  border-color: rgba(0, 245, 212, 0.2);
+  border-color: transparent;
+  color: var(--text-inverse);
 }
 
 .message-item:not(.user) .message-body {
@@ -197,7 +189,7 @@ const displayContent = computed(() =>
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--neon-cyan);
+  background: var(--color-primary);
   animation: dotPulse 1.4s ease-in-out infinite;
 }
 
@@ -233,6 +225,162 @@ const displayContent = computed(() =>
   line-height: 1.7;
   color: var(--text-primary);
   word-wrap: break-word;
-  white-space: pre-wrap;
+}
+
+.message-body.user .message-text {
+  color: var(--text-inverse);
+}
+
+/* Markdown Body */
+.message-text.markdown-body {
+  white-space: normal;
+}
+
+.message-text.markdown-body :deep(p) {
+  margin: 0 0 12px;
+}
+
+.message-text.markdown-body :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.message-text.markdown-body :deep(code) {
+  background: var(--color-primary-light);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  color: var(--color-primary);
+}
+
+/* Code Block */
+.message-text.markdown-body :deep(.code-block) {
+  margin: 12px 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+}
+
+.message-text.markdown-body :deep(.code-header) {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.message-text.markdown-body :deep(.code-lang) {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-primary);
+  text-transform: uppercase;
+}
+
+.message-text.markdown-body :deep(.copy-btn) {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.message-text.markdown-body :deep(.copy-btn:hover) {
+  background: var(--color-primary);
+  color: var(--text-inverse);
+  border-color: var(--color-primary);
+}
+
+.message-text.markdown-body :deep(pre) {
+  margin: 0;
+  padding: 16px;
+  overflow-x: auto;
+}
+
+.message-text.markdown-body :deep(pre code) {
+  background: transparent;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+/* Lists */
+.message-text.markdown-body :deep(ul),
+.message-text.markdown-body :deep(ol) {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.message-text.markdown-body :deep(li) {
+  margin: 4px 0;
+}
+
+/* Headings */
+.message-text.markdown-body :deep(h1),
+.message-text.markdown-body :deep(h2),
+.message-text.markdown-body :deep(h3) {
+  margin: 16px 0 8px;
+  color: var(--text-primary);
+}
+
+.message-text.markdown-body :deep(h1) {
+  font-size: 1.4em;
+}
+
+.message-text.markdown-body :deep(h2) {
+  font-size: 1.2em;
+}
+
+.message-text.markdown-body :deep(h3) {
+  font-size: 1.1em;
+}
+
+/* Blockquote */
+.message-text.markdown-body :deep(blockquote) {
+  margin: 12px 0;
+  padding: 8px 16px;
+  border-left: 3px solid var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--text-secondary);
+}
+
+/* Links */
+.message-text.markdown-body :deep(a) {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.message-text.markdown-body :deep(a:hover) {
+  text-decoration: underline;
+}
+
+/* Typing Cursor */
+.typing-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 18px;
+  background: var(--color-primary);
+  margin-left: 2px;
+  animation: blink 1s step-end infinite;
+  vertical-align: text-bottom;
+}
+
+.message-body.user .typing-cursor {
+  background: var(--text-inverse);
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 </style>

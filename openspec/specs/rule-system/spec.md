@@ -51,8 +51,45 @@ interface Rule {
 | `backend/app/api/v1/rules.py` | 规则 API 路由 |
 | `backend/app/services/rule_service.py` | 规则业务逻辑 |
 
+## 规则优先级
+
+### 优先级机制
+
+```typescript
+interface Rule {
+  // ... 原有字段
+  priority: number  // 1-10，数值越高优先级越高
+  conflict_strategy: 'override' | 'merge' | 'reject'
+}
+```
+
+### 冲突处理策略
+
+| 策略 | 行为 |
+|------|------|
+| `override` | 高优先级规则覆盖低优先级 |
+| `merge` | 合并所有规则内容 |
+| `reject` | 检测到冲突时拒绝启用 |
+
+### 规则组合规则
+
+1. **同类别规则**：按优先级排序，高优先级先生效
+2. **跨类别规则**：behavior → constraint → format 顺序注入
+3. **互斥规则**：标记 `mutual_exclusive` 的规则组只能启用一个
+
+```typescript
+interface RuleGroup {
+  id: string
+  name: string
+  rules: string[]  // 规则 ID 列表
+  selection_mode: 'single' | 'multiple'  // 单选或多选
+}
+```
+
 ## 约束
 
 1. 规则内容需要有明确的格式要求
 2. 规则应该简洁明了，避免过长
 3. 默认规则不可删除，但可以禁用
+4. 同一互斥组内的规则只能启用一个
+5. 规则优先级默认为 5

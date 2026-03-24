@@ -51,9 +51,47 @@ interface MemoryExtractionResult {
 | `backend/app/api/v1/memories.py` | 记忆 API 路由 |
 | `backend/app/services/memory_service.py` | AI 驱动的记忆提取 |
 
+## 记忆检索策略
+
+### 相关性评分
+
+```typescript
+interface MemoryRetrievalConfig {
+  max_memories: number      // 每次检索最大数量，默认 10
+  min_relevance: number     // 最低相关性阈值，默认 0.5
+  recency_weight: number    // 时效性权重，默认 0.3
+  type_weights: {
+    fact: number            // 事实权重，默认 0.4
+    preference: number      // 偏好权重，默认 0.4
+    event: number           // 事件权重，默认 0.2
+  }
+}
+```
+
+### 检索流程
+
+```
+用户消息 → 语义向量化 → 相似度计算 → 时效性加权 → 排序 → 返回 Top-N
+```
+
+### 记忆过期机制
+
+```typescript
+interface MemoryTTL {
+  fact: number       // 事实：永不过期 (0)
+  preference: number // 偏好：30 天
+  event: number      // 事件：7 天
+}
+
+// 过期记忆自动降权，不删除
+// 用户可手动标记"重要"永久保留
+```
+
 ## 约束
 
 1. 记忆提取是异步进行的，不阻塞聊天响应
 2. 低置信度的记忆应该被过滤
 3. 敏感信息不应被存储为记忆
 4. 记忆应该定期清理过时或不再相关的内容
+5. 每次对话注入的记忆不超过 10 条
+6. 事件类型记忆默认 7 天后过期

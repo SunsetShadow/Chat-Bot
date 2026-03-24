@@ -145,25 +145,25 @@ async function handleSubmit() {
   gap: 8px;
   padding: 10px 16px;
   background: var(--bg-tertiary);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: 13px;
   cursor: pointer;
-  transition: all var(--transition-smooth);
+  transition: all var(--transition-fast);
 }
 
 .rule-trigger:hover {
-  border-color: var(--neon-cyan);
-  color: var(--neon-cyan);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .rule-count {
   padding: 2px 6px;
-  background: var(--neon-cyan);
+  background: var(--color-primary);
   border-radius: 10px;
-  color: var(--bg-primary);
+  color: var(--text-inverse);
   font-size: 11px;
   font-weight: 600;
 }
@@ -178,7 +178,7 @@ async function handleSubmit() {
   justify-content: space-between;
   padding-bottom: 16px;
   margin-bottom: 16px;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .header-info {
@@ -200,7 +200,7 @@ async function handleSubmit() {
   align-items: center;
   justify-content: center;
   background: var(--bg-tertiary);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   cursor: pointer;
@@ -208,8 +208,8 @@ async function handleSubmit() {
 }
 
 .add-btn:hover {
-  border-color: var(--neon-cyan);
-  color: var(--neon-cyan);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .rule-list {
@@ -254,7 +254,7 @@ async function handleSubmit() {
 
 .btn-cancel {
   background: var(--bg-tertiary);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-color);
   color: var(--text-secondary);
 }
 
@@ -263,12 +263,12 @@ async function handleSubmit() {
 }
 
 .btn-submit {
-  background: var(--neon-cyan);
+  background: var(--color-primary);
   border: none;
-  color: var(--bg-primary);
+  color: var(--text-inverse);
 }
 
 .btn-submit:hover {
-  box-shadow: 0 0 20px rgba(0, 245, 212, 0.4);
+  background: var(--color-primary-hover);
 }
 </style>

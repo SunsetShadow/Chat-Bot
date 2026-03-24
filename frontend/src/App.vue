@@ -7,111 +7,119 @@ import {
   zhCN,
   dateZhCN,
   type GlobalThemeOverrides,
-  darkTheme,
 } from "naive-ui";
 
-// 自定义主题
+// 清新主题配置
 const themeOverrides: GlobalThemeOverrides = {
   common: {
-    primaryColor: "#00f5d4",
-    primaryColorHover: "#00c4aa",
-    primaryColorPressed: "#00a088",
-    primaryColorSuppl: "#00d4b8",
+    primaryColor: "#3b82f6",
+    primaryColorHover: "#2563eb",
+    primaryColorPressed: "#1d4ed8",
+    primaryColorSuppl: "#3b82f6",
 
     fontFamily: "Sora, sans-serif",
     fontFamilyMono: "JetBrains Mono, monospace",
 
-    borderRadius: "12px",
-    borderRadiusSmall: "8px",
+    borderRadius: "10px",
+    borderRadiusSmall: "6px",
 
-    textColorBase: "#e8e8ed",
-    textColor1: "#e8e8ed",
-    textColor2: "#9898a8",
-    textColor3: "#5a5a6e",
-    textColorDisabled: "#3a3a4e",
+    textColorBase: "#1e293b",
+    textColor1: "#1e293b",
+    textColor2: "#64748b",
+    textColor3: "#94a3b8",
+    textColorDisabled: "#cbd5e1",
 
-    placeholderColor: "#5a5a6e",
-    placeholderColorDisabled: "#3a3a4e",
+    placeholderColor: "#94a3b8",
+    placeholderColorDisabled: "#cbd5e1",
 
-    boxShadow1: "0 2px 8px rgba(0, 0, 0, 0.3)",
-    boxShadow2: "0 4px 20px rgba(0, 0, 0, 0.4)",
-    boxShadow3: "0 8px 40px rgba(0, 0, 0, 0.5)",
+    boxShadow1: "0 1px 3px rgba(0, 0, 0, 0.1)",
+    boxShadow2: "0 4px 6px rgba(0, 0, 0, 0.07)",
+    boxShadow3: "0 10px 15px rgba(0, 0, 0, 0.1)",
+
+    borderColor: "#e2e8f0",
+    dividerColor: "#e2e8f0",
   },
   Card: {
-    color: "rgba(18, 18, 26, 0.7)",
-    colorModal: "rgba(18, 18, 26, 0.9)",
-    borderColor: "rgba(255, 255, 255, 0.06)",
-    titleTextColor: "#e8e8ed",
-    textColor: "#9898a8",
-    borderRadius: "20px",
+    color: "#ffffff",
+    colorModal: "#ffffff",
+    borderColor: "#e2e8f0",
+    titleTextColor: "#1e293b",
+    textColor: "#64748b",
+    borderRadius: "16px",
   },
   Button: {
-    textColorPrimary: "#0a0a0f",
-    textColorHoverPrimary: "#0a0a0f",
-    textColorPressedPrimary: "#0a0a0f",
-    colorPrimary: "#00f5d4",
-    colorHoverPrimary: "#00d4b8",
-    colorPressedPrimary: "#00c4aa",
+    textColorPrimary: "#ffffff",
+    textColorHoverPrimary: "#ffffff",
+    textColorPressedPrimary: "#ffffff",
+    colorPrimary: "#3b82f6",
+    colorHoverPrimary: "#2563eb",
+    colorPressedPrimary: "#1d4ed8",
     borderRadiusMedium: "8px",
     fontWeight: "500",
   },
   Input: {
-    color: "rgba(26, 26, 37, 0.8)",
-    colorFocus: "rgba(26, 26, 37, 0.9)",
-    borderColor: "rgba(255, 255, 255, 0.06)",
-    borderColorHover: "rgba(0, 245, 212, 0.3)",
-    borderColorFocus: "#00f5d4",
-    boxShadowFocus: "0 0 0 2px rgba(0, 245, 212, 0.2)",
-    textColor: "#e8e8ed",
-    caretColor: "#00f5d4",
-    borderRadius: "12px",
+    color: "#ffffff",
+    colorFocus: "#ffffff",
+    borderColor: "#e2e8f0",
+    borderColorHover: "#cbd5e1",
+    borderColorFocus: "#3b82f6",
+    boxShadowFocus: "0 0 0 3px rgba(59, 130, 246, 0.1)",
+    textColor: "#1e293b",
+    caretColor: "#3b82f6",
+    borderRadius: "10px",
   },
   Select: {
     peers: {
       InternalSelection: {
-        textColor: "#e8e8ed",
-        color: "rgba(26, 26, 37, 0.8)",
-        colorActive: "rgba(26, 26, 37, 0.9)",
-        border: "1px solid rgba(255, 255, 255, 0.06)",
-        borderHover: "1px solid rgba(0, 245, 212, 0.3)",
-        borderActive: "1px solid #00f5d4",
-        boxShadowActive: "0 0 0 2px rgba(0, 245, 212, 0.2)",
-        borderRadius: "12px",
+        textColor: "#1e293b",
+        color: "#ffffff",
+        colorActive: "#ffffff",
+        border: "1px solid #e2e8f0",
+        borderHover: "1px solid #cbd5e1",
+        borderActive: "1px solid #3b82f6",
+        boxShadowActive: "0 0 0 3px rgba(59, 130, 246, 0.1)",
+        borderRadius: "10px",
       },
       InternalSelectMenu: {
-        color: "rgba(18, 18, 26, 0.95)",
-        optionTextColor: "#e8e8ed",
-        optionTextColorActive: "#00f5d4",
-        borderRadius: "12px",
+        color: "#ffffff",
+        optionTextColor: "#1e293b",
+        optionTextColorActive: "#3b82f6",
+        borderRadius: "10px",
       },
     },
   },
   Modal: {
-    color: "rgba(18, 18, 26, 0.95)",
-    borderRadius: "20px",
+    color: "#ffffff",
+    borderRadius: "16px",
   },
   Tabs: {
-    tabTextColorLine: "#9898a8",
-    tabTextColorActiveLine: "#00f5d4",
-    tabTextColorHoverLine: "#00f5d4",
-    barColor: "#00f5d4",
-    tabBorderColor: "rgba(255, 255, 255, 0.06)",
+    tabTextColorLine: "#64748b",
+    tabTextColorActiveLine: "#3b82f6",
+    tabTextColorHoverLine: "#3b82f6",
+    barColor: "#3b82f6",
+    tabBorderColor: "#e2e8f0",
   },
   Tag: {
     borderRadius: "6px",
   },
   Switch: {
-    railColorActive: "#00f5d4",
+    railColorActive: "#3b82f6",
   },
   Scrollbar: {
-    color: "rgba(0, 245, 212, 0.3)",
+    color: "rgba(0, 0, 0, 0.15)",
+  },
+  Message: {
+    textColor: "#1e293b",
+  },
+  Dialog: {
+    textColor: "#1e293b",
+    titleTextColor: "#1e293b",
   },
 };
 </script>
 
 <template>
   <NConfigProvider
-    :theme="darkTheme"
     :locale="zhCN"
     :date-locale="dateZhCN"
     :theme-overrides="themeOverrides"
@@ -128,21 +136,28 @@ const themeOverrides: GlobalThemeOverrides = {
 </template>
 
 <style>
-/* Naive UI Overrides */
+/* Naive UI Overrides - Fresh Theme */
 .n-button--primary-type {
-  box-shadow: 0 0 20px rgba(0, 245, 212, 0.3) !important;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2) !important;
 }
 
-.n-input:hover,
+.n-button--primary-type:hover {
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3) !important;
+}
+
 .n-input:focus-within {
-  box-shadow: 0 0 20px rgba(0, 245, 212, 0.1) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
 }
 
 .n-card {
-  backdrop-filter: blur(20px) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.n-card:hover {
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15) !important;
 }
 
 .n-modal {
-  backdrop-filter: blur(20px) !important;
+  box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15) !important;
 }
 </style>

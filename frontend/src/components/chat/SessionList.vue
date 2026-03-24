@@ -128,30 +128,21 @@ async function handleDeleteSession(sessionId: string) {
   gap: 8px;
   width: 100%;
   padding: 14px;
-  background: linear-gradient(
-    135deg,
-    rgba(0, 245, 212, 0.15) 0%,
-    rgba(0, 245, 212, 0.05) 100%
-  );
-  border: 1px solid rgba(0, 245, 212, 0.3);
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary);
   border-radius: var(--radius-md);
-  color: var(--neon-cyan);
+  color: var(--color-primary);
   font-family: var(--font-mono);
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.5px;
   cursor: pointer;
-  transition: all var(--transition-smooth);
+  transition: all var(--transition-fast);
 }
 
 .new-chat-btn:hover {
-  background: linear-gradient(
-    135deg,
-    rgba(0, 245, 212, 0.25) 0%,
-    rgba(0, 245, 212, 0.1) 100%
-  );
-  box-shadow: 0 0 30px rgba(0, 245, 212, 0.2);
-  transform: translateY(-2px);
+  background: var(--color-primary);
+  color: var(--text-inverse);
 }
 
 .session-content {
@@ -167,8 +158,8 @@ async function handleDeleteSession(sessionId: string) {
 .loader {
   width: 24px;
   height: 24px;
-  border: 2px solid var(--bg-tertiary);
-  border-top-color: var(--neon-cyan);
+  border: 2px solid var(--border-color);
+  border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -220,26 +211,24 @@ async function handleDeleteSession(sessionId: string) {
   padding: 14px 16px;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all var(--transition-smooth);
+  transition: all var(--transition-fast);
   animation: fadeInUp 0.3s ease-out forwards;
   opacity: 0;
+  border: 1px solid transparent;
 }
 
 .session-item:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-tertiary);
 }
 
 .session-item.active {
-  background: linear-gradient(
-    135deg,
-    rgba(0, 245, 212, 0.1) 0%,
-    rgba(0, 245, 212, 0.02) 100%
-  );
-  border: 1px solid rgba(0, 245, 212, 0.2);
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
 }
 
 .session-item.active .session-icon {
-  color: var(--neon-cyan);
+  background: var(--color-primary);
+  color: var(--text-inverse);
 }
 
 .session-icon {
@@ -252,7 +241,7 @@ async function handleDeleteSession(sessionId: string) {
   justify-content: center;
   color: var(--text-muted);
   flex-shrink: 0;
-  transition: all var(--transition-smooth);
+  transition: all var(--transition-fast);
 }
 
 .session-info {
@@ -299,7 +288,7 @@ async function handleDeleteSession(sessionId: string) {
 }
 
 .delete-btn:hover {
-  background: rgba(247, 37, 133, 0.1);
-  color: var(--neon-pink);
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-error);
 }
 </style>

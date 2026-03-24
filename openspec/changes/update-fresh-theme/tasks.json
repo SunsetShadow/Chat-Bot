@@ -1,0 +1,87 @@
+{
+  "tasks": [
+    {
+      "number": 1,
+      "category": "阶段 1：基础样式",
+      "task": "更新全局 CSS 变量和基础样式",
+      "steps": [
+        { "step": "设计并定义新的 CSS 变量 (配色、阴影、圆角)", "completed": true },
+        { "step": "更新 main.css 中的 :root 变量定义", "completed": true },
+        { "step": "移除霓虹发光效果相关 CSS 类", "completed": true },
+        { "step": "更新 .glass-card 为清新卡片样式", "completed": true },
+        { "step": "移除背景噪点和扫描线效果", "completed": true },
+        { "step": "更新滚动条样式为浅色主题", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 2,
+      "category": "阶段 1：基础样式",
+      "task": "更新 Naive UI 主题配置",
+      "steps": [
+        { "step": "移除 darkTheme，使用浅色主题", "completed": true },
+        { "step": "更新 themeOverrides 配置为新配色", "completed": true },
+        { "step": "更新 Button、Input、Card 等组件的主题色", "completed": true },
+        { "step": "测试 Naive UI 组件在浅色主题下的表现", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 3,
+      "category": "阶段 2：聊天组件",
+      "task": "更新 MessageItem 组件样式",
+      "steps": [
+        { "step": "更新消息气泡背景色和边框", "completed": true },
+        { "step": "更新头像样式，移除发光效果", "completed": true },
+        { "step": "更新加载动画为清新风格", "completed": true },
+        { "step": "更新 Markdown 渲染样式 (代码块、链接等)", "completed": true },
+        { "step": "调整用户消息和 AI 消息的视觉区分", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 4,
+      "category": "阶段 2：聊天组件",
+      "task": "更新其他聊天相关组件",
+      "steps": [
+        { "step": "更新 ChatContainer 背景和布局", "completed": true },
+        { "step": "更新 SessionList 会话列表样式", "completed": true },
+        { "step": "更新 MessageInput 输入框样式", "completed": true },
+        { "step": "更新 AppHeader 导航栏样式", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 5,
+      "category": "阶段 3：Agent 和规则组件",
+      "task": "更新 Agent 相关组件样式",
+      "steps": [
+        { "step": "更新 AgentSelector 选择器样式", "completed": true },
+        { "step": "更新 AgentEditor 编辑器样式", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 6,
+      "category": "阶段 3：Agent 和规则组件",
+      "task": "更新规则相关组件样式",
+      "steps": [
+        { "step": "更新 RuleItem 规则项样式", "completed": true },
+        { "step": "更新 RuleEditor 规则编辑器样式", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 7,
+      "category": "阶段 4：文档和验证",
+      "task": "更新规范文档并验证",
+      "steps": [
+        { "step": "更新 development-guide/spec.md 中的 UI 主题章节", "completed": true },
+        { "step": "启动开发服务器验证所有页面样式", "completed": true },
+        { "step": "检查并修复遗漏的深色主题残留", "completed": true },
+        { "step": "确保所有交互状态 (hover、focus、active) 样式正确", "completed": true }
+      ],
+      "passes": true
+    }
+  ]
+}
