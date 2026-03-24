@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o"
 
     # CORS 配置（支持逗号分隔的字符串或列表）
-    cors_origins: list[str] = ["http://localhost:3000"]
+    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:3001"]
 
     @field_validator("cors_origins", mode="before")
     @classmethod
