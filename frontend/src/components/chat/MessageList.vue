@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, nextTick } from "vue";
+import { ref, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { useChatStore } from "@/stores/chat";
 import MessageItem from "./MessageItem.vue";
 import { ChatbubbleEllipsesOutline } from "@vicons/ionicons5";
@@ -34,6 +34,32 @@ function scrollToBottom() {
     });
   }
 }
+
+// 代码复制事件委托
+function handleCopyClick(event: MouseEvent) {
+  const target = event.target as HTMLElement;
+  const copyBtn = target.closest(".copy-btn") as HTMLButtonElement | null;
+  if (copyBtn?.dataset.code) {
+    const code = decodeURIComponent(copyBtn.dataset.code);
+    navigator.clipboard.writeText(code).then(() => {
+      const originalText = copyBtn.textContent;
+      copyBtn.textContent = "已复制!";
+      copyBtn.disabled = true;
+      setTimeout(() => {
+        copyBtn.textContent = originalText;
+        copyBtn.disabled = false;
+      }, 2000);
+    });
+  }
+}
+
+onMounted(() => {
+  listContainer.value?.addEventListener("click", handleCopyClick);
+});
+
+onUnmounted(() => {
+  listContainer.value?.removeEventListener("click", handleCopyClick);
+});
 </script>
 
 <template>
@@ -187,7 +213,7 @@ function scrollToBottom() {
 }
 
 .tip-item:hover {
-  border-color: var(--border-glow);
+  border-color: var(--color-primary);
   transform: translateY(-2px);
 }
 

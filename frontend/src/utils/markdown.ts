@@ -18,10 +18,11 @@ renderer.code = function ({ text, lang }: { text: string; lang?: string }) {
       ? hljs.highlight(text, { language }).value
       : text;
 
+  // 使用 data-code 属性存储代码，由事件委托处理复制
   return `<div class="code-block">
   <div class="code-header">
     <span class="code-lang">${language}</span>
-    <button class="copy-btn" onclick="navigator.clipboard.writeText(decodeURIComponent('${encodeURIComponent(text)}'))">复制</button>
+    <button class="copy-btn" data-code="${encodeURIComponent(text)}">复制</button>
   </div>
   <pre><code class="hljs language-${language}">${highlighted}</code></pre>
 </div>`;

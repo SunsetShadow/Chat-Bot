@@ -164,12 +164,6 @@ async function handleDeleteSession(sessionId: string) {
   animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .empty-state {
   text-align: center;
   padding: 40px 20px;

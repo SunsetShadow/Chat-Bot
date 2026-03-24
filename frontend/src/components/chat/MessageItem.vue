@@ -366,21 +366,11 @@ const renderedContent = computed(() => {
   height: 18px;
   background: var(--color-primary);
   margin-left: 2px;
-  animation: blink 1s step-end infinite;
   vertical-align: text-bottom;
+  animation: blink-cursor 1s step-end infinite;
 }
 
 .message-body.user .typing-cursor {
   background: var(--text-inverse);
-}
-
-@keyframes blink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0;
-  }
 }
 </style>

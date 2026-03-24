@@ -169,6 +169,10 @@ html, body, #app {
   50% { transform: translateY(-4px); }
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* === Typing Cursor === */
 .typing-cursor {
   display: inline-block;
