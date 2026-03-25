@@ -1,67 +1,34 @@
 # CLAUDE.md
 
-本文件为 Claude Code (claude.ai/code) 在此代码仓库中工作时提供指导。
+本文件为 Claude Code 在此代码仓库中工作时提供指导。
 
 ## 项目概述
 
-Chat Bot 是一个基于 Vue 3 + FastAPI 的聊天应用，支持 Agent 角色配置、规则系统和 AI 驱动的记忆提取。UI 采用赛博朋克/霓虹未来主义主题。
+Vue 3 + FastAPI 聊天应用，支持 Agent 角色、规则系统、AI 记忆提取。UI 主题：赛博朋克/霓虹未来主义。
 
 ## 规范文档
 
-所有功能规范、架构设计和需求文档位于 `openspec/specs/` 目录：
-
-| 目录 | 说明 |
-|------|------|
-| `openspec/specs/development-guide/` | **技术栈、目录结构、代码约定、开发命令** |
-| `openspec/specs/code-quality/` | **代码质量规范 (Clean Code + 重构原则)** |
-| `openspec/specs/chat-system/` | 聊天系统规范 |
-| `openspec/specs/agent-system/` | Agent 系统规范 |
-| `openspec/specs/rule-system/` | 规则系统规范 |
-| `openspec/specs/memory-system/` | 记忆系统规范 |
-| `openspec/specs/message-rendering/` | 消息渲染规范 (Markdown、代码高亮、LaTeX) |
-| `openspec/specs/context-management/` | 对话上下文管理 (Token 限制、消息截断) |
-| `openspec/specs/security/` | 安全规范 (输入验证、Prompt 注入防护) |
+`openspec/specs/` 目录：
+- `development/` - 技术栈、目录结构、代码约定
+- `core-features/` - 聊天、Agent、规则、记忆、上下文管理
+- `security/` - 安全规范
+- `message-rendering/` - 消息渲染
 
 ## 开发命令
 
-### 启动开发服务器
-
 ```bash
-# 同时启动前端和后端
-./dev.sh
-
-# 或单独运行：
-# 后端 (FastAPI 运行于 http://localhost:8000)
-cd backend && uv run fastapi dev app/main.py
-
-# 前端 (Vite 运行于 http://localhost:3000)
-cd frontend && pnpm dev
+./dev.sh                    # 同时启动前后端
+cd backend && uv run fastapi dev app/main.py  # 后端 :8000
+cd frontend && pnpm dev     # 前端 :3000
+cd frontend && pnpm build   # 构建
+cd frontend && pnpm lint    # ESLint 检查
 ```
 
-### 构建与检查
-
-```bash
-# 前端构建
-cd frontend && pnpm build
-
-# 前端预览
-cd frontend && pnpm preview
-
-# ESLint 检查
-cd frontend && pnpm lint
-
-# ESLint 自动修复
-cd frontend && pnpm lint:fix
-```
-
-### API 文档
-
-- 后端 API 文档: http://localhost:8000/docs (Swagger UI)
-- API 基础路径: `/api/v1/`
+API 文档: http://localhost:8000/docs
 
 ## 后端配置
 
-环境变量 (在 `backend/` 目录下的 `.env` 文件中):
+`backend/.env`:
 ```
 LLM_PROVIDER=openai
 OPENAI_API_KEY=your-key
