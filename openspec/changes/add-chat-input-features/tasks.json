@@ -1,0 +1,86 @@
+{
+  "changeId": "add-chat-input-features",
+  "tasks": [
+    {
+      "number": 1,
+      "category": "阶段 1：基础设施",
+      "task": "后端文件上传支持",
+      "steps": [
+        { "step": "创建 backend/app/api/v1/upload.py 上传端点", "completed": true },
+        { "step": "创建 backend/app/services/upload_service.py 文件处理服务", "completed": true },
+        { "step": "配置文件上传目录和大小限制", "completed": true },
+        { "step": "添加文件类型验证逻辑", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 2,
+      "category": "阶段 2：前端 UI",
+      "task": "输入框工具栏 UI",
+      "steps": [
+        { "step": "在 MessageInput.vue 添加工具栏容器", "completed": true },
+        { "step": "添加附件上传按钮（📎）", "completed": true },
+        { "step": "添加联网开关按钮（🌐）", "completed": true },
+        { "step": "添加思考过程开关按钮（🧠）", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 3,
+      "category": "阶段 2：前端 UI",
+      "task": "附件上传功能",
+      "steps": [
+        { "step": "创建 useFileUpload.ts composable", "completed": true },
+        { "step": "创建 AttachmentPreview.vue 预览组件", "completed": true },
+        { "step": "实现文件选择和上传逻辑", "completed": true },
+        { "step": "实现附件预览和删除功能", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 4,
+      "category": "阶段 2：前端 UI",
+      "task": "功能开关状态管理",
+      "steps": [
+        { "step": "在 chat store 添加 webSearchEnabled 状态", "completed": true },
+        { "step": "在 chat store 添加 thinkingEnabled 状态", "completed": true },
+        { "step": "在 chat store 添加 attachments 状态", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 5,
+      "category": "阶段 3：API 集成",
+      "task": "聊天 API 扩展",
+      "steps": [
+        { "step": "扩展 SendMessageRequest schema 支持新参数", "completed": true },
+        { "step": "修改 chat_service.py 处理附件", "completed": false },
+        { "step": "修改 chat_service.py 处理联网搜索参数", "completed": false },
+        { "step": "修改 chat_service.py 处理思考过程参数", "completed": false }
+      ],
+      "passes": false
+    },
+    {
+      "number": 6,
+      "category": "阶段 3：API 集成",
+      "task": "前端 API 调用更新",
+      "steps": [
+        { "step": "更新 useChatStream.ts 支持新参数", "completed": true },
+        { "step": "更新 MessageInput.vue 发送逻辑", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 7,
+      "category": "阶段 4：验证",
+      "task": "功能验证",
+      "steps": [
+        { "step": "测试文件上传功能", "completed": true },
+        { "step": "测试联网开关功能", "completed": true },
+        { "step": "测试思考过程开关功能", "completed": true },
+        { "step": "运行 pnpm build 确认无错误", "completed": true }
+      ],
+      "passes": true
+    }
+  ]
+}

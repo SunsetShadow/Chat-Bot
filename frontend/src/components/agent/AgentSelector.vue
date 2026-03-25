@@ -25,9 +25,12 @@ function handleChange(agentId: string) {
 </script>
 
 <template>
-  <div class="agent-selector">
-    <div class="selector-label">
-      <span class="label-mono">Agent</span>
+  <div class="flex items-center gap-3">
+    <div class="flex flex-col">
+      <span
+        class="font-mono text-[11px] tracking-wider uppercase text-[var(--text-muted)]"
+        >Agent</span
+      >
     </div>
     <NSelect
       :value="agentStore.currentAgentId"
@@ -43,23 +46,29 @@ function handleChange(agentId: string) {
     </NSelect>
     <NTooltip v-if="agentStore.currentAgent" placement="bottom">
       <template #trigger>
-        <button class="info-btn">
+        <button
+          class="w-8 h-8 flex items-center justify-center bg-transparent border border-[var(--border-color)] rounded-[var(--radius-sm)] text-[var(--text-muted)] cursor-pointer transition-all duration-150 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+        >
           <NIcon :component="InformationCircleOutline" :size="16" />
         </button>
       </template>
-      <div class="agent-tooltip">
-        <div class="tooltip-title">{{ agentStore.currentAgent.name }}</div>
-        <div class="tooltip-desc">
+      <div class="max-w-[280px]">
+        <div class="font-semibold text-[var(--text-primary)] mb-1.5">
+          {{ agentStore.currentAgent.name }}
+        </div>
+        <div
+          class="text-[13px] text-[var(--text-secondary)] leading-relaxed mb-2"
+        >
           {{ agentStore.currentAgent.description }}
         </div>
         <div
-          class="tooltip-traits"
           v-if="agentStore.currentAgent.traits.length"
+          class="flex flex-wrap gap-1.5"
         >
           <span
             v-for="trait in agentStore.currentAgent.traits"
             :key="trait"
-            class="trait-tag"
+            class="px-2 py-0.5 bg-[var(--color-primary-light)] border border-[var(--color-primary)] rounded text-[10px] font-mono text-[var(--color-primary)] tracking-wide"
           >
             {{ trait }}
           </span>
@@ -68,69 +77,3 @@ function handleChange(agentId: string) {
     </NTooltip>
   </div>
 </template>
-
-<style scoped>
-.agent-selector {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.selector-label {
-  display: flex;
-  flex-direction: column;
-}
-
-.info-btn {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.info-btn:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-}
-
-.agent-tooltip {
-  max-width: 280px;
-}
-
-.tooltip-title {
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 6px;
-}
-
-.tooltip-desc {
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-  margin-bottom: 8px;
-}
-
-.tooltip-traits {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.trait-tag {
-  padding: 3px 8px;
-  background: var(--color-primary-light);
-  border: 1px solid var(--color-primary);
-  border-radius: 4px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--color-primary);
-  letter-spacing: 0.5px;
-}
-</style>

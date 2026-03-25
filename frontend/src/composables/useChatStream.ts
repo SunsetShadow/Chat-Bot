@@ -7,6 +7,13 @@ import { createChatStream } from "@/api/chat";
 import type { ChatCompletionRequest, Message } from "@/types";
 import { generateId } from "@/utils/id";
 
+/** 发送消息选项 */
+export interface SendMessageOptions {
+  attachments?: Array<{ id: string; filename: string; type: "image" | "document"; url: string; size?: number }>;
+  webSearch?: boolean;
+  thinking?: boolean;
+}
+
 /**
  * 流式聊天 composable
  */
@@ -23,7 +30,10 @@ export function useChatStream() {
   /**
    * 发送流式消息
    */
-  async function sendStreamMessage(message: string): Promise<void> {
+  async function sendStreamMessage(
+    message: string,
+    options: SendMessageOptions = {},
+  ): Promise<void> {
     if (isStreaming.value) {
       console.warn("已有正在进行的流式请求");
       return;
@@ -37,6 +47,8 @@ export function useChatStream() {
       role: "user",
       content: message,
       created_at: new Date().toISOString(),
+      // 扩展字段
+      attachments: options.attachments,
     };
     chatStore.addMessage(userMessage);
 
@@ -47,6 +59,10 @@ export function useChatStream() {
       stream: true,
       agent_id: agentStore.currentAgentId || undefined,
       rule_ids: Array.from(rulesStore.enabledRuleIds),
+      // 新增参数
+      attachment_ids: options.attachments?.map((a) => a.id),
+      web_search: options.webSearch,
+      thinking: options.thinking,
     };
 
     // 准备流式消息占位
@@ -83,6 +99,11 @@ export function useChatStream() {
         },
         onDone: () => {
           chatStore.stopStreaming();
+          // 只在新建会话时刷新列表（currentSessionId 之前不存在于 sessions 中）
+          const isNewSession = !chatStore.sessions.some(s => s.id === chatStore.currentSessionId);
+          if (isNewSession) {
+            chatStore.fetchSessions();
+          }
         },
         onError: (data) => {
           error.value = data.error;

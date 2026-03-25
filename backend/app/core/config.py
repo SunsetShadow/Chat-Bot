@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     # CORS 配置（支持逗号分隔的字符串或列表）
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:3001"]
 
+    # 文件上传配置
+    upload_dir: str = "uploads"
+    max_file_size: int = 10 * 1024 * 1024  # 10MB
+    max_files_per_message: int = 5
+    allowed_image_types: list[str] = ["image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp"]
+    allowed_doc_types: list[str] = ["application/pdf", "text/plain", "text/markdown"]
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_cors_origins(cls, v):

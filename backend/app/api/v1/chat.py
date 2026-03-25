@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request
+from pydantic import BaseModel, Field
 
 from app.middleware.security import (
     chat_limiter,
@@ -102,16 +103,23 @@ async def get_session(
     return DataResponse(data=service.session_to_detail_response(session))
 
 
-@router.delete("/sessions/{session_id}")
-async def delete_session(
+
+class PinSessionRequest(BaseModel):
+    """置顶请求"""
+    is_pinned: bool = Field(..., description="是否置顶")
+
+
+@router.put("/sessions/{session_id}/pin", response_model=DataResponse)
+async def toggle_session_pin(
     session_id: str,
+    request: PinSessionRequest,
     service: ChatServiceDep,
 ):
     """
-    删除会话
+    切换会话置顶状态
     """
-    service.delete_session(session_id)
-    return DataResponse(message="Session deleted successfully")
+    session = service.toggle_pin(session_id, request.is_pinned)
+    return DataResponse(data=service.session_to_response(session))
 
 
 @router.get("/sessions/{session_id}/messages", response_model=DataResponse)

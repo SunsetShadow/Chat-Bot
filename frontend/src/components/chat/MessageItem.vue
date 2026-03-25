@@ -27,215 +27,94 @@ const renderedContent = computed(() => {
 </script>
 
 <template>
-  <div class="message-item" :class="[message.role, { streaming: isStreaming }]">
+  <div
+    class="flex gap-4 py-5 animate-[fadeInUp_0.3s_ease-out_forwards]"
+    :class="[
+      message.role === 'user' ? 'flex-row-reverse' : '',
+      isStreaming ? '!opacity-100 !animate-none' : '',
+    ]"
+  >
     <!-- Avatar -->
-    <div class="message-avatar" :class="{ user: isUser }">
+    <div
+      class="w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center shrink-0 transition-all duration-150"
+      :class="
+        isUser
+          ? 'bg-[var(--color-primary)] text-white'
+          : 'bg-[var(--bg-tertiary)] border border-[var(--border-color)] text-[var(--color-secondary)]'
+      "
+    >
       <NIcon :component="isUser ? PersonOutline : SparklesOutline" :size="18" />
     </div>
 
     <!-- Content -->
-    <div class="message-content">
+    <div
+      class="flex-1 flex flex-col gap-2 min-w-0"
+      :class="isUser ? 'items-end' : ''"
+      :style="{ maxWidth: '75%' }"
+    >
       <!-- Header -->
-      <div class="message-header">
-        <span class="message-role">{{ isUser ? "你" : "AI 助手" }}</span>
-        <span class="message-time">{{
-          formatRelativeTime(message.created_at)
-        }}</span>
+      <div class="flex items-center gap-2.5">
+        <span
+          class="font-mono text-xs font-medium tracking-wide text-[var(--text-secondary)]"
+        >
+          {{ isUser ? "你" : "AI 助手" }}
+        </span>
+        <span class="font-mono text-[11px] text-[var(--text-muted)]">
+          {{ formatRelativeTime(message.created_at) }}
+        </span>
       </div>
 
       <!-- Body -->
-      <div class="message-body" :class="{ user: isUser }">
+      <div
+        class="px-5 py-4 rounded-2xl border relative"
+        :class="
+          isUser
+            ? 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)] border-transparent text-white rounded-tr-sm'
+            : 'bg-[var(--bg-secondary)] border-[var(--border-color)] rounded-tl-sm'
+        "
+      >
         <!-- Loading State -->
-        <div v-if="isStreaming && !displayContent" class="message-loading">
-          <div class="loading-dots">
-            <span></span>
-            <span></span>
-            <span></span>
+        <div
+          v-if="isStreaming && !displayContent"
+          class="flex items-center gap-3"
+        >
+          <div class="flex gap-1">
+            <span
+              class="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse"
+            ></span>
+            <span
+              class="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse"
+              style="animation-delay: 0.2s"
+            ></span>
+            <span
+              class="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse"
+              style="animation-delay: 0.4s"
+            ></span>
           </div>
-          <span class="loading-text">思考中...</span>
+          <span class="text-[13px] text-[var(--text-muted)] italic"
+            >思考中...</span
+          >
         </div>
 
         <!-- Content -->
         <div
           v-else
-          class="message-text"
+          class="message-text text-[15px] leading-relaxed break-words"
           :class="{ 'markdown-body': !isUser }"
           v-html="renderedContent"
         ></div>
-        <span v-if="isStreaming && displayContent" class="typing-cursor"></span>
+        <span
+          v-if="isStreaming && displayContent"
+          class="inline-block w-0.5 h-[18px] ml-0.5 align-text-bottom animate-[blink-cursor_1s_step-end_infinite]"
+          :class="isUser ? 'bg-white' : 'bg-[var(--color-primary)]'"
+        ></span>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.message-item {
-  display: flex;
-  gap: 16px;
-  padding: 20px 0;
-  opacity: 0;
-  animation: fadeInUp 0.3s ease-out forwards;
-}
-
-.message-item.user {
-  flex-direction: row-reverse;
-}
-
-.message-item.streaming {
-  animation: none;
-  opacity: 1;
-}
-
-/* Avatar */
-.message-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  background: var(--bg-tertiary);
-  color: var(--text-secondary);
-  transition: all var(--transition-fast);
-}
-
-.message-avatar.user {
-  background: var(--color-primary);
-  color: var(--text-inverse);
-}
-
-.message-avatar:not(.user) {
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  color: var(--color-secondary);
-}
-
-/* Content */
-.message-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-width: 75%;
-  min-width: 0;
-}
-
-.message-item.user .message-content {
-  align-items: flex-end;
-}
-
-/* Header */
-.message-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.message-role {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
-}
-
-.message-time {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-muted);
-}
-
-/* Body */
-.message-body {
-  padding: 16px 20px;
-  border-radius: var(--radius-lg);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  position: relative;
-}
-
-.message-body.user {
-  background: linear-gradient(
-    135deg,
-    var(--color-primary) 0%,
-    var(--color-primary-hover) 100%
-  );
-  border-color: transparent;
-  color: var(--text-inverse);
-}
-
-.message-item:not(.user) .message-body {
-  border-top-left-radius: 4px;
-}
-
-.message-item.user .message-body {
-  border-top-right-radius: 4px;
-}
-
-/* Loading */
-.message-loading {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.loading-dots {
-  display: flex;
-  gap: 4px;
-}
-
-.loading-dots span {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  animation: dotPulse 1.4s ease-in-out infinite;
-}
-
-.loading-dots span:nth-child(2) {
-  animation-delay: 0.2s;
-}
-.loading-dots span:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-@keyframes dotPulse {
-  0%,
-  80%,
-  100% {
-    opacity: 0.3;
-    transform: scale(0.8);
-  }
-  40% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.loading-text {
-  font-size: 13px;
-  color: var(--text-muted);
-  font-style: italic;
-}
-
-/* Text */
-.message-text {
-  font-size: 15px;
-  line-height: 1.7;
-  color: var(--text-primary);
-  word-wrap: break-word;
-}
-
-.message-body.user .message-text {
-  color: var(--text-inverse);
-}
-
-/* Markdown Body */
-.message-text.markdown-body {
-  white-space: normal;
-}
-
+/* Markdown Body - 保留深度样式，无法用 Tailwind 实现 */
 .message-text.markdown-body :deep(p) {
   margin: 0 0 12px;
 }
@@ -253,7 +132,6 @@ const renderedContent = computed(() => {
   color: var(--color-primary);
 }
 
-/* Code Block */
 .message-text.markdown-body :deep(.code-block) {
   margin: 12px 0;
   border-radius: var(--radius-md);
@@ -309,7 +187,6 @@ const renderedContent = computed(() => {
   color: var(--text-primary);
 }
 
-/* Lists */
 .message-text.markdown-body :deep(ul),
 .message-text.markdown-body :deep(ol) {
   margin: 8px 0;
@@ -320,7 +197,6 @@ const renderedContent = computed(() => {
   margin: 4px 0;
 }
 
-/* Headings */
 .message-text.markdown-body :deep(h1),
 .message-text.markdown-body :deep(h2),
 .message-text.markdown-body :deep(h3) {
@@ -340,7 +216,6 @@ const renderedContent = computed(() => {
   font-size: 1.1em;
 }
 
-/* Blockquote */
 .message-text.markdown-body :deep(blockquote) {
   margin: 12px 0;
   padding: 8px 16px;
@@ -349,7 +224,6 @@ const renderedContent = computed(() => {
   color: var(--text-secondary);
 }
 
-/* Links */
 .message-text.markdown-body :deep(a) {
   color: var(--color-primary);
   text-decoration: none;
@@ -357,20 +231,5 @@ const renderedContent = computed(() => {
 
 .message-text.markdown-body :deep(a:hover) {
   text-decoration: underline;
-}
-
-/* Typing Cursor */
-.typing-cursor {
-  display: inline-block;
-  width: 2px;
-  height: 18px;
-  background: var(--color-primary);
-  margin-left: 2px;
-  vertical-align: text-bottom;
-  animation: blink-cursor 1s step-end infinite;
-}
-
-.message-body.user .typing-cursor {
-  background: var(--text-inverse);
 }
 </style>

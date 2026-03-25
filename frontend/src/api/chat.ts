@@ -82,6 +82,20 @@ export async function deleteSession(sessionId: string): Promise<void> {
   await del(`/api/v1/chat/sessions/${sessionId}`);
 }
 
+/**
+ * 切换会话置顶状态
+ */
+export async function pinSession(
+  sessionId: string,
+  isPinned: boolean,
+): Promise<SessionResponse> {
+  const response = await put<DataResponse<SessionResponse>>(
+    `/api/v1/chat/sessions/${sessionId}/pin`,
+    { is_pinned: isPinned },
+  );
+  return response.data;
+}
+
 // ============ Agent 相关 API ============
 
 /**

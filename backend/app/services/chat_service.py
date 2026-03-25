@@ -109,7 +109,7 @@ class ChatService:
 
     def list_sessions(self, page: int = 1, page_size: int = 20) -> tuple[list[Session], int]:
         """
-        列出会话
+        列出会话（置顶优先，然后按更新时间倒序）
 
         Args:
             page: 页码
@@ -120,7 +120,7 @@ class ChatService:
         """
         sessions = sorted(
             self._sessions.values(),
-            key=lambda s: s.updated_at,
+            key=lambda s: (not s.is_pinned, s.updated_at),
             reverse=True,
         )
         total = len(sessions)
@@ -143,11 +143,30 @@ class ChatService:
             return True
         return False
 
+    def toggle_pin(self, session_id: str, is_pinned: bool) -> Session:
+        """
+        设置会话置顶状态
+
+        Args:
+            session_id: 会话 ID
+            is_pinned: 是否置顶
+
+        Returns:
+            更新后的会话
+
+        Raises:
+            SessionNotFoundException: 会话不存在
+        """
+        session = self.get_session(session_id)
+        session.is_pinned = is_pinned
+        return session
+
     def session_to_response(self, session: Session) -> SessionResponse:
         """将 Session 转换为 SessionResponse"""
         return SessionResponse(
             id=session.id,
             title=session.title,
+            is_pinned=session.is_pinned,
             created_at=session.created_at,
             updated_at=session.updated_at,
             message_count=len(session.messages),
@@ -158,6 +177,7 @@ class ChatService:
         return SessionDetailResponse(
             id=session.id,
             title=session.title,
+            is_pinned=session.is_pinned,
             created_at=session.created_at,
             updated_at=session.updated_at,
             message_count=len(session.messages),

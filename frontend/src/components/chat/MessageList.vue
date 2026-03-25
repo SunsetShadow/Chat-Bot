@@ -63,36 +63,64 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="listContainer" class="message-list">
+  <div ref="listContainer" class="h-full overflow-y-auto p-6">
     <!-- Empty State -->
-    <div v-if="chatStore.messages.length === 0" class="empty-state">
-      <div class="empty-visual">
-        <div class="empty-icon-wrapper">
+    <div
+      v-if="chatStore.messages.length === 0"
+      class="flex flex-col items-center justify-center h-full text-center p-10"
+    >
+      <div class="relative mb-8">
+        <div
+          class="w-[100px] h-[100px] rounded-full bg-gradient-to-br from-[var(--bg-tertiary)] to-[var(--bg-secondary)] border border-[var(--border-color)] flex items-center justify-center text-[var(--text-muted)] relative z-10"
+        >
           <NIcon :component="ChatbubbleEllipsesOutline" :size="48" />
         </div>
-        <div class="empty-glow" />
+        <div
+          class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140px] h-[140px] rounded-full bg-[radial-gradient(circle,rgba(59,130,246,0.1)_0%,transparent_70%)] animate-pulse"
+        ></div>
       </div>
-      <h3 class="empty-title">开始一段新对话</h3>
-      <p class="empty-subtitle">选择一个 Agent，输入您的问题</p>
+      <h3
+        class="text-2xl font-semibold text-[var(--text-primary)] mb-2 tracking-tight"
+      >
+        开始一段新对话
+      </h3>
+      <p class="text-[15px] text-[var(--text-secondary)] mb-10">
+        选择一个 Agent，输入您的问题
+      </p>
 
-      <div class="quick-tips">
-        <div class="tip-item">
-          <span class="tip-icon">⚡</span>
-          <span class="tip-text">支持流式响应</span>
+      <div class="flex gap-6">
+        <div
+          class="flex flex-col items-center gap-2 px-6 py-4 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-[var(--radius-md)] transition-all duration-300 hover:border-[var(--color-primary)] hover:-translate-y-0.5"
+        >
+          <span class="text-2xl">⚡</span>
+          <span
+            class="font-mono text-[11px] text-[var(--text-secondary)] tracking-wide"
+            >支持流式响应</span
+          >
         </div>
-        <div class="tip-item">
-          <span class="tip-icon">🎭</span>
-          <span class="tip-text">多种 Agent 角色</span>
+        <div
+          class="flex flex-col items-center gap-2 px-6 py-4 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-[var(--radius-md)] transition-all duration-300 hover:border-[var(--color-primary)] hover:-translate-y-0.5"
+        >
+          <span class="text-2xl">🎭</span>
+          <span
+            class="font-mono text-[11px] text-[var(--text-secondary)] tracking-wide"
+            >多种 Agent 角色</span
+          >
         </div>
-        <div class="tip-item">
-          <span class="tip-icon">🧠</span>
-          <span class="tip-text">智能记忆系统</span>
+        <div
+          class="flex flex-col items-center gap-2 px-6 py-4 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-[var(--radius-md)] transition-all duration-300 hover:border-[var(--color-primary)] hover:-translate-y-0.5"
+        >
+          <span class="text-2xl">🧠</span>
+          <span
+            class="font-mono text-[11px] text-[var(--text-secondary)] tracking-wide"
+            >智能记忆系统</span
+          >
         </div>
       </div>
     </div>
 
     <!-- Messages -->
-    <div v-else class="messages-container">
+    <div v-else class="flex flex-col">
       <template
         v-for="(message, index) in chatStore.messages"
         :key="message.id"
@@ -122,115 +150,3 @@ onUnmounted(() => {
     </div>
   </div>
 </template>
-
-<style scoped>
-.message-list {
-  height: 100%;
-  overflow-y: auto;
-  padding: 24px;
-}
-
-/* Empty State */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  text-align: center;
-  padding: 40px;
-}
-
-.empty-visual {
-  position: relative;
-  margin-bottom: 32px;
-}
-
-.empty-icon-wrapper {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  background: linear-gradient(
-    135deg,
-    var(--bg-tertiary) 0%,
-    var(--bg-secondary) 100%
-  );
-  border: 1px solid var(--border-subtle);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
-  position: relative;
-  z-index: 1;
-}
-
-.empty-glow {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 140px;
-  height: 140px;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgba(0, 245, 212, 0.1) 0%,
-    transparent 70%
-  );
-  animation: pulse-glow 3s ease-in-out infinite;
-}
-
-.empty-title {
-  font-family: var(--font-display);
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-  letter-spacing: -0.5px;
-}
-
-.empty-subtitle {
-  font-size: 15px;
-  color: var(--text-secondary);
-  margin-bottom: 40px;
-}
-
-.quick-tips {
-  display: flex;
-  gap: 24px;
-}
-
-.tip-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 16px 24px;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  transition: all var(--transition-smooth);
-}
-
-.tip-item:hover {
-  border-color: var(--color-primary);
-  transform: translateY(-2px);
-}
-
-.tip-icon {
-  font-size: 24px;
-}
-
-.tip-text {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-secondary);
-  letter-spacing: 0.5px;
-}
-
-/* Messages Container */
-.messages-container {
-  display: flex;
-  flex-direction: column;
-}
-</style>

@@ -80,14 +80,24 @@ async function handleDelete(agentId: string) {
 </script>
 
 <template>
-  <div class="agent-editor">
+  <div>
     <!-- Header -->
-    <div class="editor-header">
-      <div class="header-info">
-        <span class="label-mono">Agents</span>
-        <h3>智能助手</h3>
+    <div
+      class="flex items-center justify-between mb-6 pb-4 border-b border-[var(--border-color)]"
+    >
+      <div class="flex flex-col gap-1">
+        <span
+          class="font-mono text-[11px] tracking-wider uppercase text-[var(--text-muted)]"
+          >Agents</span
+        >
+        <h3 class="text-lg font-semibold text-[var(--text-primary)]">
+          智能助手
+        </h3>
       </div>
-      <button class="create-btn" @click="openCreateModal">
+      <button
+        class="flex items-center gap-2 px-4 py-2.5 bg-[var(--color-primary)] border-none rounded-[var(--radius-sm)] text-white font-mono text-[13px] font-medium cursor-pointer transition-all duration-150 hover:bg-[var(--color-primary-hover)]"
+        @click="openCreateModal"
+      >
         <NIcon :component="AddOutline" :size="18" />
         <span>创建</span>
       </button>
@@ -95,39 +105,56 @@ async function handleDelete(agentId: string) {
 
     <!-- Agent List -->
     <NSpin :show="agentStore.isLoading">
-      <div class="agent-list">
+      <div class="flex flex-col gap-4">
         <div
           v-for="(agent, index) in agentStore.agents"
           :key="agent.id"
-          class="agent-card"
+          class="flex gap-4 p-5 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl transition-all duration-150 opacity-0 animate-[fadeInUp_0.3s_ease-out_forwards] hover:border-[var(--color-primary)] hover:shadow-[var(--shadow-primary)] group"
           :style="{ animationDelay: `${index * 0.08}s` }"
         >
-          <div class="agent-icon">
+          <div
+            class="w-12 h-12 flex items-center justify-center bg-[var(--color-primary-light)] border border-[var(--color-primary)] rounded-[var(--radius-md)] text-[var(--color-primary)] shrink-0"
+          >
             <NIcon :component="SparklesOutline" :size="22" />
           </div>
-          <div class="agent-info">
-            <div class="agent-name">
+          <div class="flex-1 min-w-0">
+            <div
+              class="flex items-center gap-2.5 text-base font-semibold text-[var(--text-primary)] mb-1.5"
+            >
               {{ agent.name }}
-              <span v-if="agent.is_builtin" class="builtin-badge">内置</span>
+              <span
+                v-if="agent.is_builtin"
+                class="px-2 py-0.5 bg-[rgba(139,92,246,0.1)] border border-[rgba(139,92,246,0.3)] rounded font-mono text-[10px] text-purple-500 tracking-wide"
+                >内置</span
+              >
             </div>
-            <div class="agent-desc">{{ agent.description }}</div>
-            <div class="agent-traits">
+            <div
+              class="text-[13px] text-[var(--text-secondary)] leading-relaxed mb-2.5"
+            >
+              {{ agent.description }}
+            </div>
+            <div class="flex flex-wrap gap-1.5">
               <span
                 v-for="trait in agent.traits"
                 :key="trait"
-                class="trait-tag"
+                class="px-2.5 py-1 bg-[var(--color-primary-light)] border border-[rgba(59,130,246,0.2)] rounded font-mono text-[11px] text-[var(--color-primary)] tracking-wide"
               >
                 {{ trait }}
               </span>
             </div>
           </div>
-          <div class="agent-actions">
-            <button class="action-btn" @click="openEditModal(agent.id)">
+          <div
+            class="flex flex-col gap-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+          >
+            <button
+              class="w-9 h-9 flex items-center justify-center bg-transparent border border-[var(--border-color)] rounded-[var(--radius-sm)] text-[var(--text-muted)] cursor-pointer transition-all duration-150 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+              @click="openEditModal(agent.id)"
+            >
               <NIcon :component="CreateOutline" :size="18" />
             </button>
             <button
               v-if="!agent.is_builtin"
-              class="action-btn delete"
+              class="w-9 h-9 flex items-center justify-center bg-transparent border border-[var(--border-color)] rounded-[var(--radius-sm)] text-[var(--text-muted)] cursor-pointer transition-all duration-150 hover:border-[var(--color-error)] hover:text-[var(--color-error)] hover:bg-[rgba(239,68,68,0.1)]"
               @click="handleDelete(agent.id)"
             >
               <NIcon :component="TrashOutline" :size="18" />
@@ -135,12 +162,19 @@ async function handleDelete(agentId: string) {
           </div>
         </div>
 
-        <div v-if="agentStore.agents.length === 0" class="empty-state">
-          <div class="empty-icon">
+        <div
+          v-if="agentStore.agents.length === 0"
+          class="flex flex-col items-center py-16 px-5 text-center"
+        >
+          <div
+            class="w-20 h-20 flex items-center justify-center bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-2xl text-[var(--text-muted)] mb-5"
+          >
             <NIcon :component="SparklesOutline" :size="40" />
           </div>
-          <p class="empty-text">暂无 Agent</p>
-          <p class="empty-hint">点击上方按钮创建</p>
+          <p class="text-base font-medium text-[var(--text-secondary)] mb-2">
+            暂无 Agent
+          </p>
+          <p class="text-[13px] text-[var(--text-muted)]">点击上方按钮创建</p>
         </div>
       </div>
     </NSpin>
@@ -179,9 +213,17 @@ async function handleDelete(agentId: string) {
         </NFormItem>
       </NForm>
       <template #footer>
-        <div class="modal-footer">
-          <button class="btn-cancel" @click="showModal = false">取消</button>
-          <button class="btn-submit" @click="handleSubmit">
+        <div class="flex justify-end gap-3">
+          <button
+            class="px-6 py-3 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-[var(--radius-sm)] font-mono text-[13px] font-medium text-[var(--text-secondary)] cursor-pointer transition-all duration-150 hover:border-[var(--text-secondary)]"
+            @click="showModal = false"
+          >
+            取消
+          </button>
+          <button
+            class="px-6 py-3 bg-[var(--color-primary)] border-none rounded-[var(--radius-sm)] font-mono text-[13px] font-medium text-white cursor-pointer transition-all duration-150 hover:bg-[var(--color-primary-hover)]"
+            @click="handleSubmit"
+          >
             {{ editingAgentId ? "保存" : "创建" }}
           </button>
         </div>
@@ -189,244 +231,3 @@ async function handleDelete(agentId: string) {
     </NModal>
   </div>
 </template>
-
-<style scoped>
-.agent-editor {
-  padding: 0;
-}
-
-.editor-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.header-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.header-info h3 {
-  font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.create-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 18px;
-  background: var(--color-primary);
-  border: none;
-  border-radius: var(--radius-sm);
-  color: var(--text-inverse);
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.create-btn:hover {
-  background: var(--color-primary-hover);
-}
-
-.agent-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.agent-card {
-  display: flex;
-  gap: 16px;
-  padding: 20px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  transition: all var(--transition-fast);
-  opacity: 0;
-  animation: fadeInUp 0.3s ease-out forwards;
-}
-
-.agent-card:hover {
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-primary);
-}
-
-.agent-icon {
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-primary-light);
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius-md);
-  color: var(--color-primary);
-  flex-shrink: 0;
-}
-
-.agent-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.agent-name {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 6px;
-}
-
-.builtin-badge {
-  padding: 3px 8px;
-  background: rgba(139, 92, 246, 0.1);
-  border: 1px solid rgba(139, 92, 246, 0.3);
-  border-radius: 4px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: #8b5cf6;
-  letter-spacing: 0.5px;
-}
-
-.agent-desc {
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-  margin-bottom: 10px;
-}
-
-.agent-traits {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.trait-tag {
-  padding: 4px 10px;
-  background: var(--color-primary-light);
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  border-radius: 4px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--color-primary);
-  letter-spacing: 0.3px;
-}
-
-.agent-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  opacity: 0;
-  transition: opacity var(--transition-fast);
-}
-
-.agent-card:hover .agent-actions {
-  opacity: 1;
-}
-
-.action-btn {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.action-btn:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-}
-
-.action-btn.delete:hover {
-  border-color: var(--color-error);
-  color: var(--color-error);
-  background: rgba(239, 68, 68, 0.1);
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 60px 20px;
-  text-align: center;
-}
-
-.empty-icon {
-  width: 80px;
-  height: 80px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  color: var(--text-muted);
-  margin-bottom: 20px;
-}
-
-.empty-text {
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  margin-bottom: 8px;
-}
-
-.empty-hint {
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
-.btn-cancel,
-.btn-submit {
-  padding: 12px 24px;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-cancel {
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-}
-
-.btn-cancel:hover {
-  border-color: var(--text-secondary);
-}
-
-.btn-submit {
-  background: var(--color-primary);
-  border: none;
-  color: var(--text-inverse);
-}
-
-.btn-submit:hover {
-  background: var(--color-primary-hover);
-}
-</style>

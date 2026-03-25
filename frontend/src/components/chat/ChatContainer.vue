@@ -7,100 +7,48 @@ import RuleEditor from "@/components/rules/RuleEditor.vue";
 </script>
 
 <template>
-  <div class="chat-container">
+  <div class="flex h-full p-4 gap-4">
     <!-- 左侧会话列表 -->
-    <aside class="chat-sidebar glass-card">
+    <aside
+      class="w-[280px] shrink-0 p-0 overflow-hidden relative bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl shadow-sm hover:border-[var(--color-primary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300"
+    >
       <SessionList />
     </aside>
 
     <!-- 主聊天区域 -->
-    <main class="chat-main">
+    <main class="flex-1 flex flex-col min-w-0 gap-4">
       <!-- 顶部工具栏 -->
-      <header class="chat-toolbar glass-card">
-        <div class="toolbar-left">
+      <header
+        class="flex items-center justify-between px-6 py-4 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl shadow-sm hover:border-[var(--color-primary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300"
+      >
+        <div class="flex items-center gap-4">
           <AgentSelector />
         </div>
-        <div class="toolbar-right">
+        <div class="flex items-center gap-4">
           <RuleEditor />
-          <div class="status-indicator">
-            <div class="status-online" />
-            <span class="status-text">在线</span>
+          <div class="flex items-center gap-2">
+            <div
+              class="w-2 h-2 bg-[var(--color-secondary)] rounded-full animate-pulse"
+            ></div>
+            <span
+              class="font-mono text-[11px] tracking-wider uppercase text-[var(--text-muted)]"
+              >在线</span
+            >
           </div>
         </div>
       </header>
 
       <!-- 消息列表 -->
-      <div class="messages-wrapper glass-card">
+      <div
+        class="flex-1 overflow-hidden relative bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl shadow-sm hover:border-[var(--color-primary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300"
+      >
         <MessageList />
       </div>
 
       <!-- 输入区域 -->
-      <div class="input-wrapper">
+      <div class="relative">
         <MessageInput />
       </div>
     </main>
   </div>
 </template>
-
-<style scoped>
-.chat-container {
-  display: flex;
-  height: 100%;
-  padding: 16px;
-  gap: 16px;
-}
-
-.chat-sidebar {
-  width: 280px;
-  flex-shrink: 0;
-  padding: 0;
-  overflow: hidden;
-  position: relative;
-}
-
-.chat-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  gap: 16px;
-}
-
-.chat-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 24px;
-}
-
-.toolbar-left,
-.toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.status-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.status-text {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.messages-wrapper {
-  flex: 1;
-  overflow: hidden;
-  position: relative;
-}
-
-.input-wrapper {
-  position: relative;
-}
-</style>

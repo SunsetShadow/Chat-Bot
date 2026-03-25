@@ -38,6 +38,7 @@ class Session(BaseModel):
     id: str = Field(default_factory=generate_id)
     title: str = "New Chat"
     messages: list[Message] = Field(default_factory=list)
+    is_pinned: bool = False
     created_at: datetime = Field(default_factory=get_current_timestamp)
     updated_at: datetime = Field(default_factory=get_current_timestamp)
 
@@ -58,6 +59,7 @@ class SessionResponse(BaseModel):
 
     id: str
     title: str
+    is_pinned: bool = False
     created_at: datetime
     updated_at: datetime
     message_count: int = 0
@@ -80,6 +82,10 @@ class ChatCompletionRequest(BaseModel):
     model: Optional[str] = Field(None, description="指定模型，不传则使用默认模型")
     agent_id: Optional[str] = Field(None, description="Agent ID，用于设定 AI 角色")
     rule_ids: Optional[list[str]] = Field(None, description="启用的规则 ID 列表")
+    # 新增参数
+    attachment_ids: Optional[list[str]] = Field(None, description="附件 ID 列表")
+    web_search: bool = Field(False, description="是否启用联网搜索")
+    thinking: bool = Field(False, description="是否显示思考过程")
 
 
 class ChatCompletionResponse(BaseModel):

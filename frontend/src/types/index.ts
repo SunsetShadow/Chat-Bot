@@ -1,9 +1,21 @@
 // 消息相关类型
+export interface Attachment {
+  id: string;
+  filename: string;
+  type: "image" | "document";
+  url: string;
+  size?: number;
+}
+
 export interface Message {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
   created_at: string;
+  // 扩展字段
+  attachments?: Attachment[];
+  thinking_process?: string;
+  web_search_used?: boolean;
 }
 
 // 会话相关类型
@@ -18,6 +30,7 @@ export interface Session {
 export interface SessionResponse {
   id: string;
   title: string;
+  is_pinned: boolean;
   created_at: string;
   updated_at: string;
   message_count: number;
@@ -121,6 +134,10 @@ export interface ChatCompletionRequest {
   model?: string;
   agent_id?: string;
   rule_ids?: string[];
+  // 新增参数
+  attachment_ids?: string[];
+  web_search?: boolean;
+  thinking?: boolean;
 }
 
 export interface ChatCompletionResponse {

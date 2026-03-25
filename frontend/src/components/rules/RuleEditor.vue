@@ -60,40 +60,56 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="rule-editor">
+  <div>
     <NPopover trigger="click" placement="bottom-end" :width="380">
       <template #trigger>
-        <button class="rule-trigger">
+        <button
+          class="flex items-center gap-2 px-4 py-2.5 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-[var(--radius-sm)] text-[var(--text-secondary)] font-mono text-[13px] cursor-pointer transition-all duration-150 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+        >
           <NIcon :component="SettingsOutline" :size="18" />
           <span>规则</span>
-          <span class="rule-count" v-if="enabledCount > 0">{{
-            enabledCount
-          }}</span>
+          <span
+            v-if="enabledCount > 0"
+            class="px-1.5 py-0.5 bg-[var(--color-primary)] rounded-[10px] text-white text-[11px] font-semibold"
+          >
+            {{ enabledCount }}
+          </span>
         </button>
       </template>
 
-      <div class="rule-popover">
-        <div class="popover-header">
-          <div class="header-info">
-            <span class="label-mono">Rules</span>
-            <span class="header-text">规则设置</span>
+      <div class="p-1">
+        <div
+          class="flex items-center justify-between pb-4 mb-4 border-b border-[var(--border-color)]"
+        >
+          <div class="flex flex-col gap-0.5">
+            <span
+              class="font-mono text-[11px] tracking-wider uppercase text-[var(--text-muted)]"
+              >Rules</span
+            >
+            <span class="text-[15px] font-medium text-[var(--text-primary)]"
+              >规则设置</span
+            >
           </div>
-          <button class="add-btn" @click="openCreateModal">
+          <button
+            class="w-8 h-8 flex items-center justify-center bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-[var(--radius-sm)] text-[var(--text-secondary)] cursor-pointer transition-all duration-150 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+            @click="openCreateModal"
+          >
             <NIcon :component="AddOutline" :size="16" />
           </button>
         </div>
 
         <NSpin :show="rulesStore.isLoading">
-          <div class="rule-list">
+          <div class="flex flex-col gap-2 max-h-[320px] overflow-y-auto">
             <div
-              v-for="rule in rulesStore.rules"
+              v-for="(rule, index) in rulesStore.rules"
               :key="rule.id"
-              class="rule-wrapper"
+              class="opacity-0 animate-[fadeInUp_0.3s_ease-out_forwards]"
+              :style="{ animationDelay: `${index * 0.05}s` }"
             >
               <RuleItem :rule="rule" @toggle="handleToggle" />
             </div>
-            <div v-if="rulesStore.rules.length === 0" class="empty-state">
-              <span class="empty-text">暂无规则</span>
+            <div v-if="rulesStore.rules.length === 0" class="py-8 text-center">
+              <span class="text-sm text-[var(--text-muted)]">暂无规则</span>
             </div>
           </div>
         </NSpin>
@@ -127,9 +143,17 @@ async function handleSubmit() {
         </NFormItem>
       </NForm>
       <template #footer>
-        <div class="modal-footer">
-          <button class="btn-cancel" @click="showModal = false">取消</button>
-          <button class="btn-submit" @click="handleSubmit">
+        <div class="flex justify-end gap-3">
+          <button
+            class="px-5 py-2.5 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-[var(--radius-sm)] font-mono text-[13px] font-medium text-[var(--text-secondary)] cursor-pointer transition-all duration-150 hover:border-[var(--text-secondary)]"
+            @click="showModal = false"
+          >
+            取消
+          </button>
+          <button
+            class="px-5 py-2.5 bg-[var(--color-primary)] border-none rounded-[var(--radius-sm)] font-mono text-[13px] font-medium text-white cursor-pointer transition-all duration-150 hover:bg-[var(--color-primary-hover)]"
+            @click="handleSubmit"
+          >
             {{ editingRuleId ? "保存" : "创建" }}
           </button>
         </div>
@@ -137,138 +161,3 @@ async function handleSubmit() {
     </NModal>
   </div>
 </template>
-
-<style scoped>
-.rule-trigger {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: 13px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.rule-trigger:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-}
-
-.rule-count {
-  padding: 2px 6px;
-  background: var(--color-primary);
-  border-radius: 10px;
-  color: var(--text-inverse);
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.rule-popover {
-  padding: 4px;
-}
-
-.popover-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 16px;
-  margin-bottom: 16px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.header-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.header-text {
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.add-btn {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.add-btn:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-}
-
-.rule-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 320px;
-  overflow-y: auto;
-}
-
-.rule-wrapper {
-  opacity: 0;
-  animation: fadeInUp 0.3s ease-out forwards;
-}
-
-.empty-state {
-  padding: 32px;
-  text-align: center;
-}
-
-.empty-text {
-  font-size: 14px;
-  color: var(--text-muted);
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
-.btn-cancel,
-.btn-submit {
-  padding: 10px 20px;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.btn-cancel {
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-}
-
-.btn-cancel:hover {
-  border-color: var(--text-secondary);
-}
-
-.btn-submit {
-  background: var(--color-primary);
-  border: none;
-  color: var(--text-inverse);
-}
-
-.btn-submit:hover {
-  background: var(--color-primary-hover);
-}
-</style>

@@ -12,20 +12,35 @@ function goToSettings() {
 </script>
 
 <template>
-  <header class="app-header">
-    <div class="header-left">
-      <div class="logo">
-        <NIcon :component="ChatbubblesOutline" size="24" class="logo-icon" />
-        <span class="logo-text">Chat Bot</span>
+  <header
+    class="flex items-center justify-between px-4 py-3 bg-[var(--bg-secondary)] border-b border-[var(--border-color)]"
+  >
+    <div class="flex items-center">
+      <div class="flex items-center gap-2">
+        <NIcon
+          :component="ChatbubblesOutline"
+          size="24"
+          class="text-[var(--color-primary)]"
+        />
+        <span class="text-base font-semibold text-[var(--text-primary)]"
+          >Chat Bot</span
+        >
       </div>
     </div>
-    <div class="header-center">
-      <span v-if="agentStore.currentAgent" class="current-agent">
+    <div class="flex items-center">
+      <span
+        v-if="agentStore.currentAgent"
+        class="text-sm text-[var(--text-secondary)] px-3 py-1 bg-[var(--bg-tertiary)] rounded-[var(--radius-sm)]"
+      >
         {{ agentStore.currentAgent.name }}
       </span>
     </div>
-    <div class="header-right">
-      <NButton text class="settings-btn" @click="goToSettings">
+    <div class="flex items-center">
+      <NButton
+        text
+        class="text-[var(--text-secondary)] hover:text-[var(--color-primary)]"
+        @click="goToSettings"
+      >
         <template #icon>
           <NIcon :component="SettingsOutline" size="20" />
         </template>
@@ -33,53 +48,3 @@ function goToSettings() {
     </div>
   </header>
 </template>
-
-<style scoped>
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
-}
-
-.header-left,
-.header-center,
-.header-right {
-  display: flex;
-  align-items: center;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.logo-icon {
-  color: var(--color-primary);
-}
-
-.logo-text {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.current-agent {
-  font-size: 14px;
-  color: var(--text-secondary);
-  padding: 4px 12px;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-sm);
-}
-
-.settings-btn {
-  color: var(--text-secondary);
-}
-
-.settings-btn:hover {
-  color: var(--color-primary);
-}
-</style>

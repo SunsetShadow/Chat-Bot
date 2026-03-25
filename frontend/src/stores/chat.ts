@@ -6,6 +6,7 @@ import {
   getSessions as apiGetSessions,
   getSession as apiGetSession,
   deleteSession as apiDeleteSession,
+  pinSession as apiPinSession,
 } from "@/api/chat";
 
 export const useChatStore = defineStore("chat", () => {
@@ -14,6 +15,7 @@ export const useChatStore = defineStore("chat", () => {
   const currentSession = ref<SessionDetailResponse | null>(null);
   const messages = ref<Message[]>([]);
   const isLoading = ref(false);
+  const isSessionLoading = ref(false); // 新增：会话切换加载状态
   const isStreaming = ref(false);
   const currentStreamingContent = ref("");
   const currentStreamingMessageId = ref<string | null>(null);
@@ -56,7 +58,7 @@ export const useChatStore = defineStore("chat", () => {
   }
 
   async function selectSession(sessionId: string) {
-    isLoading.value = true;
+    isSessionLoading.value = true;
     error.value = null;
     try {
       const session = await apiGetSession(sessionId);
@@ -67,7 +69,7 @@ export const useChatStore = defineStore("chat", () => {
       error.value = e instanceof Error ? e.message : "获取会话详情失败";
       throw e;
     } finally {
-      isLoading.value = false;
+      isSessionLoading.value = false;
     }
   }
 
@@ -143,11 +145,34 @@ export const useChatStore = defineStore("chat", () => {
       currentSession.value = {
         id: sessionId,
         title: "New Chat",
+        is_pinned: false,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         message_count: 0,
         messages: [],
       };
+    }
+  }
+
+  /**
+   * 切换会话置顶状态
+   */
+  async function pinSession(sessionId: string, isPinned: boolean) {
+    try {
+      const updatedSession = await apiPinSession(sessionId, isPinned);
+      const index = sessions.value.findIndex((s) => s.id === sessionId);
+      if (index !== -1) {
+        sessions.value[index] = updatedSession;
+      }
+      if (currentSession.value?.id === sessionId) {
+        currentSession.value = {
+          ...currentSession.value,
+          is_pinned: isPinned,
+        };
+      }
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : "切换置顶状态失败";
+      throw e;
     }
   }
 
@@ -157,6 +182,7 @@ export const useChatStore = defineStore("chat", () => {
     currentSession,
     messages,
     isLoading,
+    isSessionLoading,
     isStreaming,
     currentStreamingContent,
     currentStreamingMessageId,
@@ -170,6 +196,7 @@ export const useChatStore = defineStore("chat", () => {
     createSession,
     selectSession,
     removeSession,
+    pinSession,
     addMessage,
     updateMessage,
     startStreaming,

@@ -1,0 +1,69 @@
+{
+  "changeId": "add-session-pin-feature",
+  "tasks": [
+    {
+      "number": 1,
+      "category": "阶段 1：后端模型",
+      "task": "Session 模型扩展",
+      "steps": [
+        { "step": "Session 模型添加 is_pinned 字段", "completed": true },
+        { "step": "SessionResponse 添加 is_pinned 字段", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 2,
+      "category": "阶段 2：后端 API",
+      "task": "置顶 API 实现",
+      "steps": [
+        { "step": "ChatService 添加 toggle_pin 方法", "completed": true },
+        { "step": "新增 PUT /sessions/{id}/pin 端点", "completed": true },
+        { "step": "list_sessions 排序：置顶优先", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 3,
+      "category": "阶段 3：前端类型",
+      "task": "类型定义更新",
+      "steps": [
+        { "step": "types/index.ts SessionResponse 添加 is_pinned", "completed": true },
+        { "step": "api/chat.ts 添加 pinSession 函数", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 4,
+      "category": "阶段 4：前端 Store",
+      "task": "状态管理更新",
+      "steps": [
+        { "step": "chat.ts 添加 pinSession 方法", "completed": true },
+        { "step": "sessions 计算属性：置顶排序", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 5,
+      "category": "阶段 5：前端 UI",
+      "task": "SessionList 组件更新",
+      "steps": [
+        { "step": "添加置顶按钮和图标", "completed": true },
+        { "step": "添加删除确认对话框", "completed": true },
+        { "step": "置顶会话显示置顶标识", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 6,
+      "category": "阶段 6：验证",
+      "task": "功能验证",
+      "steps": [
+        { "step": "测试置顶/取消置顶功能", "completed": true },
+        { "step": "测试置顶会话排序正确", "completed": true },
+        { "step": "测试删除确认功能", "completed": true },
+        { "step": "pnpm build 验证", "completed": true }
+      ],
+      "passes": true
+    }
+  ]
+}

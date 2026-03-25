@@ -1,0 +1,85 @@
+{
+  "changeId": "migrate-to-tailwind-css",
+  "tasks": [
+    {
+      "number": 1,
+      "category": "阶段 1：准备",
+      "task": "分析现有 CSS 结构",
+      "steps": [
+        { "step": "审计 main.css 中的自定义类，按组件分类", "completed": true },
+        { "step": "识别可复用的 Tailwind 类模式", "completed": true },
+        { "step": "创建 Tailwind 类映射表（自定义类 → Tailwind 类）", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 2,
+      "category": "阶段 2：精简 main.css",
+      "task": "清理 main.css，保留必要配置",
+      "steps": [
+        { "step": "保留 CSS 变量定义（:root）", "completed": true },
+        { "step": "保留字体导入（@import url）", "completed": true },
+        { "step": "保留 @import \"tailwindcss\"", "completed": true },
+        { "step": "删除组件级自定义类", "completed": true },
+        { "step": "保留必要的全局样式（如滚动条、选中态）", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 3,
+      "category": "阶段 3：迁移组件样式",
+      "task": "迁移 common 组件",
+      "steps": [
+        { "step": "迁移 AppHeader.vue 样式", "completed": true },
+        { "step": "迁移 Sidebar.vue 样式", "completed": true },
+        { "step": "迁移其他 common 组件样式", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 4,
+      "category": "阶段 3：迁移组件样式",
+      "task": "迁移 chat 组件",
+      "steps": [
+        { "step": "迁移 ChatContainer.vue 样式", "completed": true },
+        { "step": "迁移 MessageItem.vue 样式", "completed": true },
+        { "step": "迁移 MessageInput.vue 样式", "completed": true },
+        { "step": "迁移 MessageList.vue 样式", "completed": true },
+        { "step": "迁移 SessionList.vue 样式", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 5,
+      "category": "阶段 3：迁移组件样式",
+      "task": "迁移 agent 组件",
+      "steps": [
+        { "step": "迁移 AgentSelector.vue 样式", "completed": true },
+        { "step": "迁移 AgentEditor.vue 样式", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 6,
+      "category": "阶段 3：迁移组件样式",
+      "task": "迁移 rules 组件",
+      "steps": [
+        { "step": "迁移 RuleEditor.vue 样式", "completed": true },
+        { "step": "迁移 RuleItem.vue 样式", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 7,
+      "category": "阶段 4：验证",
+      "task": "验证迁移结果",
+      "steps": [
+        { "step": "运行 pnpm build 确认无错误", "completed": true },
+        { "step": "运行 pnpm lint 确认无警告", "completed": true },
+        { "step": "视觉检查所有页面，确保样式一致", "completed": true },
+        { "step": "删除不再使用的 CSS 代码", "completed": true }
+      ],
+      "passes": true
+    }
+  ]
+}
