@@ -235,11 +235,11 @@ const darkThemeOverrides: GlobalThemeOverrides = {
 };
 
 const currentTheme = computed(() =>
-  themeStore.resolvedMode === "dark" ? darkTheme : null
+  themeStore.resolvedMode === "dark" ? darkTheme : null,
 );
 
 const currentThemeOverrides = computed(() =>
-  themeStore.resolvedMode === "dark" ? darkThemeOverrides : lightThemeOverrides
+  themeStore.resolvedMode === "dark" ? darkThemeOverrides : lightThemeOverrides,
 );
 </script>
 

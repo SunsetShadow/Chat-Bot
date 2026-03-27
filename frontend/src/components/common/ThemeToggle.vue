@@ -1,16 +1,12 @@
 <script setup lang="ts">
-import { computed, h } from "vue";
+import { computed, h, type Component } from "vue";
 import { NIcon } from "naive-ui";
 import { useThemeStore, type ThemeMode } from "@/stores/theme";
-import {
-  SunnyOutline,
-  MoonOutline,
-  DesktopOutline,
-} from "@vicons/ionicons5";
+import { SunnyOutline, MoonOutline, DesktopOutline } from "@vicons/ionicons5";
 
 const themeStore = useThemeStore();
 
-const options: { label: string; value: ThemeMode; icon: any }[] = [
+const options: { label: string; value: ThemeMode; icon: Component }[] = [
   { label: "亮色", value: "light", icon: SunnyOutline },
   { label: "暗色", value: "dark", icon: MoonOutline },
   { label: "跟随系统", value: "system", icon: DesktopOutline },
