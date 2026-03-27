@@ -3,19 +3,30 @@ import { useRouter } from "vue-router";
 import AgentEditor from "@/components/agent/AgentEditor.vue";
 import RuleEditor from "@/components/rules/RuleEditor.vue";
 import { useMemoryStore } from "@/stores/memory";
+import { useThemeStore, type ThemeMode } from "@/stores/theme";
 import { onMounted, ref } from "vue";
 import type { MemoryType } from "@/types";
 import {
   ArrowBackOutline,
   TrashOutline,
   SparklesOutline,
+  SunnyOutline,
+  MoonOutline,
+  DesktopOutline,
 } from "@vicons/ionicons5";
 
 const router = useRouter();
 const memoryStore = useMemoryStore();
+const themeStore = useThemeStore();
 
 const activeTab = ref("agents");
 const memoryTypeFilter = ref<MemoryType | undefined>(undefined);
+
+const themeOptions = [
+  { label: "亮色模式", value: "light" as ThemeMode },
+  { label: "暗色模式", value: "dark" as ThemeMode },
+  { label: "跟随系统", value: "system" as ThemeMode },
+];
 
 onMounted(() => {
   memoryStore.fetchMemories();
@@ -130,6 +141,59 @@ function goBack() {
                   </div>
                 </div>
               </NSpin>
+            </div>
+          </NTabPane>
+
+          <!-- Appearance Tab -->
+          <NTabPane name="appearance" tab="外观设置">
+            <div class="tab-content">
+              <div class="section-header">
+                <div class="section-title">
+                  <span class="label-mono">Appearance</span>
+                  <h3>主题设置</h3>
+                </div>
+              </div>
+              <div class="appearance-panel">
+                <div class="theme-option-group">
+                  <NRadioGroup
+                    :value="themeStore.mode"
+                    @update:value="(val: ThemeMode) => themeStore.setMode(val)"
+                  >
+                    <div class="theme-cards">
+                      <div
+                        v-for="option in themeOptions"
+                        :key="option.value"
+                        class="theme-card"
+                        :class="{ active: themeStore.mode === option.value }"
+                        @click="themeStore.setMode(option.value)"
+                      >
+                        <NRadio :value="option.value">
+                          <div class="theme-card-content">
+                            <div class="theme-icon">
+                              <NIcon
+                                v-if="option.value === 'light'"
+                                :component="SunnyOutline"
+                                :size="28"
+                              />
+                              <NIcon
+                                v-else-if="option.value === 'dark'"
+                                :component="MoonOutline"
+                                :size="28"
+                              />
+                              <NIcon
+                                v-else
+                                :component="DesktopOutline"
+                                :size="28"
+                              />
+                            </div>
+                            <span class="theme-label">{{ option.label }}</span>
+                          </div>
+                        </NRadio>
+                      </div>
+                    </div>
+                  </NRadioGroup>
+                </div>
+              </div>
             </div>
           </NTabPane>
         </NTabs>
@@ -368,5 +432,63 @@ function goBack() {
 .empty-hint {
   font-size: 13px;
   color: var(--text-muted);
+}
+
+/* Appearance Panel */
+.appearance-panel {
+  padding: 8px 0;
+}
+
+.theme-option-group {
+  margin-bottom: 24px;
+}
+
+.theme-cards {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.theme-card {
+  flex: 1;
+  min-width: 140px;
+  max-width: 200px;
+  padding: 20px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-smooth);
+}
+
+.theme-card:hover {
+  border-color: var(--border-hover);
+}
+
+.theme-card.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.theme-card-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.theme-icon {
+  color: var(--text-secondary);
+  transition: color var(--transition-fast);
+}
+
+.theme-card.active .theme-icon {
+  color: var(--color-primary);
+}
+
+.theme-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
 }
 </style>
