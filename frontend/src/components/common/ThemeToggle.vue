@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, h, type Component } from "vue";
-import { NIcon, NDropdown, NButton } from "naive-ui";
+import { type Component } from "vue";
+import { NButtonGroup, NButton, NIcon } from "naive-ui";
 import { useThemeStore, type ThemeMode } from "@/stores/theme";
 import { SunnyOutline, MoonOutline, DesktopOutline } from "@vicons/ionicons5";
 
@@ -9,56 +9,43 @@ const themeStore = useThemeStore();
 const options: { label: string; value: ThemeMode; icon: Component }[] = [
   { label: "亮色", value: "light", icon: SunnyOutline },
   { label: "暗色", value: "dark", icon: MoonOutline },
-  { label: "跟随系统", value: "system", icon: DesktopOutline },
+  { label: "系统", value: "system", icon: DesktopOutline },
 ];
 
-const currentIcon = computed(() => {
-  if (themeStore.mode === "system") {
-    return DesktopOutline;
-  }
-  return themeStore.resolvedMode === "dark" ? MoonOutline : SunnyOutline;
-});
-
-function handleSelect(key: ThemeMode) {
-  themeStore.setMode(key);
+function isActive(mode: ThemeMode): boolean {
+  return themeStore.mode === mode;
 }
 </script>
 
 <template>
-  <NDropdown
-    trigger="click"
-    :options="
-      options.map((opt) => ({
-        label: opt.label,
-        key: opt.value,
-        icon: () => h(NIcon, { component: opt.icon, size: 16 }),
-      }))
-    "
-    @select="handleSelect"
-  >
+  <NButtonGroup size="small" class="theme-toggle-group">
     <NButton
-      text
-      class="theme-toggle-btn"
-      :class="{ 'is-dark': themeStore.resolvedMode === 'dark' }"
+      v-for="opt in options"
+      :key="opt.value"
+      :type="isActive(opt.value) ? 'primary' : 'default'"
+      :class="{ 'is-active': isActive(opt.value) }"
+      @click="themeStore.setMode(opt.value)"
     >
       <template #icon>
-        <NIcon :component="currentIcon" size="20" />
+        <NIcon :component="opt.icon" size="16" />
       </template>
+      {{ opt.label }}
     </NButton>
-  </NDropdown>
+  </NButtonGroup>
 </template>
 
 <style scoped>
-.theme-toggle-btn {
-  color: var(--text-secondary);
-  transition: all var(--transition-fast);
+.theme-toggle-group {
+  --n-button-color: var(--bg-tertiary);
+  --n-button-text-color: var(--text-secondary);
 }
 
-.theme-toggle-btn:hover {
-  color: var(--color-primary);
+.theme-toggle-group :deep(.n-button) {
+  font-size: 12px;
+  padding: 0 10px;
 }
 
-.theme-toggle-btn.is-dark {
-  color: var(--neon-cyan);
+.theme-toggle-group :deep(.n-button.is-active) {
+  font-weight: 500;
 }
 </style>

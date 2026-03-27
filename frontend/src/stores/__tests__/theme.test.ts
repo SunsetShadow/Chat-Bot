@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { setActivePinia, createPinia } from "pinia";
-import { useThemeStore, type ThemeMode } from "../theme";
+import { useThemeStore } from "../theme";
 
 describe("Theme Store", () => {
   beforeEach(() => {
@@ -131,7 +131,7 @@ describe("Theme Store", () => {
 
       expect(mockAddEventListener).toHaveBeenCalledWith(
         "change",
-        expect.any(Function)
+        expect.any(Function),
       );
     });
   });
