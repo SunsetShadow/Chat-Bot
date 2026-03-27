@@ -9,7 +9,13 @@ import { generateId } from "@/utils/id";
 
 /** 发送消息选项 */
 export interface SendMessageOptions {
-  attachments?: Array<{ id: string; filename: string; type: "image" | "document"; url: string; size?: number }>;
+  attachments?: Array<{
+    id: string;
+    filename: string;
+    type: "image" | "document";
+    url: string;
+    size?: number;
+  }>;
   webSearch?: boolean;
   thinking?: boolean;
 }
@@ -82,6 +88,8 @@ export function useChatStream() {
           // 使用后端返回的 session_id（如果是新会话）
           if (!chatStore.currentSessionId && data.session_id) {
             chatStore.setCurrentSessionId(data.session_id);
+            // 立即添加到会话列表，让用户在左侧看到新会话
+            chatStore.addSessionToList(data.session_id, message);
           }
         },
         onContentDelta: (data) => {
@@ -100,7 +108,9 @@ export function useChatStream() {
         onDone: () => {
           chatStore.stopStreaming();
           // 只在新建会话时刷新列表（currentSessionId 之前不存在于 sessions 中）
-          const isNewSession = !chatStore.sessions.some(s => s.id === chatStore.currentSessionId);
+          const isNewSession = !chatStore.sessions.some(
+            (s) => s.id === chatStore.currentSessionId,
+          );
           if (isNewSession) {
             chatStore.fetchSessions();
           }

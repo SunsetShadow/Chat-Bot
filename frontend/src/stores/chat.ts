@@ -155,6 +155,23 @@ export const useChatStore = defineStore("chat", () => {
   }
 
   /**
+   * 将新会话添加到列表中（用于立即显示在侧边栏）
+   */
+  function addSessionToList(sessionId: string, title?: string) {
+    const exists = sessions.value.some((s) => s.id === sessionId);
+    if (!exists) {
+      sessions.value.unshift({
+        id: sessionId,
+        title: title || "New Chat",
+        is_pinned: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        message_count: 1,
+      });
+    }
+  }
+
+  /**
    * 切换会话置顶状态
    */
   async function pinSession(sessionId: string, isPinned: boolean) {
@@ -205,5 +222,6 @@ export const useChatStore = defineStore("chat", () => {
     clearCurrentSession,
     clearError,
     setCurrentSessionId,
+    addSessionToList,
   };
 });
