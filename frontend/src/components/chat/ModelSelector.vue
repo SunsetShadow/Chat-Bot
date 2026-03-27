@@ -127,7 +127,11 @@ import { h } from "vue";
 // Load models on mount
 onMounted(async () => {
   if (modelStore.models.length === 0) {
-    await modelStore.fetchModels();
+    try {
+      await modelStore.fetchModels();
+    } catch {
+      // Silently fallback to default models in store
+    }
   }
 });
 </script>
