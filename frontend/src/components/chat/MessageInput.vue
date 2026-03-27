@@ -16,7 +16,8 @@ const emit = defineEmits<{
 }>();
 
 const { isStreaming, sendStreamMessage, cancelStream } = useChatStream();
-const { isUploading, attachments, uploadMultiple, remove, clear } = useFileUpload({ maxFiles: 5 });
+const { isUploading, attachments, uploadMultiple, remove, clear } =
+  useFileUpload({ maxFiles: 5 });
 
 const inputValue = ref("");
 const isFocused = ref(false);
@@ -26,7 +27,10 @@ const webSearchEnabled = ref(false);
 const thinkingEnabled = ref(false);
 
 const canSend = computed(
-  () => (inputValue.value.trim() || attachments.value.length > 0) && !isStreaming.value && !isUploading.value,
+  () =>
+    (inputValue.value.trim() || attachments.value.length > 0) &&
+    !isStreaming.value &&
+    !isUploading.value,
 );
 
 // 文件输入引用
@@ -85,7 +89,11 @@ function handleCancel() {
 <template>
   <div
     class="p-5 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl shadow-lg transition-all duration-300"
-    :class="isFocused ? 'border-[var(--color-primary)] shadow-[var(--shadow-primary)]' : ''"
+    :class="
+      isFocused
+        ? 'border-[var(--color-primary)] shadow-[var(--shadow-primary)]'
+        : ''
+    "
   >
     <!-- 附件预览区域 -->
     <div
@@ -114,7 +122,7 @@ function handleCancel() {
           class="w-14 h-14 rounded-xl border-2 border-[var(--border-color)] flex items-center justify-center bg-[var(--bg-tertiary)]"
         >
           <span class="font-mono text-[9px] font-bold text-[var(--text-muted)]">
-            {{ attachment.filename.split('.').pop()?.toUpperCase() }}
+            {{ attachment.filename.split(".").pop()?.toUpperCase() }}
           </span>
         </div>
         <!-- 删除按钮 -->
@@ -176,7 +184,9 @@ function handleCancel() {
     </div>
 
     <!-- 底部功能栏 -->
-    <div class="flex items-center justify-between mt-4 pt-4 border-t border-[var(--border-color)]">
+    <div
+      class="flex items-center justify-between mt-4 pt-4 border-t border-[var(--border-color)]"
+    >
       <!-- 左侧功能按钮 -->
       <div class="flex items-center gap-2">
         <!-- 附件上传 -->
@@ -191,7 +201,9 @@ function handleCancel() {
           @click="triggerFileUpload"
         >
           <NIcon :component="AttachOutline" :size="20" />
-          <span>{{ attachments.length > 0 ? `${attachments.length}/5` : '附件' }}</span>
+          <span>{{
+            attachments.length > 0 ? `${attachments.length}/5` : "附件"
+          }}</span>
         </button>
 
         <!-- 联网搜索 -->
@@ -231,8 +243,12 @@ function handleCancel() {
         >
           {{ inputValue.length }}
         </span>
-        <span class="flex items-center gap-1 text-[11px] text-[var(--text-muted)]">
-          <kbd class="px-1.5 py-0.5 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded text-[10px] font-mono">
+        <span
+          class="flex items-center gap-1 text-[11px] text-[var(--text-muted)]"
+        >
+          <kbd
+            class="px-1.5 py-0.5 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded text-[10px] font-mono"
+          >
             Enter
           </kbd>
           <span>发送</span>

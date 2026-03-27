@@ -26,6 +26,8 @@ declare module 'vue' {
     NInput: typeof import('naive-ui')['NInput']
     NModal: typeof import('naive-ui')['NModal']
     NPopover: typeof import('naive-ui')['NPopover']
+    NRadio: typeof import('naive-ui')['NRadio']
+    NRadioGroup: typeof import('naive-ui')['NRadioGroup']
     NScrollbar: typeof import('naive-ui')['NScrollbar']
     NSelect: typeof import('naive-ui')['NSelect']
     NSpin: typeof import('naive-ui')['NSpin']
@@ -38,5 +40,6 @@ declare module 'vue' {
     RuleEditor: typeof import('./components/rules/RuleEditor.vue')['default']
     RuleItem: typeof import('./components/rules/RuleItem.vue')['default']
     SessionList: typeof import('./components/chat/SessionList.vue')['default']
+    ThemeToggle: typeof import('./components/common/ThemeToggle.vue')['default']
   }
 }

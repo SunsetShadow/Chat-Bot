@@ -140,7 +140,9 @@ async function confirmDelete() {
             </div>
           </div>
           <!-- 操作按钮 -->
-          <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div
+            class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+          >
             <!-- 置顶按钮 -->
             <button
               class="p-1.5 border-none bg-transparent rounded-[var(--radius-sm)] cursor-pointer transition-all duration-150"
@@ -178,7 +180,10 @@ async function confirmDelete() {
       @negative-click="closeDeleteConfirm"
     >
       <p class="text-[var(--text-secondary)]">
-        热定要删除会话「{{ chatStore.sessions.find(s => s.id === sessionToDelete)?.title || '' }} 吳？
+        热定要删除会话「{{
+          chatStore.sessions.find((s) => s.id === sessionToDelete)?.title || ""
+        }}
+        吳？
       </p>
       <p class="text-xs text-[var(--text-muted)]">此操作无法撤销。</p>
     </NModal>

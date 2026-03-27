@@ -78,7 +78,9 @@ export function useFileUpload(options: FileUploadOptions = {}) {
   /**
    * 批量上传文件
    */
-  async function uploadMultiple(files: FileList | File[]): Promise<UploadResult[]> {
+  async function uploadMultiple(
+    files: FileList | File[],
+  ): Promise<UploadResult[]> {
     const results: UploadResult[] = [];
 
     for (const file of Array.from(files)) {
