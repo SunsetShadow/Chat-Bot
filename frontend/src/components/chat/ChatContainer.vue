@@ -4,6 +4,7 @@ import MessageList from "./MessageList.vue";
 import MessageInput from "./MessageInput.vue";
 import AgentSelector from "@/components/agent/AgentSelector.vue";
 import RuleEditor from "@/components/rules/RuleEditor.vue";
+import ThemeToggle from "@/components/common/ThemeToggle.vue";
 </script>
 
 <template>
@@ -26,6 +27,7 @@ import RuleEditor from "@/components/rules/RuleEditor.vue";
         </div>
         <div class="flex items-center gap-4">
           <RuleEditor />
+          <ThemeToggle />
           <div class="flex items-center gap-2">
             <div
               class="w-2 h-2 bg-[var(--color-secondary)] rounded-full animate-pulse"
