@@ -58,6 +58,64 @@
   --radius-lg: 16px;
   --radius-xl: 24px;
   --radius-full: 9999px;
+
+  /* Additional cyberpunk colors (for both themes) */
+  --neon-cyan: #00b4d8;
+  --neon-purple: #9b5de5;
+  --neon-pink: #f72585;
+  --neon-green: #06d6a0;
+  --border-subtle: rgba(0, 0, 0, 0.04);
+  --border-glow: rgba(59, 130, 246, 0.3);
+}
+
+/* === Dark Theme - Cyberpunk === */
+:root.dark {
+  /* Core Colors - Dark Cyberpunk Theme */
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-tertiary: #1a1a25;
+  --bg-hover: #252532;
+
+  /* Accent Colors - Neon */
+  --color-primary: #00f0ff;
+  --color-primary-hover: #33f3ff;
+  --color-primary-pressed: #00c4cc;
+  --color-primary-light: rgba(0, 240, 255, 0.1);
+
+  --color-secondary: #bf5af2;
+  --color-secondary-hover: #d07af5;
+
+  --color-accent: #ff2d92;
+  --color-warning: #ffb800;
+  --color-error: #ff453a;
+
+  /* Text Colors */
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-inverse: #0a0a0f;
+
+  /* Borders */
+  --border-color: rgba(191, 90, 242, 0.2);
+  --border-hover: rgba(191, 90, 242, 0.4);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+
+  /* Shadows - Neon glow effect */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 16px 32px rgba(0, 0, 0, 0.7);
+  --shadow-primary: 0 4px 20px rgba(0, 240, 255, 0.15);
+  --shadow-neon-cyan: 0 0 20px rgba(0, 240, 255, 0.3);
+  --shadow-neon-purple: 0 0 20px rgba(191, 90, 242, 0.3);
+
+  /* Additional cyberpunk colors */
+  --neon-cyan: #00f0ff;
+  --neon-purple: #bf5af2;
+  --neon-pink: #ff2d92;
+  --neon-green: #30d158;
+  --border-glow: rgba(0, 240, 255, 0.3);
 }
 
 /* === Global Reset (Tailwind preflight handles most) === */
