@@ -2,6 +2,8 @@
 import { ref, computed } from "vue";
 import { useChatStream } from "@/composables/useChatStream";
 import { useFileUpload } from "@/composables/useFileUpload";
+import { useModelStore } from "@/stores/model";
+import { useChatStore } from "@/stores/chat";
 import {
   SendOutline,
   StopOutline,
@@ -10,6 +12,7 @@ import {
   BulbOutline,
   CloseOutline,
 } from "@vicons/ionicons5";
+import ModelSelector from "./ModelSelector.vue";
 
 const emit = defineEmits<{
   send: [message: string];
@@ -18,6 +21,8 @@ const emit = defineEmits<{
 const { isStreaming, sendStreamMessage, cancelStream } = useChatStream();
 const { isUploading, attachments, uploadMultiple, remove, clear } =
   useFileUpload({ maxFiles: 5 });
+const modelStore = useModelStore();
+const chatStore = useChatStore();
 
 const inputValue = ref("");
 const isFocused = ref(false);
@@ -59,11 +64,17 @@ async function handleSend() {
   const message = inputValue.value.trim();
   inputValue.value = "";
 
+  // 获取当前选中的模型
+  const modelId = modelStore.getEffectiveModel(
+    chatStore.currentSessionId || undefined,
+  );
+
   try {
     await sendStreamMessage(message, {
       attachments: attachments.value,
       webSearch: webSearchEnabled.value,
       thinking: thinkingEnabled.value,
+      model: modelId || undefined,
     });
     emit("send", message);
     clear();
@@ -87,29 +98,21 @@ function handleCancel() {
 </script>
 
 <template>
-  <div
-    class="p-5 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl shadow-lg transition-all duration-300"
-    :class="
-      isFocused
-        ? 'border-[var(--color-primary)] shadow-[var(--shadow-primary)]'
-        : ''
-    "
-  >
+  <div class="message-input-container" :class="{ 'is-focused': isFocused }">
+    <!-- 模型选择器区域 -->
+    <div class="model-selector-bar">
+      <ModelSelector :session-id="chatStore.currentSessionId || undefined" />
+    </div>
+
     <!-- 附件预览区域 -->
-    <div
-      v-if="attachments.length > 0"
-      class="flex flex-wrap gap-2 mb-3 pb-3 border-b border-[var(--border-color)]"
-    >
+    <div v-if="attachments.length > 0" class="attachments-preview">
       <div
         v-for="attachment in attachments"
         :key="attachment.id"
-        class="relative group animate-in fade-in zoom-in duration-200"
+        class="attachment-item group animate-in fade-in zoom-in duration-200"
       >
         <!-- 图片预览 -->
-        <div
-          v-if="attachment.type === 'image'"
-          class="w-14 h-14 rounded-xl overflow-hidden border-2 border-[var(--border-color)] shadow-sm"
-        >
+        <div v-if="attachment.type === 'image'" class="attachment-image">
           <img
             :src="attachment.url"
             :alt="attachment.filename"
@@ -117,17 +120,14 @@ function handleCancel() {
           />
         </div>
         <!-- 文档预览 -->
-        <div
-          v-else
-          class="w-14 h-14 rounded-xl border-2 border-[var(--border-color)] flex items-center justify-center bg-[var(--bg-tertiary)]"
-        >
+        <div v-else class="attachment-document">
           <span class="font-mono text-[9px] font-bold text-[var(--text-muted)]">
             {{ attachment.filename.split(".").pop()?.toUpperCase() }}
           </span>
         </div>
         <!-- 删除按钮 -->
         <button
-          class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[var(--color-error)] text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-150 hover:scale-110 shadow-sm"
+          class="attachment-remove"
           @click="removeAttachment(attachment.id)"
         >
           <NIcon :component="CloseOutline" :size="12" />
@@ -136,7 +136,7 @@ function handleCancel() {
     </div>
 
     <!-- 主输入行 -->
-    <div class="flex items-center gap-3">
+    <div class="input-row">
       <input
         ref="fileInput"
         type="file"
@@ -147,13 +147,13 @@ function handleCancel() {
       />
 
       <!-- 输入框 -->
-      <div class="flex-1 relative">
+      <div class="input-wrapper flex-1 relative">
         <textarea
           v-model="inputValue"
           :disabled="isStreaming"
           placeholder="说点什么..."
           rows="2"
-          class="w-full min-h-[64px] max-h-40 px-5 py-4 bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-2xl text-[var(--text-primary)] text-[16px] leading-relaxed resize-none transition-all duration-200 placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--color-primary)] focus:bg-[var(--bg-secondary)] disabled:opacity-60 disabled:cursor-not-allowed"
+          class="main-textarea"
           @focus="isFocused = true"
           @blur="isFocused = false"
           @keydown="handleKeyDown"
@@ -163,19 +163,15 @@ function handleCancel() {
       <!-- 发送/停止按钮 -->
       <button
         v-if="isStreaming"
-        class="flex-shrink-0 w-14 h-14 flex items-center justify-center rounded-2xl bg-[rgba(239,68,68,0.15)] border border-[rgba(239,68,68,0.3)] text-[var(--color-error)] transition-all duration-150 hover:bg-[rgba(239,68,68,0.25)] hover:scale-105 active:scale-95"
+        class="send-button is-cancel"
         @click="handleCancel"
       >
         <NIcon :component="StopOutline" :size="22" />
       </button>
       <button
         v-else
-        class="flex-shrink-0 w-14 h-14 flex items-center justify-center rounded-2xl transition-all duration-200"
-        :class="
-          canSend
-            ? 'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] hover:scale-105 active:scale-95 shadow-md hover:shadow-lg'
-            : 'bg-[var(--bg-tertiary)] border border-[var(--border-color)] text-[var(--text-muted)]'
-        "
+        class="send-button"
+        :class="{ 'is-active': canSend }"
         :disabled="!canSend"
         @click="handleSend"
       >
@@ -184,19 +180,13 @@ function handleCancel() {
     </div>
 
     <!-- 底部功能栏 -->
-    <div
-      class="flex items-center justify-between mt-4 pt-4 border-t border-[var(--border-color)]"
-    >
+    <div class="bottom-bar">
       <!-- 左侧功能按钮 -->
-      <div class="flex items-center gap-2">
+      <div class="action-buttons">
         <!-- 附件上传 -->
         <button
-          class="h-10 px-4 flex items-center gap-2 rounded-xl text-[14px] font-semibold border transition-all duration-200"
-          :class="
-            attachments.length > 0
-              ? 'bg-[var(--color-primary-light)] border-[var(--color-primary)] text-[var(--color-primary)]'
-              : 'bg-transparent border-[var(--border-color)] text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]'
-          "
+          class="action-button"
+          :class="{ 'is-active': attachments.length > 0 }"
           :disabled="isStreaming"
           @click="triggerFileUpload"
         >
@@ -208,12 +198,8 @@ function handleCancel() {
 
         <!-- 联网搜索 -->
         <button
-          class="h-10 px-4 flex items-center gap-2 rounded-xl text-[14px] font-semibold border transition-all duration-200"
-          :class="
-            webSearchEnabled
-              ? 'bg-[var(--color-primary-light)] border-[var(--color-primary)] text-[var(--color-primary)]'
-              : 'bg-transparent border-[var(--border-color)] text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]'
-          "
+          class="action-button"
+          :class="{ 'is-active': webSearchEnabled }"
           @click="webSearchEnabled = !webSearchEnabled"
         >
           <NIcon :component="GlobeOutline" :size="20" />
@@ -222,12 +208,8 @@ function handleCancel() {
 
         <!-- 思考过程 -->
         <button
-          class="h-10 px-4 flex items-center gap-2 rounded-xl text-[14px] font-semibold border transition-all duration-200"
-          :class="
-            thinkingEnabled
-              ? 'bg-[var(--color-primary-light)] border-[var(--color-primary)] text-[var(--color-primary)]'
-              : 'bg-transparent border-[var(--border-color)] text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]'
-          "
+          class="action-button"
+          :class="{ 'is-active': thinkingEnabled }"
           @click="thinkingEnabled = !thinkingEnabled"
         >
           <NIcon :component="BulbOutline" :size="20" />
@@ -236,24 +218,256 @@ function handleCancel() {
       </div>
 
       <!-- 右侧提示 -->
-      <div class="flex items-center gap-2">
+      <div class="hints">
         <span
           v-if="inputValue.length > 0"
           class="font-mono text-[11px] text-[var(--text-muted)]"
         >
           {{ inputValue.length }}
         </span>
-        <span
-          class="flex items-center gap-1 text-[11px] text-[var(--text-muted)]"
-        >
-          <kbd
-            class="px-1.5 py-0.5 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded text-[10px] font-mono"
-          >
-            Enter
-          </kbd>
+        <span class="hint-enter">
+          <kbd class="kbd">Enter</kbd>
           <span>发送</span>
         </span>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.message-input-container {
+  padding: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-smooth);
+}
+
+.message-input-container.is-focused {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-primary);
+}
+
+/* Model Selector Bar */
+.model-selector-bar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Attachments Preview */
+.attachments-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.attachment-item {
+  position: relative;
+}
+
+.attachment-image {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 2px solid var(--border-color);
+  box-shadow: var(--shadow-xs);
+}
+
+.attachment-document {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-tertiary);
+}
+
+.attachment-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-error);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all var(--transition-fast);
+  border: none;
+  cursor: pointer;
+}
+
+.attachment-item:hover .attachment-remove {
+  opacity: 1;
+}
+
+.attachment-remove:hover {
+  transform: scale(1.1);
+}
+
+/* Input Row */
+.input-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.main-textarea {
+  width: 100%;
+  min-height: 64px;
+  max-height: 160px;
+  padding: 16px 20px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 16px;
+  line-height: 1.6;
+  resize: none;
+  transition: all var(--transition-fast);
+}
+
+.main-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.main-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: var(--bg-secondary);
+}
+
+.main-textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Send Button */
+.send-button {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.send-button.is-active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+  box-shadow: var(--shadow-md);
+}
+
+.send-button.is-active:hover {
+  background: var(--color-primary-hover);
+  transform: scale(1.05);
+}
+
+.send-button.is-active:active {
+  transform: scale(0.95);
+}
+
+.send-button.is-cancel {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: var(--color-error);
+}
+
+.send-button.is-cancel:hover {
+  background: rgba(239, 68, 68, 0.25);
+  transform: scale(1.05);
+}
+
+/* Bottom Bar */
+.bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-button {
+  height: 40px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.action-button:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.action-button.is-active {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Hints */
+.hints {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hint-enter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.kbd {
+  padding: 2px 6px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+}
+</style>

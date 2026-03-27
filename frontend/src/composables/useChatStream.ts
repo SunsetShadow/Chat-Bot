@@ -18,6 +18,7 @@ export interface SendMessageOptions {
   }>;
   webSearch?: boolean;
   thinking?: boolean;
+  model?: string;
 }
 
 /**
@@ -69,6 +70,7 @@ export function useChatStream() {
       attachment_ids: options.attachments?.map((a) => a.id),
       web_search: options.webSearch,
       thinking: options.thinking,
+      model: options.model,
     };
 
     // 准备流式消息占位

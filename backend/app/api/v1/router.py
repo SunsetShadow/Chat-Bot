@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.v1.agent import router as agent_router
 from app.api.v1.chat import router as chat_router
 from app.api.v1.memory import router as memory_router
+from app.api.v1.model import router as model_router
 from app.api.v1.rule import router as rule_router
 from app.api.v1.upload import router as upload_router
 
@@ -18,3 +19,5 @@ router.include_router(rule_router)
 router.include_router(memory_router)
 # 注册文件上传路由
 router.include_router(upload_router)
+# 注册模型路由
+router.include_router(model_router)

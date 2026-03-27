@@ -19,6 +19,7 @@ declare module 'vue' {
     MessageInput: typeof import('./components/chat/MessageInput.vue')['default']
     MessageItem: typeof import('./components/chat/MessageItem.vue')['default']
     MessageList: typeof import('./components/chat/MessageList.vue')['default']
+    ModelSelector: typeof import('./components/chat/ModelSelector.vue')['default']
     NDynamicTags: typeof import('naive-ui')['NDynamicTags']
     NForm: typeof import('naive-ui')['NForm']
     NFormItem: typeof import('naive-ui')['NFormItem']
