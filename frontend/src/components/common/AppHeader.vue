@@ -2,6 +2,7 @@
 import { useRouter } from "vue-router";
 import { useAgentStore } from "@/stores/agent";
 import { SettingsOutline, ChatbubblesOutline } from "@vicons/ionicons5";
+import ThemeToggle from "./ThemeToggle.vue";
 
 const router = useRouter();
 const agentStore = useAgentStore();
@@ -35,7 +36,8 @@ function goToSettings() {
         {{ agentStore.currentAgent.name }}
       </span>
     </div>
-    <div class="flex items-center">
+    <div class="flex items-center gap-2">
+      <ThemeToggle />
       <NButton
         text
         class="text-[var(--text-secondary)] hover:text-[var(--color-primary)]"
