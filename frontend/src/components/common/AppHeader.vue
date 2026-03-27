@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from "vue-router";
 import { useAgentStore } from "@/stores/agent";
+import { NIcon, NButton } from "naive-ui";
 import { SettingsOutline, ChatbubblesOutline } from "@vicons/ionicons5";
 import ThemeToggle from "./ThemeToggle.vue";
 

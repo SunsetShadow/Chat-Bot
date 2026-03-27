@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, h, type Component } from "vue";
-import { NIcon } from "naive-ui";
+import { NIcon, NDropdown, NButton } from "naive-ui";
 import { useThemeStore, type ThemeMode } from "@/stores/theme";
 import { SunnyOutline, MoonOutline, DesktopOutline } from "@vicons/ionicons5";
 
