@@ -11,20 +11,51 @@ describe("ThemeToggle 组件", () => {
     document.documentElement.classList.remove("dark");
   });
 
-  it("应正确渲染组件", () => {
+  it("应渲染三个主题按钮", () => {
     const wrapper = mount(ThemeToggle);
-
-    // 组件应包含按钮元素
-    expect(wrapper.find("button").exists()).toBe(true);
+    const buttons = wrapper.findAll("button");
+    expect(buttons).toHaveLength(3);
   });
 
-  it("亮色模式下 store.resolvedMode 应为 light", () => {
+  it("按钮标签应包含亮色、暗色、系统", () => {
+    const wrapper = mount(ThemeToggle);
+    const text = wrapper.text();
+    expect(text).toContain("亮色");
+    expect(text).toContain("暗色");
+    expect(text).toContain("系统");
+  });
+
+  it("点击暗色按钮应切换到暗色模式", async () => {
     const store = useThemeStore();
-    store.setMode("light");
+    const spy = vi.spyOn(store, "setMode");
 
-    mount(ThemeToggle);
+    const wrapper = mount(ThemeToggle);
+    const buttons = wrapper.findAll("button");
+    await buttons[1].trigger("click");
 
-    expect(store.resolvedMode).toBe("light");
+    expect(spy).toHaveBeenCalledWith("dark");
+  });
+
+  it("点击亮色按钮应切换到亮色模式", async () => {
+    const store = useThemeStore();
+    const spy = vi.spyOn(store, "setMode");
+
+    const wrapper = mount(ThemeToggle);
+    const buttons = wrapper.findAll("button");
+    await buttons[0].trigger("click");
+
+    expect(spy).toHaveBeenCalledWith("light");
+  });
+
+  it("点击系统按钮应切换到系统模式", async () => {
+    const store = useThemeStore();
+    const spy = vi.spyOn(store, "setMode");
+
+    const wrapper = mount(ThemeToggle);
+    const buttons = wrapper.findAll("button");
+    await buttons[2].trigger("click");
+
+    expect(spy).toHaveBeenCalledWith("system");
   });
 
   it("暗色模式下 store.resolvedMode 应为 dark", () => {
@@ -37,33 +68,12 @@ describe("ThemeToggle 组件", () => {
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
-  it("应包含三个主题选项", () => {
-    const wrapper = mount(ThemeToggle);
-
-    // 检查 options 数据
-    const options = wrapper.vm.options;
-    expect(options).toHaveLength(3);
-    expect(options.map((o: { value: string }) => o.value)).toContain("light");
-    expect(options.map((o: { value: string }) => o.value)).toContain("dark");
-    expect(options.map((o: { value: string }) => o.value)).toContain("system");
-  });
-
-  it("handleSelect 应调用 store.setMode", () => {
+  it("亮色模式下 store.resolvedMode 应为 light", () => {
     const store = useThemeStore();
-    const spy = vi.spyOn(store, "setMode");
+    store.setMode("light");
 
-    const wrapper = mount(ThemeToggle);
-    wrapper.vm.handleSelect("dark");
+    mount(ThemeToggle);
 
-    expect(spy).toHaveBeenCalledWith("dark");
-  });
-
-  it("系统模式下 currentIcon 应返回 DesktopOutline", () => {
-    const store = useThemeStore();
-    store.setMode("system");
-
-    const wrapper = mount(ThemeToggle);
-
-    expect(wrapper.vm.currentIcon.name).toBe("DesktopOutline");
+    expect(store.resolvedMode).toBe("light");
   });
 });
