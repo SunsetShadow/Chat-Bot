@@ -47,6 +47,11 @@ Chat-Bot/
 │
 ├── backend/                     # 后端项目
 │   ├── app/
+│   │   ├── agents/              # Agent 模块（自包含）
+│   │   │   ├── prompts/         # 内置 Agent 定义
+│   │   │   ├── routes.py        # Agent API 路由
+│   │   │   ├── schemas.py       # Agent 数据模型
+│   │   │   └── service.py       # Agent 业务逻辑
 │   │   ├── api/v1/              # API 路由
 │   │   ├── core/                # 核心配置
 │   │   ├── models/              # 数据模型
@@ -137,6 +142,7 @@ Models (app/models/)
 | `frontend/src/api/chat.ts` | API 函数 + SSE 流处理 |
 | `frontend/src/composables/useSSE.ts` | SSE 解析逻辑 |
 | `backend/app/services/chat_service.py` | 核心聊天逻辑 |
+| `backend/app/agents/` | Agent 模块（routes/schemas/service/prompts） |
 | `backend/app/services/memory_service.py` | AI 记忆提取 |
 | `backend/app/services/llm/base.py` | LLM 提供者抽象 |
 

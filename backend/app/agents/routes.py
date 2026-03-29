@@ -2,9 +2,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 
-from app.schemas.agent import AgentCreate, AgentResponse, AgentUpdate
+from app.agents.schemas import AgentCreate, AgentResponse, AgentUpdate
 from app.schemas.base import DataResponse
-from app.services.agent_service import AgentService, get_agent_service
+from app.agents.service import AgentService, get_agent_service
 
 router = APIRouter(prefix="/agents", tags=["Agents"])
 

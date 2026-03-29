@@ -214,7 +214,7 @@ interface Memory {
 | `frontend/src/api/chat.ts` | API 调用和流处理 |
 | `backend/app/api/v1/chat.py` | 聊天 API 路由 |
 | `backend/app/services/chat_service.py` | 核心聊天逻辑 |
-| `backend/app/services/agent_service.py` | Agent 业务逻辑 |
+| `backend/app/agents/` | Agent 模块（routes/schemas/service/prompts） |
 | `backend/app/services/rule_service.py` | 规则业务逻辑 |
 | `backend/app/services/memory_service.py` | AI 记忆提取 |
 | `backend/app/services/context_service.py` | 上下文管理服务 |

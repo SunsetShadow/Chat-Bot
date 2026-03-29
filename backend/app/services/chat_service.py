@@ -23,7 +23,7 @@ from app.schemas.sse import (
     create_message_done_event,
     create_message_start_event,
 )
-from app.services.agent_service import AgentService
+from app.agents.service import AgentService
 from app.services.llm.factory import get_default_llm_provider
 from app.services.memory_service import MemoryService
 from app.services.rule_service import RuleService

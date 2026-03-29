@@ -1,31 +1,19 @@
 from functools import lru_cache
 
+from app.agents.prompts import BUILTIN_AGENTS
+from app.agents.schemas import Agent, AgentCreate, AgentResponse, AgentUpdate
 from app.core.exceptions import ValidationException, raise_not_found
-from app.schemas.agent import Agent, AgentCreate, AgentResponse, AgentUpdate, BUILTIN_AGENTS
 
 
 class AgentService:
     """Agent 服务"""
 
     def __init__(self):
-        # 初始化内置 Agent 和自定义 Agent 存储
-        self._agents: dict[str, Agent] = {agent.id: agent.model_copy() for agent in BUILTIN_AGENTS}
+        self._agents: dict[str, Agent] = {a["id"]: Agent(**a, is_builtin=True) for a in BUILTIN_AGENTS}
 
     def list_agents(self) -> list[AgentResponse]:
         """获取所有 Agent"""
-        return [
-            AgentResponse(
-                id=agent.id,
-                name=agent.name,
-                description=agent.description,
-                system_prompt=agent.system_prompt,
-                traits=agent.traits,
-                is_builtin=agent.is_builtin,
-                created_at=agent.created_at,
-                updated_at=agent.updated_at,
-            )
-            for agent in self._agents.values()
-        ]
+        return [self.agent_to_response(agent) for agent in self._agents.values()]
 
     def get_agent(self, agent_id: str) -> Agent:
         """获取单个 Agent"""
@@ -90,7 +78,6 @@ class AgentService:
         )
 
 
-# 服务依赖注入
 @lru_cache
 def get_agent_service() -> AgentService:
     """获取 AgentService 实例（单例）"""
