@@ -20,11 +20,13 @@
 
 | 类别 | 技术 | 版本 |
 |------|------|------|
-| 框架 | FastAPI | - |
-| 语言 | Python | 3.12+ |
-| 包管理 | uv | - |
-| 数据库 | SQLite + SQLAlchemy | - |
-| AI | OpenAI API | - |
+| 框架 | NestJS | ^11.x |
+| 语言 | TypeScript | ^5.x |
+| 运行时 | Node.js | 20+ |
+| 包管理 | pnpm | ^10.x |
+| AI | OpenAI SDK (npm) | ^4.x |
+| 验证 | class-validator + class-transformer | ^0.14 / ^0.5 |
+| 环境变量 | @nestjs/config | ^4.x |
 
 ## 目录结构
 
@@ -46,21 +48,22 @@ Chat-Bot/
 │   └── package.json
 │
 ├── backend/                     # 后端项目
-│   ├── app/
-│   │   ├── agents/              # Agent 模块（自包含）
-│   │   │   ├── prompts/         # 内置 Agent 定义
-│   │   │   ├── routes.py        # Agent API 路由
-│   │   │   ├── schemas.py       # Agent 数据模型
-│   │   │   └── service.py       # Agent 业务逻辑
-│   │   ├── api/v1/              # API 路由
-│   │   ├── core/                # 核心配置
-│   │   ├── models/              # 数据模型
-│   │   ├── repositories/        # 数据访问层
-│   │   ├── schemas/             # Pydantic 模式
-│   │   ├── services/            # 业务逻辑层
-│   │   │   └── llm/             # LLM 提供者
-│   │   └── utils/               # 工具函数
-│   └── pyproject.toml
+│   ├── src/
+│   │   ├── common/              # 公共层
+│   │   │   ├── types/           # 公共类型定义
+│   │   │   ├── filters/         # 异常过滤器
+│   │   │   └── interceptors/    # 拦截器
+│   │   ├── config/              # 配置模块
+│   │   ├── middleware/          # 中间件
+│   │   └── modules/             # 业务模块
+│   │       ├── agent/           # Agent 模块
+│   │       ├── chat/            # 聊天模块（含 SSE）
+│   │       ├── llm/             # LLM 集成模块
+│   │       ├── memory/          # 记忆模块
+│   │       ├── model/           # 模型管理模块
+│   │       ├── rule/            # 规则模块
+│   │       └── upload/          # 上传模块
+│   └── package.json
 │
 └── openspec/                    # 规范文档
 ```
@@ -80,20 +83,41 @@ Chat-Bot/
 
 | 类型 | 规范 | 示例 |
 |------|------|------|
-| 文件 | snake_case | `chat_service.py` |
+| 文件 | kebab-case | `chat.service.ts` |
 | 类 | PascalCase | `ChatService` |
-| 函数/变量 | snake_case | `get_chat_messages` |
+| 函数/变量 | camelCase | `getChatMessages` |
+| 模块目录 | kebab-case | `modules/chat/` |
+
+## API开发规则
+
+### 接口设计规则
+1. 遵循RESTful设计原则
+2. 使用HTTP状态码表示结果
+3. 响应格式统一为JSON
+4. 支持分页的接口必须包含元数据
+
+### 错误处理规则
+1. 统一的错误响应格式
+2. 错误信息要对用户友好
+3. 记录详细的错误日志
+4. 敏感信息不能暴露给客户端
+
+### 安全规则
+1. 所有接口都要有认证检查
+2. 使用HTTPS传输敏感数据
+3. 输入数据必须验证和清理
+4. 实施适当的限流策略
 
 ## 分层架构
 
 ```
-API Routes (app/api/v1/)
+Controllers (modules/*/controller.ts)
     ↓ 调用
-Services (app/services/)
+Services (modules/*/service.ts)
     ↓ 调用
-Repositories (app/repositories/)
+Providers (modules/llm/providers/)
     ↓ 操作
-Models (app/models/)
+Models/DTOs (modules/*/dto/)
 ```
 
 ## 代码风格约束
@@ -141,15 +165,17 @@ Models (app/models/)
 | `frontend/src/types/index.ts` | 所有 TypeScript 接口定义 |
 | `frontend/src/api/chat.ts` | API 函数 + SSE 流处理 |
 | `frontend/src/composables/useSSE.ts` | SSE 解析逻辑 |
-| `backend/app/services/chat_service.py` | 核心聊天逻辑 |
-| `backend/app/agents/` | Agent 模块（routes/schemas/service/prompts） |
-| `backend/app/services/memory_service.py` | AI 记忆提取 |
-| `backend/app/services/llm/base.py` | LLM 提供者抽象 |
+| `backend/src/modules/chat/chat.service.ts` | 核心聊天逻辑 |
+| `backend/src/modules/agent/` | Agent 模块（controller/service/dto） |
+| `backend/src/modules/memory/memory.service.ts` | 记忆管理 |
+| `backend/src/modules/llm/providers/base.provider.ts` | LLM 提供者抽象 |
 
 ## 约束
 
 1. 前端使用 `<script setup lang="ts">` 语法
 2. 所有聊天消息通过 SSE 流式传输
-3. 后端业务逻辑放在 Services 层，不在路由中直接编写
+3. 后端使用 NestJS 模块化架构，业务逻辑在 Service 层
 4. Agent 和 Rule 在请求时注入到系统提示词
-5. 会话持久化存储在本地文件系统
+5. 始终考虑组件的可复用性
+7. 遵循Vue3最佳实践
+3. 确保类型安全

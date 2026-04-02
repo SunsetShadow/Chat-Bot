@@ -212,9 +212,8 @@ interface Memory {
 |------|------|
 | `frontend/src/composables/useSSE.ts` | SSE 解析逻辑 |
 | `frontend/src/api/chat.ts` | API 调用和流处理 |
-| `backend/app/api/v1/chat.py` | 聊天 API 路由 |
-| `backend/app/services/chat_service.py` | 核心聊天逻辑 |
-| `backend/app/agents/` | Agent 模块（routes/schemas/service/prompts） |
-| `backend/app/services/rule_service.py` | 规则业务逻辑 |
-| `backend/app/services/memory_service.py` | AI 记忆提取 |
-| `backend/app/services/context_service.py` | 上下文管理服务 |
+| `backend/src/modules/chat/chat.controller.ts` | 聊天 API 路由 |
+| `backend/src/modules/chat/chat.service.ts` | 核心聊天逻辑 |
+| `backend/src/modules/agent/` | Agent 模块（controller/service/dto） |
+| `backend/src/modules/rule/rule.service.ts` | 规则业务逻辑 |
+| `backend/src/modules/memory/memory.service.ts` | 记忆管理 |

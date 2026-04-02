@@ -86,6 +86,8 @@ export function useChatStream() {
       await processStream(response, {
         onMessageStart: (data) => {
           assistantMessageId = data.message_id;
+          // 同步更新 store 中的 streaming message ID，确保 stopStreaming 时能正确更新消息
+          chatStore.updateStreamingMessageId(data.message_id);
 
           // 使用后端返回的 session_id（如果是新会话）
           if (!chatStore.currentSessionId && data.session_id) {

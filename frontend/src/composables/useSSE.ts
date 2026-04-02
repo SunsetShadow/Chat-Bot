@@ -90,6 +90,7 @@ export function useSSE() {
 
     isConnected.value = true;
     let buffer = "";
+    let doneEventReceived = false;
 
     try {
       while (true) {
@@ -129,17 +130,24 @@ export function useSSE() {
               );
               break;
             case "done":
+              doneEventReceived = true;
               options.onDone?.(
                 event.data as Parameters<NonNullable<SSEOptions["onDone"]>>[0],
               );
               break;
             case "error":
+              doneEventReceived = true;
               options.onError?.(
                 event.data as Parameters<NonNullable<SSEOptions["onError"]>>[0],
               );
               break;
           }
         }
+      }
+
+      // 安全网：流结束但未收到 done/error 事件时，仍触发 onDone
+      if (!doneEventReceived) {
+        options.onDone?.({ session_id: "" });
       }
     } finally {
       isConnected.value = false;

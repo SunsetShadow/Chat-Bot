@@ -115,12 +115,27 @@ export const useChatStore = defineStore("chat", () => {
     currentStreamingContent.value += content;
   }
 
+  function updateStreamingMessageId(messageId: string) {
+    currentStreamingMessageId.value = messageId;
+  }
+
   function stopStreaming() {
     if (currentStreamingMessageId.value && currentStreamingContent.value) {
-      updateMessage(
-        currentStreamingMessageId.value,
-        currentStreamingContent.value,
+      const index = messages.value.findIndex(
+        (m) => m.id === currentStreamingMessageId.value,
       );
+      if (index !== -1) {
+        // 消息已存在，更新内容
+        messages.value[index].content = currentStreamingContent.value;
+      } else {
+        // 消息不存在（onMessageDone 未被调用），直接添加
+        messages.value.push({
+          id: currentStreamingMessageId.value,
+          role: "assistant",
+          content: currentStreamingContent.value,
+          created_at: new Date().toISOString(),
+        });
+      }
     }
     isStreaming.value = false;
     currentStreamingContent.value = "";
@@ -218,6 +233,7 @@ export const useChatStore = defineStore("chat", () => {
     updateMessage,
     startStreaming,
     appendStreamingContent,
+    updateStreamingMessageId,
     stopStreaming,
     clearCurrentSession,
     clearError,

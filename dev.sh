@@ -21,8 +21,8 @@ cleanup() {
 trap cleanup SIGINT SIGTERM
 
 # 启动后端
-echo -e "${BLUE}[Backend]${NC} Starting FastAPI server on http://localhost:8000"
-cd "$SCRIPT_DIR/backend" && uv run fastapi dev app/main.py &
+echo -e "${BLUE}[Backend]${NC} Starting NestJS server on http://localhost:8000"
+cd "$SCRIPT_DIR/backend" && pnpm dev &
 BACKEND_PID=$!
 
 # 启动前端
