@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { generateId, getCurrentTimestamp } from '../../common/types';
-import { LlmService } from '../llm/llm.service';
 import { AgentService } from '../agent/agent.service';
 import { RuleService } from '../rule/rule.service';
 import { MemoryService } from '../memory/memory.service';
+import { LangGraphService } from '../langgraph/langgraph.service';
 import { CreateCompletionDto } from './dto/create-completion.dto';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
@@ -31,10 +31,10 @@ export class ChatService {
   private sessions = new Map<string, Session>();
 
   constructor(
-    private llmService: LlmService,
     private agentService: AgentService,
     private ruleService: RuleService,
     private memoryService: MemoryService,
+    private langGraphService: LangGraphService,
   ) {}
 
   async createCompletion(dto: CreateCompletionDto) {
@@ -62,7 +62,7 @@ export class ChatService {
       return { session, stream: true, messages, systemPrompt };
     }
 
-    const response = await this.llmService.chat(messages, systemPrompt);
+    const response = await this.langGraphService.chat(messages, systemPrompt, session.id);
     const assistantMessage: Message = {
       id: generateId(),
       role: 'assistant',
@@ -90,7 +90,7 @@ export class ChatService {
     let hasError = false;
 
     try {
-      for await (const chunk of this.llmService.chatStream(messages, systemPrompt)) {
+      for await (const chunk of this.langGraphService.chatStream(messages, systemPrompt, sessionId)) {
         if (chunk.content) {
           fullContent += chunk.content;
           yield {
