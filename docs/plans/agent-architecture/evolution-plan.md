@@ -1,16 +1,18 @@
-# Agent 架构演进设计
+# Agent 架构演进计划
 
-> 基于前沿 Agent 设计模式研究，结合项目现状制定的完整架构演进方案。
+> 从单 Agent 到 Supervisor + Worker 多 Agent 架构的分阶段演进方案。
 > 日期：2026-04-11
 
 ## 设计原则
 
-1. **从简到繁** — 每阶段独立可交付，不依赖后续阶段（Anthropic 核心建议）
+1. **从简到繁** — 每阶段独立可交付，不依赖后续阶段
 2. **工具设计优先** — 投资工具接口（ACI），比 prompt 更影响 Agent 质量
-3. **LangGraph 原生** — 沿用 LangGraph JS 编排，利用其 checkpointing / streaming / multi-agent 原生能力
-4. **NestJS 模块化** — 工具和记忆作为 NestJS Injectable，通过 DI 注入，可测试可替换
+3. **LangGraph 原生** — 沿用 LangGraph JS，利用 checkpointing / streaming / multi-agent 原生能力
+4. **NestJS 模块化** — 工具和记忆作为 Injectable，通过 DI 注入
 
-## 当前架构
+## 现状评估
+
+### 当前架构
 
 ```
 START → agent → [有 tool_calls?] → tools → agent → ... → END
@@ -20,6 +22,54 @@ START → agent → [有 tool_calls?] → tools → agent → ... → END
 - MemorySaver 内存级 checkpoint，重启丢失
 - 所有数据存内存 Map
 - 无 token 管理、无错误重试、无安全防护
+
+```
+System Prompt = Agent.system_prompt + 启用的规则内容 + 记忆上下文
+```
+
+### 问题分级
+
+**P0 — 阻塞性问题**
+
+| # | 问题 | 现状 |
+|---|------|------|
+| 1 | 记忆提取工具是空壳 | `memoryExtractTool` 只 `return JSON.stringify(...)`，从未调用 MemoryService |
+| 2 | Tool 无法访问 DI 容器 | LangChain Tool 是纯函数，无法注入 NestJS 服务 |
+| 3 | 无最大迭代保护 | agent→tools 循环无 `recursionLimit`，可能无限循环 |
+| 4 | 两套 LLM 体系并存 | `llm/` 模块和 `langgraph/` 模块互不关联，`LlmService` 是死代码 |
+
+**P1 — 核心功能缺失**
+
+| # | 问题 | 现状 |
+|---|------|------|
+| 5 | 数据持久化 | 所有数据存内存 Map，重启全丢 |
+| 6 | 上下文管理 | `buildSystemPrompt()` 只做简单拼接，无 token 计算、消息截断 |
+| 7 | 记忆过期与数量限制 | 无过期逻辑，注入全部记忆，无数量限制 |
+| 8 | Agent-Tool 动态绑定 | 所有 Agent 共享固定工具列表 |
+| 9 | Agent-Model 绑定 | 所有 Agent 使用同一个 ChatOpenAI 实例 |
+| 10 | Agent traits 未使用 | `traits[]` 存在于数据模型但从未融入 system prompt |
+
+**P2 — 多 Agent 协作缺失**
+
+| # | 问题 | 现状 |
+|---|------|------|
+| 11 | 多 Agent 协作模式 | 单 Agent 节点图，无 Supervisor/Router |
+| 12 | 动态图拓扑 | 固定线性循环，不支持条件分支、并行执行 |
+| 13 | Agent 间通信 | 无消息传递机制 |
+| 14 | 任务分解与规划 | 无任务分解能力 |
+
+**P3 — 生产化缺失**
+
+| # | 问题 | 现状 |
+|---|------|------|
+| 15 | 错误恢复与重试 | LLM 调用失败直接抛异常，无 fallback |
+| 16 | Token 使用追踪 | 不记录 token 消耗 |
+| 17 | 认证与授权 | 所有 API 无认证守卫 |
+| 18 | 速率限制 | 无请求频率限制 |
+| 19 | Prompt Injection 防护 | 用户输入直接传给 LLM |
+| 20 | 结构化输出 | Agent 节点无 output parser |
+| 21 | 流式工具调用反馈 | `chatStream()` 中 `tool_call_chunks` 被跳过 |
+| 22 | 可观测性 | 无结构化日志、无 tracing |
 
 ## 目标架构
 
@@ -47,13 +97,6 @@ START → Supervisor → [意图路由]
 **问题**：LangChain Tool 是纯函数，无法注入 NestJS 服务。memoryExtractTool 是空壳。
 
 **方案**：ToolRegistry + 工厂模式。
-
-```
-ToolRegistry (NestJS Injectable)
-  ├── register(name, factory: (services) => DynamicTool)
-  ├── getTools(toolIds?: string[]) → DynamicTool[]
-  └── 内部持有 MemoryService 等 DI 服务引用
-```
 
 ```typescript
 // backend/src/modules/langgraph/tools/tool-registry.ts
@@ -97,30 +140,19 @@ function containsSensitiveInfo(content: string): boolean {
 
 ### 1.2 递归限制 + 错误自愈
 
-**问题**：agent→tools 循环无 recursionLimit，工具错误直接抛异常。
-
-**方案**：
-
 ```typescript
-// graph.builder.ts
-const graph = builder.compile({
-  checkpointer: new MemorySaver(),
-});
-
-// 调用时限制
+// graph.builder.ts — 调用时限制
 graph.invoke(inputs, { recursion_limit: 25 });
 
-// ToolNode 启用错误自愈
+// ToolNode 启用错误自愈：将工具错误包装为 ToolMessage 返回 LLM 自修正
 const toolNode = new ToolNode(tools, { handleToolErrors: true });
 ```
-
-`handleToolErrors: true` 将工具错误包装为 ToolMessage 返回 LLM，让模型自行修正参数。
 
 ### 1.3 统一 LLM 体系
 
 **问题**：`llm/` 模块和 `langgraph/` 模块是两套独立体系，`LlmService` 是死代码。
 
-**方案**：移除 `llm/` 模块，其职责（模型配置、Provider 切换）合并到 `LangGraphService`。
+**方案**：移除 `llm/` 模块，其职责合并到 `LangGraphService`。
 
 ```typescript
 // langgraph.service.ts
@@ -198,7 +230,7 @@ export class DatabaseModule {}
 
 ### 2.2 Token 预算管理
 
-按 Anthropic 推荐的优先级分层分配：
+按优先级分层分配：
 
 ```
 ┌─────────────────────────────────────┐
@@ -226,22 +258,20 @@ export class TokenBudgetManager {
 
   prepareContext(parts: ContextParts): PreparedContext {
     const budget = this.contextLimit - this.outputReserve;
-
-    // 1. Protected：始终包含
     let used = this.estimateTokens(parts.systemPrompt + parts.currentQuery);
     let remaining = budget - used;
 
-    // 2. High：工具结果 + 记忆
+    // High：工具结果 + 记忆 (~30%)
     const highTokens = Math.min(remaining * 0.3, this.estimateTokens(parts.toolResults));
     remaining -= highTokens;
 
-    // 3. Medium：近 5 轮
-    // 4. Low：摘要后的旧历史
+    // Medium：近 5 轮 (~25%)
+    // Low：摘要后的旧历史（剩余空间）
     // ...
   }
 
   estimateTokens(content: string): number {
-    return Math.ceil(content.length / 3); // Phase 2 用估算，Phase 4 换 tiktoken
+    return Math.ceil(content.length / 3); // 简易估算，后续换 tiktoken
   }
 }
 ```
@@ -253,25 +283,16 @@ export class TokenBudgetManager {
 ```
 短期记忆 (Short-term)
   └── LangGraph SqliteSaver（thread-scoped）
-      - 对话历史自动持久化
-      - 按 thread_id 隔离
-      - 不再需要 buildMessages() 手动重建
+      - 对话历史自动持久化，按 thread_id 隔离
 
 工作记忆 (Working)
   └── LangGraph State Annotation
-      - 图节点间共享的中间状态
-      - 任务计划、工具调用结果
+      - 图节点间共享的中间状态（任务计划、工具调用结果）
 
 长期记忆 (Long-term)
   └── MemoryService（SQLite memories 表）
-      - 语义记忆：用户偏好、事实知识
-      - 情节记忆：重要对话事件
-      - 按 importance (1-10) 排序
-      - 注入前 Top 10，按类型过期：
-        - fact: 永不过期
-        - preference: 30 天
-        - event: 7 天
-      - 记忆提取通过 Phase 1 修复的工具实际写入
+      - 按 importance (1-10) 排序，注入前 Top 10
+      - 按类型过期：fact 永不过期 / preference 30天 / event 7天
 ```
 
 ### 2.4 Agent 配置扩展
@@ -311,8 +332,6 @@ for await (const chunk of stream) {
 }
 ```
 
-前端 `useChatTransport.ts` 增加 `step_update` 事件处理，ChatContainer 可展示当前执行步骤。
-
 ### Phase 2 交付物
 
 - [ ] `DatabaseModule` — SQLite 集成
@@ -347,14 +366,14 @@ for await (const chunk of stream) {
 ```
 
 **为什么选 Supervisor**：
-- Agent 角色差异明确（聊天/编程/写作），适合中央路由
+- Agent 角色差异明确，适合中央路由
 - 调试简单，链路清晰
-- 与单 Agent 架构演进路径自然（在现有 Agent 上加一层路由）
+- 与单 Agent 演进路径自然
 - 不选 Swarm：当前场景不需要 Agent 间对等协作
 
 ### 3.2 Handoff 机制
 
-Supervisor 持有 handoff 工具，调用时通过 Command 切换到目标 Agent：
+Supervisor 持有 handoff 工具，通过 Command 切换到目标 Agent：
 
 ```typescript
 function createHandoffTool(targetAgentName: string, description: string) {
@@ -380,20 +399,7 @@ function createHandoffTool(targetAgentName: string, description: string) {
 }
 ```
 
-### 3.3 图拓扑
-
-```
-START → supervisor ──┬── handoff_to_general → general_agent → [tools?] → END
-                     ├── handoff_to_coder   → coder_agent   → [tools?] → END
-                     ├── handoff_to_writer  → writer_agent  → [tools?] → END
-                     └── 直接回答 → END
-```
-
-- 每个 Worker Agent 有独立 system prompt + tool set
-- 对话历史在 handoff 时通过 Command.update 传递
-- Worker 需要另一个 Worker 的能力时，返回 handoff 回到 supervisor
-
-### 3.4 动态图构建
+### 3.3 动态图构建
 
 根据数据库中的 Agent 配置，运行时动态构建图拓扑：
 
@@ -425,9 +431,7 @@ export class DynamicGraphBuilder {
       .addEdge(START, 'supervisor')
       .addConditionalEdges('supervisor', routeToAgent);
 
-    return builder.compile({
-      checkpointer: sqliteSaver,
-    });
+    return builder.compile({ checkpointer: sqliteSaver });
   }
 }
 ```
@@ -438,10 +442,10 @@ export class DynamicGraphBuilder {
 
 - [ ] `DynamicGraphBuilder` — 动态图构建器
 - [ ] `createHandoffTool` — Handoff 工具工厂
-- [ ] `supervisor.node.ts` — Supervisor 节点（路由 + 直接回答）
+- [ ] `supervisor.node.ts` — Supervisor 节点
 - [ ] 内置 Agent 定义（General / Coder / Writer）
-- [ ] 前端 SSE 事件扩展（支持 agent_switched 事件）
-- [ ] Agent 管理 API 扩展（支持 tool_ids / model_id 配置）
+- [ ] 前端 SSE 事件扩展（支持 agent_switched）
+- [ ] Agent 管理 API 扩展（支持 tool_ids / model_id）
 
 ---
 
@@ -461,8 +465,8 @@ Agent 调用
 
 ### 4.2 安全防护
 
-| 措施 | 当前状态 | Phase 4 目标 |
-|------|---------|-------------|
+| 措施 | 当前状态 | 目标 |
+|------|---------|------|
 | 速率限制 | 中间件已定义未注册 | 注册到路由 |
 | 输入长度校验 | 无 | `@MaxLength(10000)` |
 | Prompt 注入检测 | 无 | 正则模式匹配 + 可疑度评分 |
@@ -471,31 +475,8 @@ Agent 调用
 
 ### 4.3 可观测性
 
-```typescript
-// backend/src/common/interceptors/agent-trace.interceptor.ts
-@Injectable()
-export class AgentTraceInterceptor implements NestInterceptor {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    const traceId = generateId();
-    const startTime = Date.now();
-
-    return next.handle().pipe(
-      tap((result) => {
-        const duration = Date.now() - startTime;
-        logger.info('agent_trace', {
-          traceId,
-          duration,
-          agentName: result?.agentName,
-          toolCallCount: result?.toolCallCount,
-          model: result?.model,
-        });
-      }),
-    );
-  }
-}
-```
-
 结构化日志格式：
+
 ```json
 {
   "level": "info",
@@ -566,17 +547,24 @@ Phase 4 (生产化) ─── 2-3 周 ─── 可独立交付
 └── 4.4 Token 追踪
 ```
 
-## 关键设计决策记录
+## 关键设计决策
 
 | 决策 | 选择 | 理由 |
 |------|------|------|
 | 编排框架 | LangGraph JS | 已有基础、原生支持 checkpointing/streaming/multi-agent |
 | 多 Agent 模式 | Supervisor | 角色差异明确、调试简单、演进自然 |
 | 持久化 | SQLite → PostgreSQL | SQLite 够用且简单，PostgreSQL 为未来扩展预留 |
-| 记忆架构 | 三层（短期/工作/长期） | Anthropic 推荐，LangGraph 原生支持短期和工作记忆 |
+| 记忆架构 | 三层（短期/工作/长期） | LangGraph 原生支持短期和工作记忆 |
 | 上下文管理 | 优先级分层 + 摘要压缩 | 生产验证的模式，40-60% token 节省 |
 | 工具注入 | 工厂模式 + ToolRegistry | 桥接 LangGraph Tool 和 NestJS DI |
-| 错误处理 | R5 模式 + Fallback 链 | 2025 最佳实践，让 Agent 自修正 |
+| 错误处理 | 重试 + 自修正 + Fallback | 让 Agent 自修正，减少人工干预 |
+
+## 不做的事
+
+- 不引入新的 LLM 框架（继续使用 LangGraph）
+- 不做前端 UI 改造（仅后端架构演进）
+- 不引入消息队列或微服务（保持单体架构）
+- 不实现认证授权（属于独立安全模块）
 
 ## 参考
 
@@ -588,4 +576,3 @@ Phase 4 (生产化) ─── 2-3 周 ─── 可独立交付
 - [LangGraph Supervisor Pattern](https://langchain-ai.github.io/langgraphjs/agents/supervisor/)
 - [LangGraph Memory & Persistence](https://langchain-ai.github.io/langgraphjs/concepts/persistence/)
 - [Token Budget Strategies](https://tianpan.co/blog/2025-10-20-token-budget-strategies-llm-production)
-- [Google ADK Multi-Agent Patterns](https://developers.googleblog.com/developers-guide-to-multi-agent-patterns-in-adk/)
