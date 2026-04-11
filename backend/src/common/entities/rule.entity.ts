@@ -14,7 +14,7 @@ export enum ConflictStrategy {
 
 @Entity('rules')
 export class RuleEntity {
-  @PrimaryColumn('uuid')
+  @PrimaryColumn('varchar')
   id: string;
 
   @Column()
