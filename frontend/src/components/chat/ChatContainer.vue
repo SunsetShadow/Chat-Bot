@@ -1,10 +1,32 @@
 <script setup lang="ts">
+import { watch } from "vue";
 import SessionList from "./SessionList.vue";
 import MessageList from "./MessageList.vue";
 import MessageInput from "./MessageInput.vue";
 import AgentSelector from "@/components/agent/AgentSelector.vue";
 import RuleEditor from "@/components/rules/RuleEditor.vue";
 import ThemeToggle from "@/components/common/ThemeToggle.vue";
+import { useChatStore } from "@/stores/chat";
+import { useAIChat } from "@/composables/useAIChat";
+
+const chatStore = useChatStore();
+const { loadMessages, clearMessages } = useAIChat();
+
+// 会话切换时同步历史消息到 AI SDK Chat 实例
+// 只在用户主动切换会话时同步，新建会话（oldId === null）时不干预 Chat 实例
+watch(
+  () => chatStore.currentSessionId,
+  (newId, oldId) => {
+    if (newId && oldId) {
+      // 切换到已有会话：加载历史消息
+      loadMessages(chatStore.messages);
+    } else if (!newId) {
+      // 点击"新对话"：清空消息
+      clearMessages();
+    }
+    // newId !== null && oldId === null：新建会话，Chat 已有消息，不干预
+  },
+);
 </script>
 
 <template>

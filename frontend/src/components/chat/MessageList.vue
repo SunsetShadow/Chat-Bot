@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, onMounted, onUnmounted } from "vue";
-import { useChatStore } from "@/stores/chat";
+import { useAIChat } from "@/composables/useAIChat";
 import MessageItem from "./MessageItem.vue";
 import { ChatbubbleEllipsesOutline } from "@vicons/ionicons5";
 
-const chatStore = useChatStore();
+const { messages, isLoading } = useAIChat();
+
 const listContainer = ref<HTMLElement | null>(null);
 
 // 消息变化时自动滚动到底部
 watch(
-  () => chatStore.messages.length,
+  () => messages.value.length,
   () => {
     nextTick(() => {
       scrollToBottom();
@@ -17,8 +18,16 @@ watch(
   },
 );
 
+// 流式内容变化时滚动（通过检查最后一条消息的 text part 长度）
 watch(
-  () => chatStore.currentStreamingContent,
+  () => {
+    const lastMsg = messages.value[messages.value.length - 1];
+    if (!lastMsg) return 0;
+    const textPart = lastMsg.parts?.find((p: { type: string }) => p.type === "text") as
+      | { type: "text"; text: string }
+      | undefined;
+    return textPart?.text?.length ?? 0;
+  },
   () => {
     nextTick(() => {
       scrollToBottom();
@@ -66,7 +75,7 @@ onUnmounted(() => {
   <div ref="listContainer" class="h-full overflow-y-auto p-6">
     <!-- Empty State -->
     <div
-      v-if="chatStore.messages.length === 0"
+      v-if="messages.length === 0"
       class="flex flex-col items-center justify-center h-full text-center p-10"
     >
       <div class="relative mb-8">
@@ -121,30 +130,15 @@ onUnmounted(() => {
 
     <!-- Messages -->
     <div v-else class="flex flex-col">
-      <template
-        v-for="(message, index) in chatStore.messages"
-        :key="message.id"
-      >
+      <template v-for="(message, index) in messages" :key="message.id">
         <MessageItem
           :message="message"
-          :is-streaming="false"
-          :style="{ animationDelay: `${index * 0.05}s` }"
-        />
-        <!-- Streaming Assistant Message -->
-        <MessageItem
-          v-if="
-            chatStore.isStreaming &&
-            index === chatStore.messages.length - 1 &&
-            message.role === 'user'
+          :is-streaming="
+            isLoading &&
+            index === messages.length - 1 &&
+            message.role === 'assistant'
           "
-          :message="{
-            id: 'streaming',
-            role: 'assistant',
-            content: '',
-            created_at: new Date().toISOString(),
-          }"
-          :is-streaming="true"
-          :streaming-content="chatStore.currentStreamingContent"
+          :style="{ animationDelay: `${index * 0.05}s` }"
         />
       </template>
     </div>

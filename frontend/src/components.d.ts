@@ -42,5 +42,6 @@ declare module 'vue' {
     RuleItem: typeof import('./components/rules/RuleItem.vue')['default']
     SessionList: typeof import('./components/chat/SessionList.vue')['default']
     ThemeToggle: typeof import('./components/common/ThemeToggle.vue')['default']
+    ToolCallBlock: typeof import('./components/chat/ToolCallBlock.vue')['default']
   }
 }

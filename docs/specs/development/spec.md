@@ -13,6 +13,8 @@
 | 状态管理 | Pinia | ^3.0 |
 | UI 组件库 | Naive UI | ^2.44 |
 | 路由 | Vue Router | ^5.0 |
+| AI SDK | ai + @ai-sdk/vue | ^6.0 / ^3.0 |
+| Markdown 渲染 | marked + highlight.js | ^17.0 / ^11.11 |
 | 代码检查 | ESLint | ^10.1 |
 | 包管理 | pnpm | ^10.26.2 |
 
@@ -65,7 +67,7 @@ Chat-Bot/
 │   │       └── upload/          # 上传模块
 │   └── package.json
 │
-└── openspec/                    # 规范文档
+└── docs/                        # 规范文档
 ```
 
 ## 命名规范
@@ -75,7 +77,7 @@ Chat-Bot/
 | 类型 | 规范 | 示例 |
 |------|------|------|
 | 组件文件 | PascalCase | `ChatView.vue`、`MessageItem.vue` |
-| Composables | camelCase，以 use 开头 | `useChatStream.ts` |
+| Composables | camelCase，以 use 开头 | `useAIChat.ts`、`useChatTransport.ts` |
 | Store 文件 | camelCase | `chat.ts`、`agent.ts` |
 | 类型定义 | 统一在 `src/types/index.ts` | - |
 
@@ -163,12 +165,15 @@ Models/DTOs (modules/*/dto/)
 |------|------|
 | `frontend/src/assets/main.css` | CSS 变量和全局样式 |
 | `frontend/src/types/index.ts` | 所有 TypeScript 接口定义 |
-| `frontend/src/api/chat.ts` | API 函数 + SSE 流处理 |
-| `frontend/src/composables/useSSE.ts` | SSE 解析逻辑 |
+| `frontend/src/composables/useAIChat.ts` | AI SDK Chat 实例管理（单例） |
+| `frontend/src/composables/useChatTransport.ts` | 自定义 ChatTransport（SSE → UIMessageChunk） |
+| `frontend/src/stores/chat.ts` | Pinia 聊天状态管理 |
+| `frontend/src/api/chat.ts` | REST API 调用（会话管理等） |
 | `backend/src/modules/chat/chat.service.ts` | 核心聊天逻辑 |
+| `backend/src/modules/chat/chat.controller.ts` | 聊天 API 路由（含 SSE） |
+| `backend/src/modules/langgraph/langgraph.service.ts` | LangGraph 工作流集成 |
 | `backend/src/modules/agent/` | Agent 模块（controller/service/dto） |
 | `backend/src/modules/memory/memory.service.ts` | 记忆管理 |
-| `backend/src/modules/llm/providers/base.provider.ts` | LLM 提供者抽象 |
 
 ## 约束
 

@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { useChatStream } from "@/composables/useChatStream";
+import { useAIChat } from "@/composables/useAIChat";
 import { useFileUpload } from "@/composables/useFileUpload";
-import { useModelStore } from "@/stores/model";
 import { useChatStore } from "@/stores/chat";
 import {
   SendOutline,
@@ -18,10 +17,9 @@ const emit = defineEmits<{
   send: [message: string];
 }>();
 
-const { isStreaming, sendStreamMessage, cancelStream } = useChatStream();
+const { isLoading: isStreaming, sendMessage, stopStreaming } = useAIChat();
 const { isUploading, attachments, uploadMultiple, remove, clear } =
   useFileUpload({ maxFiles: 5 });
-const modelStore = useModelStore();
 const chatStore = useChatStore();
 
 const inputValue = ref("");
@@ -64,17 +62,11 @@ async function handleSend() {
   const message = inputValue.value.trim();
   inputValue.value = "";
 
-  // 获取当前选中的模型
-  const modelId = modelStore.getEffectiveModel(
-    chatStore.currentSessionId || undefined,
-  );
-
   try {
-    await sendStreamMessage(message, {
+    await sendMessage(message, {
       attachments: attachments.value,
       webSearch: webSearchEnabled.value,
       thinking: thinkingEnabled.value,
-      model: modelId || undefined,
     });
     emit("send", message);
     clear();
@@ -93,7 +85,7 @@ function handleKeyDown(e: KeyboardEvent) {
 }
 
 function handleCancel() {
-  cancelStream();
+  stopStreaming();
 }
 </script>
 

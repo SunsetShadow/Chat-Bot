@@ -1,0 +1,118 @@
+{
+  "changeId": "migrate-to-ai-sdk-ui",
+  "tasks": [
+    {
+      "number": 1,
+      "category": "阶段 1：依赖安装",
+      "task": "安装 @ai-sdk/vue 依赖",
+      "steps": [
+        { "step": "pnpm add @ai-sdk/vue 安装 Vue.js AI SDK 绑定", "completed": true },
+        { "step": "pnpm add ai 安装 AI SDK 核心包（提供类型声明）", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 2,
+      "category": "阶段 2：Transport 适配层",
+      "task": "创建自定义 ChatTransport 适配后端 SSE 协议",
+      "steps": [
+        { "step": "创建 useChatTransport.ts 文件", "completed": true },
+        { "step": "实现 createChatTransport() 函数，创建 ChatTransport<UIMessage> 实例", "completed": true },
+        { "step": "实现 sendMessages: 将 UIMessage 格式转换为后端 ChatCompletionRequest", "completed": true },
+        { "step": "实现 convertSSEStream: 将后端 SSE 事件转换为 AI SDK UIMessageChunk", "completed": true },
+        { "step": "实现 reconnectToStream: 返回 null（暂不支持重连）", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 3,
+      "category": "阶段 3：核心 Composable",
+      "task": "创建 useAIChat composable 封装 Chat 类",
+      "steps": [
+        { "step": "创建 useAIChat.ts 文件", "completed": true },
+        { "step": "集成 createChatTransport 适配后端 SSE", "completed": true },
+        { "step": "实现 sendMessage: 发送消息并同步到 chatStore", "completed": true },
+        { "step": "实现 stopStreaming / regenerate / loadMessages / clearMessages", "completed": true },
+        { "step": "导出 messages, status, isLoading, error 等响应式状态", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 4,
+      "category": "阶段 4：消息组件适配",
+      "task": "改造 MessageList.vue 适配 UIMessage 格式",
+      "steps": [
+        { "step": "从 useChatStore 切换到 useAIChat", "completed": true },
+        { "step": "使用 messages（UIMessage 格式）替代 chatStore.messages", "completed": true },
+        { "step": "使用 isLoading 替代 chatStore.isStreaming", "completed": true },
+        { "step": "移除旧的流式占位消息逻辑", "completed": true },
+        { "step": "流式滚动检测改为监听最后消息的 text part 长度变化", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 5,
+      "category": "阶段 4：消息组件适配",
+      "task": "改造 MessageItem.vue 支持 UIMessage parts 渲染",
+      "steps": [
+        { "step": "从 Message 类型切换到 UIMessage 类型", "completed": true },
+        { "step": "从 message.content 切换到 message.parts（数组）", "completed": true },
+        { "step": "新增 thinkingContent 计算属性，从 reasoning parts 提取思考过程", "completed": true },
+        { "step": "新增思考过程 UI 展示区域", "completed": true },
+        { "step": "保留 Markdown 渲染、代码高亮、光标动画等功能", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 6,
+      "category": "阶段 4：消息组件适配",
+      "task": "改造 MessageInput.vue 使用新 composable",
+      "steps": [
+        { "step": "从 useChatStream 切换到 useAIChat", "completed": true },
+        { "step": "sendMessage 改用 useAIChat 的 sendMessage", "completed": true },
+        { "step": "取消流式改用 stopStreaming()", "completed": true },
+        { "step": "移除 useModelStore 直接引用", "completed": true },
+        { "step": "保留附件上传、联网搜索、思考过程等 UI 功能", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 7,
+      "category": "阶段 5：状态管理精简",
+      "task": "精简 chat store 移除冗余流式状态",
+      "steps": [
+        { "step": "移除流式状态: isStreaming, currentStreamingContent, currentStreamingMessageId", "completed": true },
+        { "step": "移除流式方法: startStreaming, appendStreamingContent, stopStreaming 等", "completed": true },
+        { "step": "保留会话管理: sessions, currentSession, fetchSessions, createSession 等", "completed": true },
+        { "step": "保留辅助方法: addMessage, updateMessage, setCurrentSessionId, addSessionToList", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 8,
+      "category": "阶段 6：旧文件清理",
+      "task": "删除已替代的旧文件",
+      "steps": [
+        { "step": "删除 frontend/src/composables/useSSE.ts", "completed": true },
+        { "step": "删除 frontend/src/composables/useChatStream.ts", "completed": true },
+        { "step": "确认无其他文件引用这两个模块", "completed": true }
+      ],
+      "passes": true
+    },
+    {
+      "number": 9,
+      "category": "阶段 7：端到端验证",
+      "task": "构建测试与问题修复",
+      "steps": [
+        { "step": "修复 ai 包类型声明不可见问题: pnpm add ai", "completed": true },
+        { "step": "修复 MessageItem.vue 中未使用的 formatRelativeTime 导入", "completed": true },
+        { "step": "修复 useChatTransport.ts 中的隐式 any 类型", "completed": true },
+        { "step": "使用 type predicate 替代类型断言", "completed": true },
+        { "step": "pnpm lint:fix 修复格式问题", "completed": true },
+        { "step": "pnpm build 成功（vue-tsc + vite build）", "completed": true },
+        { "step": "pnpm lint 无错误（仅剩预先存在的 no-console 警告）", "completed": true }
+      ],
+      "passes": true
+    }
+  ]
+}

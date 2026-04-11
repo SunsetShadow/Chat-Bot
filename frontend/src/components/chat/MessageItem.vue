@@ -1,29 +1,102 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { Message } from "@/types";
-import { formatRelativeTime } from "@/utils/id";
+import type {
+  UIMessage,
+  TextUIPart,
+  ReasoningUIPart,
+  FileUIPart,
+  SourceUrlUIPart,
+  SourceDocumentUIPart,
+  StepStartUIPart,
+} from "ai";
 import { renderMarkdownSafe } from "@/utils/markdown";
 import { PersonOutline, SparklesOutline } from "@vicons/ionicons5";
+import ToolCallBlock from "./ToolCallBlock.vue";
 
 const props = defineProps<{
-  message: Message;
+  message: UIMessage;
   isStreaming?: boolean;
-  streamingContent?: string;
 }>();
 
 const isUser = computed(() => props.message.role === "user");
-const displayContent = computed(() =>
-  props.isStreaming ? props.streamingContent : props.message.content,
+
+const textContent = computed(() => {
+  return (
+    props.message.parts
+      ?.filter((p): p is TextUIPart => p.type === "text")
+      .map((p) => p.text)
+      .join("") || ""
+  );
+});
+
+const hasToolParts = computed(() =>
+  props.message.parts?.some(
+    (p) => p.type.startsWith("tool-") || p.type === "step-start",
+  ),
 );
 
-// 渲染 Markdown 内容
-const renderedContent = computed(() => {
-  if (isUser.value) {
-    // 用户消息不渲染 Markdown
-    return displayContent.value;
-  }
-  return renderMarkdownSafe(displayContent.value || "");
+// 缓存每个 text part 的 markdown 渲染结果，避免流式时反复解析
+const renderedParts = computed(() => {
+  if (isUser.value) return {};
+  const map: Record<number, string> = {};
+  props.message.parts?.forEach((part, idx) => {
+    if (part.type === "text") {
+      const text = (part as TextUIPart).text;
+      if (text) map[idx] = renderMarkdownSafe(text);
+    }
+  });
+  return map;
 });
+
+function getToolInfo(part: { type: string }) {
+  if (!part.type.startsWith("tool-")) return null;
+  const typed = part as {
+    type: string;
+    toolCallId?: string;
+    toolName?: string;
+    state?: string;
+    input?: Record<string, unknown>;
+    output?: unknown;
+    errorText?: string;
+  };
+  return {
+    toolName: typed.toolName || typed.type.replace("tool-", ""),
+    state: (typed.state || "input-available") as
+      | "input-streaming"
+      | "input-available"
+      | "output-available"
+      | "output-error",
+    input: typed.input,
+    output: typed.output,
+    errorText: typed.errorText,
+  };
+}
+
+function isFilePart(part: { type: string }): part is FileUIPart {
+  return part.type === "file";
+}
+
+function isSourceUrlPart(part: { type: string }): part is SourceUrlUIPart {
+  return part.type === "source-url";
+}
+
+function isSourceDocumentPart(
+  part: { type: string },
+): part is SourceDocumentUIPart {
+  return part.type === "source-document";
+}
+
+function isStepStartPart(part: { type: string }): part is StepStartUIPart {
+  return part.type === "step-start";
+}
+
+function getHostname(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}
 </script>
 
 <template>
@@ -34,7 +107,6 @@ const renderedContent = computed(() => {
       isStreaming ? '!opacity-100 !animate-none' : '',
     ]"
   >
-    <!-- Avatar -->
     <div
       class="w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center shrink-0 transition-all duration-150"
       :class="
@@ -46,25 +118,19 @@ const renderedContent = computed(() => {
       <NIcon :component="isUser ? PersonOutline : SparklesOutline" :size="18" />
     </div>
 
-    <!-- Content -->
     <div
       class="flex-1 flex flex-col gap-2 min-w-0"
       :class="isUser ? 'items-end' : ''"
       :style="{ maxWidth: '75%' }"
     >
-      <!-- Header -->
       <div class="flex items-center gap-2.5">
         <span
           class="font-mono text-xs font-medium tracking-wide text-[var(--text-secondary)]"
         >
           {{ isUser ? "你" : "AI 助手" }}
         </span>
-        <span class="font-mono text-[11px] text-[var(--text-muted)]">
-          {{ formatRelativeTime(message.created_at) }}
-        </span>
       </div>
 
-      <!-- Body -->
       <div
         class="px-5 py-4 rounded-2xl border relative"
         :class="
@@ -73,48 +139,126 @@ const renderedContent = computed(() => {
             : 'bg-[var(--bg-secondary)] border-[var(--border-color)] rounded-tl-sm'
         "
       >
-        <!-- Loading State -->
-        <div
-          v-if="isStreaming && !displayContent"
-          class="flex items-center gap-3"
-        >
-          <div class="flex gap-1">
-            <span
-              class="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse"
-            ></span>
-            <span
-              class="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse"
-              style="animation-delay: 0.2s"
-            ></span>
-            <span
-              class="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse"
-              style="animation-delay: 0.4s"
-            ></span>
-          </div>
-          <span class="text-[13px] text-[var(--text-muted)] italic"
-            >思考中...</span
-          >
-        </div>
+        <template v-if="!isUser">
+          <template v-for="(part, idx) in message.parts" :key="idx">
+            <div
+              v-if="isStepStartPart(part) && idx > 0"
+              class="my-3 border-t border-dashed border-[var(--border-color)]"
+            ></div>
 
-        <!-- Content -->
-        <div
-          v-else
-          class="message-text text-[15px] leading-relaxed break-words"
-          :class="{ 'markdown-body': !isUser }"
-          v-html="renderedContent"
-        ></div>
-        <span
-          v-if="isStreaming && displayContent"
-          class="inline-block w-0.5 h-[18px] ml-0.5 align-text-bottom animate-[blink-cursor_1s_step-end_infinite]"
-          :class="isUser ? 'bg-white' : 'bg-[var(--color-primary)]'"
-        ></span>
+            <div
+              v-else-if="part.type === 'reasoning'"
+              class="mb-3 px-3 py-2 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-color)]"
+            >
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-[11px] font-mono text-[var(--color-primary)]"
+                  >思考过程</span
+                >
+              </div>
+              <p
+                class="text-[13px] text-[var(--text-secondary)] whitespace-pre-wrap"
+              >
+                {{ (part as ReasoningUIPart).text }}
+              </p>
+            </div>
+
+            <!--  #with 绕过 v-else-if 双调用：先算好 toolInfo -->
+            <template v-else-if="part.type.startsWith('tool-')">
+              <ToolCallBlock
+                v-if="getToolInfo(part)"
+                v-bind="getToolInfo(part)!"
+                class="my-2"
+              />
+            </template>
+
+            <div v-else-if="isFilePart(part)" class="my-2">
+              <div
+                v-if="part.mediaType?.startsWith('image/')"
+                class="inline-block rounded-lg overflow-hidden border border-[var(--border-color)]"
+              >
+                <img
+                  :src="part.url"
+                  :alt="part.filename || '图片'"
+                  class="max-w-full max-h-60 object-contain"
+                />
+              </div>
+              <div
+                v-else
+                class="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-color)]"
+              >
+                <span class="font-mono text-xs text-[var(--color-primary)]">
+                  {{ part.filename || part.mediaType }}
+                </span>
+              </div>
+            </div>
+
+            <div v-else-if="isSourceUrlPart(part)" class="my-1">
+              <a
+                :href="part.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-1 font-mono text-[11px] text-[var(--color-primary)] hover:underline"
+              >
+                [{{ part.title || getHostname(part.url) }}]
+              </a>
+            </div>
+
+            <div v-else-if="isSourceDocumentPart(part)" class="my-1">
+              <span
+                class="inline-flex items-center gap-1 font-mono text-[11px] text-[var(--text-muted)]"
+              >
+                [{{ part.title || "文档" }}]
+              </span>
+            </div>
+
+            <template v-else-if="part.type === 'text'">
+              <div
+                v-if="isStreaming && !textContent && !hasToolParts"
+                class="flex items-center gap-3"
+              >
+                <div class="flex gap-1">
+                  <span
+                    class="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse"
+                  ></span>
+                  <span
+                    class="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse"
+                    style="animation-delay: 0.2s"
+                  ></span>
+                  <span
+                    class="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse"
+                    style="animation-delay: 0.4s"
+                  ></span>
+                </div>
+                <span class="text-[13px] text-[var(--text-muted)] italic"
+                  >思考中...</span
+                >
+              </div>
+
+              <div
+                v-else-if="renderedParts[idx]"
+                class="message-text text-[15px] leading-relaxed break-words markdown-body"
+                v-html="renderedParts[idx]"
+              ></div>
+            </template>
+          </template>
+
+          <span
+            v-if="isStreaming && textContent"
+            class="inline-block w-0.5 h-[18px] ml-0.5 align-text-bottom animate-[blink-cursor_1s_step-end_infinite] bg-[var(--color-primary)]"
+          ></span>
+        </template>
+
+        <template v-else>
+          <div class="message-text text-[15px] leading-relaxed break-words">
+            {{ textContent }}
+          </div>
+        </template>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* Markdown Body - 保留深度样式，无法用 Tailwind 实现 */
 .message-text.markdown-body :deep(p) {
   margin: 0 0 12px;
 }

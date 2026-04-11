@@ -11,7 +11,9 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
+    "@ai-sdk/vue": "^3.0.157",
     "@vicons/ionicons5": "^0.13.0",
+    "ai": "^6.0.157",
     "highlight.js": "^11.11.1",
     "marked": "^17.0.5",
     "naive-ui": "^2.44.1",

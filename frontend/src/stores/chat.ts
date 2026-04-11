@@ -15,10 +15,7 @@ export const useChatStore = defineStore("chat", () => {
   const currentSession = ref<SessionDetailResponse | null>(null);
   const messages = ref<Message[]>([]);
   const isLoading = ref(false);
-  const isSessionLoading = ref(false); // 新增：会话切换加载状态
-  const isStreaming = ref(false);
-  const currentStreamingContent = ref("");
-  const currentStreamingMessageId = ref<string | null>(null);
+  const isSessionLoading = ref(false);
   const error = ref<string | null>(null);
 
   // 计算属性
@@ -105,43 +102,6 @@ export const useChatStore = defineStore("chat", () => {
     }
   }
 
-  function startStreaming(messageId: string) {
-    isStreaming.value = true;
-    currentStreamingContent.value = "";
-    currentStreamingMessageId.value = messageId;
-  }
-
-  function appendStreamingContent(content: string) {
-    currentStreamingContent.value += content;
-  }
-
-  function updateStreamingMessageId(messageId: string) {
-    currentStreamingMessageId.value = messageId;
-  }
-
-  function stopStreaming() {
-    if (currentStreamingMessageId.value && currentStreamingContent.value) {
-      const index = messages.value.findIndex(
-        (m) => m.id === currentStreamingMessageId.value,
-      );
-      if (index !== -1) {
-        // 消息已存在，更新内容
-        messages.value[index].content = currentStreamingContent.value;
-      } else {
-        // 消息不存在（onMessageDone 未被调用），直接添加
-        messages.value.push({
-          id: currentStreamingMessageId.value,
-          role: "assistant",
-          content: currentStreamingContent.value,
-          created_at: new Date().toISOString(),
-        });
-      }
-    }
-    isStreaming.value = false;
-    currentStreamingContent.value = "";
-    currentStreamingMessageId.value = null;
-  }
-
   function clearCurrentSession() {
     currentSession.value = null;
     messages.value = [];
@@ -215,9 +175,6 @@ export const useChatStore = defineStore("chat", () => {
     messages,
     isLoading,
     isSessionLoading,
-    isStreaming,
-    currentStreamingContent,
-    currentStreamingMessageId,
     error,
     // 计算属性
     currentSessionId,
@@ -231,10 +188,6 @@ export const useChatStore = defineStore("chat", () => {
     pinSession,
     addMessage,
     updateMessage,
-    startStreaming,
-    appendStreamingContent,
-    updateStreamingMessageId,
-    stopStreaming,
     clearCurrentSession,
     clearError,
     setCurrentSessionId,

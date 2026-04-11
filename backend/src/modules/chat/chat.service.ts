@@ -4,6 +4,7 @@ import { AgentService } from '../agent/agent.service';
 import { RuleService } from '../rule/rule.service';
 import { MemoryService } from '../memory/memory.service';
 import { LangGraphService } from '../langgraph/langgraph.service';
+import type { StreamEvent } from '../langgraph/langgraph.service';
 import { CreateCompletionDto } from './dto/create-completion.dto';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
@@ -90,19 +91,38 @@ export class ChatService {
     let hasError = false;
 
     try {
-      for await (const chunk of this.langGraphService.chatStream(messages, systemPrompt, sessionId)) {
-        if (chunk.content) {
-          fullContent += chunk.content;
-          yield {
-            event: 'content_delta',
-            data: { session_id: sessionId, message_id: messageId, content: chunk.content },
-          };
-        }
-        if (chunk.finish_reason) {
-          yield {
-            event: 'message_done',
-            data: { session_id: sessionId, message_id: messageId, finish_reason: chunk.finish_reason },
-          };
+      for await (const event of this.langGraphService.chatStream(messages, systemPrompt, sessionId)) {
+        const base = { session_id: sessionId, message_id: messageId };
+
+        switch (event.type) {
+          case 'text':
+            fullContent += event.content;
+            yield { event: 'content_delta', data: { ...base, content: event.content } };
+            break;
+
+          case 'tool_start':
+            yield { event: 'tool_call_start', data: { ...base, tool_call_id: event.toolCallId, tool_name: event.toolName } };
+            break;
+
+          case 'tool_delta':
+            yield { event: 'tool_call_delta', data: { ...base, tool_call_id: event.toolCallId, args_delta: event.argsDelta } };
+            break;
+
+          case 'tool_input':
+            yield { event: 'tool_call_input', data: { ...base, tool_call_id: event.toolCallId, tool_name: event.toolName, input: event.args } };
+            break;
+
+          case 'tool_output':
+            yield { event: 'tool_call_output', data: { ...base, tool_call_id: event.toolCallId, output: event.output } };
+            break;
+
+          case 'step_start':
+            yield { event: 'step_start', data: base };
+            break;
+
+          case 'finish':
+            yield { event: 'message_done', data: { ...base, finish_reason: event.finishReason } };
+            break;
         }
       }
     } catch (error) {
