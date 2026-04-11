@@ -1,5 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { generateId, getCurrentTimestamp } from '../../common/types';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { v4 as uuidv4 } from 'uuid';
+import { SessionEntity } from '../../common/entities/session.entity';
+import { MessageEntity, MessageRole } from '../../common/entities/message.entity';
 import { AgentService } from '../agent/agent.service';
 import { RuleService } from '../rule/rule.service';
 import { MemoryService } from '../memory/memory.service';
@@ -9,29 +13,13 @@ import { CreateCompletionDto } from './dto/create-completion.dto';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
 
-export type MessageRole = 'user' | 'assistant' | 'system';
-
-export interface Message {
-  id: string;
-  role: MessageRole;
-  content: string;
-  created_at: Date;
-}
-
-export interface Session {
-  id: string;
-  title: string;
-  messages: Message[];
-  is_pinned: boolean;
-  created_at: Date;
-  updated_at: Date;
-}
-
 @Injectable()
 export class ChatService {
-  private sessions = new Map<string, Session>();
-
   constructor(
+    @InjectRepository(SessionEntity)
+    private sessionRepo: Repository<SessionEntity>,
+    @InjectRepository(MessageEntity)
+    private messageRepo: Repository<MessageEntity>,
     private agentService: AgentService,
     private ruleService: RuleService,
     private memoryService: MemoryService,
@@ -42,38 +30,46 @@ export class ChatService {
     const { message, session_id, stream, agent_id, rule_ids } = dto;
 
     const session = session_id
-      ? this.getSession(session_id)
-      : this.createSession({ title: 'New Chat' });
+      ? await this.getSession(session_id)
+      : await this.createSession({ title: 'New Chat' });
 
-    const userMessage: Message = {
-      id: generateId(),
-      role: 'user',
+    const userMessage = this.messageRepo.create({
+      id: uuidv4(),
+      role: 'user' as MessageRole,
       content: message,
-      created_at: getCurrentTimestamp(),
-    };
-    session.messages.push(userMessage);
+      session: { id: session.id } as SessionEntity,
+    });
+    await this.messageRepo.save(userMessage);
 
-    const systemPrompt = this.buildSystemPrompt(agent_id, rule_ids);
-    const messages = session.messages.map((m) => ({
+    // Reload session with messages
+    const sessionWithMessages = await this.sessionRepo.findOne({
+      where: { id: session.id },
+      relations: ['messages'],
+    });
+
+    const systemPrompt = await this.buildSystemPrompt(agent_id, rule_ids);
+    const messages = sessionWithMessages!.messages.map((m) => ({
       role: m.role,
       content: m.content,
     }));
 
     if (stream) {
-      return { session, stream: true, messages, systemPrompt };
+      return { session: sessionWithMessages, stream: true, messages, systemPrompt };
     }
 
     const response = await this.langGraphService.chat(messages, systemPrompt, session.id);
-    const assistantMessage: Message = {
-      id: generateId(),
-      role: 'assistant',
+    const assistantMessage = this.messageRepo.create({
+      id: uuidv4(),
+      role: 'assistant' as MessageRole,
       content: response.content,
-      created_at: getCurrentTimestamp(),
-    };
-    session.messages.push(assistantMessage);
-    session.updated_at = getCurrentTimestamp();
+      session: { id: session.id } as SessionEntity,
+    });
+    await this.messageRepo.save(assistantMessage);
 
-    return { session, assistantMessage, finish_reason: response.finish_reason };
+    session.updated_at = new Date();
+    await this.sessionRepo.save(session);
+
+    return { session: sessionWithMessages, assistantMessage, finish_reason: response.finish_reason };
   }
 
   async *streamCompletion(
@@ -134,16 +130,15 @@ export class ChatService {
     }
 
     if (fullContent) {
-      const session = this.sessions.get(sessionId);
-      if (session) {
-        session.messages.push({
-          id: messageId,
-          role: 'assistant',
-          content: fullContent,
-          created_at: getCurrentTimestamp(),
-        });
-        session.updated_at = getCurrentTimestamp();
-      }
+      const msg = this.messageRepo.create({
+        id: messageId,
+        role: 'assistant' as MessageRole,
+        content: fullContent,
+        session: { id: sessionId } as SessionEntity,
+      });
+      await this.messageRepo.save(msg);
+
+      await this.sessionRepo.update(sessionId, { updated_at: new Date() });
     }
 
     if (!hasError) {
@@ -151,30 +146,25 @@ export class ChatService {
     }
   }
 
-  createSession(dto: CreateSessionDto): Session {
-    const session: Session = {
-      id: generateId(),
+  async createSession(dto: CreateSessionDto): Promise<SessionEntity> {
+    const session = this.sessionRepo.create({
+      id: uuidv4(),
       title: dto.title || 'New Chat',
-      messages: [],
       is_pinned: false,
-      created_at: getCurrentTimestamp(),
-      updated_at: getCurrentTimestamp(),
-    };
-    this.sessions.set(session.id, session);
-    return session;
+    });
+    return this.sessionRepo.save(session);
   }
 
-  getSessions(page = 1, pageSize = 20) {
-    const all = Array.from(this.sessions.values()).sort((a, b) => {
-      if (a.is_pinned !== b.is_pinned) return b.is_pinned ? 1 : -1;
-      return b.updated_at.getTime() - a.updated_at.getTime();
+  async getSessions(page = 1, pageSize = 20) {
+    const [all, total] = await this.sessionRepo.findAndCount({
+      relations: ['messages'],
+      order: { is_pinned: 'DESC', updated_at: 'DESC' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     });
 
-    const total = all.length;
     const totalPages = Math.ceil(total / pageSize);
-    const start = (page - 1) * pageSize;
-    const data = all.slice(start, start + pageSize);
-    const sessions = data.map(({ messages, ...rest }) => ({ ...rest, message_count: messages.length }));
+    const sessions = all.map(({ messages, ...rest }) => ({ ...rest, message_count: messages.length }));
 
     return {
       data: sessions,
@@ -182,33 +172,37 @@ export class ChatService {
     };
   }
 
-  getSession(id: string): Session {
-    const session = this.sessions.get(id);
+  async getSession(id: string): Promise<SessionEntity> {
+    const session = await this.sessionRepo.findOne({
+      where: { id },
+      relations: ['messages'],
+    });
     if (!session) throw new NotFoundException(`Session ${id} not found`);
     return session;
   }
 
-  togglePin(id: string, dto: UpdateSessionDto): Session {
-    const session = this.getSession(id);
+  async togglePin(id: string, dto: UpdateSessionDto): Promise<SessionEntity> {
+    const session = await this.getSession(id);
     session.is_pinned = dto.is_pinned;
-    session.updated_at = getCurrentTimestamp();
-    return session;
+    session.updated_at = new Date();
+    return this.sessionRepo.save(session);
   }
 
-  getMessages(sessionId: string): Message[] {
-    return this.getSession(sessionId).messages;
+  async getMessages(sessionId: string): Promise<MessageEntity[]> {
+    const session = await this.getSession(sessionId);
+    return session.messages;
   }
 
-  private buildSystemPrompt(agentId?: string, ruleIds?: string[]): string {
+  private async buildSystemPrompt(agentId?: string, ruleIds?: string[]): Promise<string> {
     const parts: string[] = [];
 
     const resolvedAgentId = agentId || 'builtin-general';
     try {
-      const agent = this.agentService.findOne(resolvedAgentId);
+      const agent = await this.agentService.findOne(resolvedAgentId);
       if (agent.system_prompt) parts.push(agent.system_prompt);
     } catch { /* skip */ }
 
-    const enabledRules = this.ruleService.getEnabledRules();
+    const enabledRules = await this.ruleService.getEnabledRules();
     const targetRules = ruleIds
       ? enabledRules.filter((r) => ruleIds.includes(r.id))
       : enabledRules;
@@ -216,7 +210,7 @@ export class ChatService {
       parts.push(...targetRules.map((r) => r.content));
     }
 
-    const memoryContext = this.memoryService.buildMemoryContext();
+    const memoryContext = await this.memoryService.buildMemoryContext();
     if (memoryContext) parts.push(memoryContext);
 
     return parts.join('\n\n');

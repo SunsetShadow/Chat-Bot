@@ -1,16 +1,7 @@
 import { IsString, IsOptional, IsNotEmpty, IsEnum } from 'class-validator';
+import { RuleCategory, ConflictStrategy } from '../../../common/entities/rule.entity';
 
-export enum RuleCategory {
-  BEHAVIOR = 'behavior',
-  FORMAT = 'format',
-  CONSTRAINT = 'constraint',
-}
-
-export enum ConflictStrategy {
-  OVERRIDE = 'override',
-  MERGE = 'merge',
-  REJECT = 'reject',
-}
+export { RuleCategory, ConflictStrategy };
 
 export class CreateRuleDto {
   @IsString()

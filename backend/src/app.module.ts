@@ -1,5 +1,6 @@
 import { Module, MiddlewareConsumer } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { SecurityMiddleware } from './middleware/security.middleware';
 import { AppController } from './app.controller';
 import { ModelService } from './modules/model/model.service';
@@ -13,6 +14,19 @@ import { ModelModule } from './modules/model/model.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
+    TypeOrmModule.forRootAsync({
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres' as const,
+        host: configService.get<string>('DB_HOST', 'localhost'),
+        port: configService.get<number>('DB_PORT', 5432),
+        username: configService.get<string>('DB_USERNAME', 'chatbot'),
+        password: configService.get<string>('DB_PASSWORD', 'chatbot'),
+        database: configService.get<string>('DB_DATABASE', 'chatbot'),
+        autoLoadEntities: true,
+        synchronize: true,
+      }),
+      inject: [ConfigService],
+    }),
     ChatModule,
     AgentModule,
     RuleModule,

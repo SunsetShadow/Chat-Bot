@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
-import { RuleService, Rule } from './rule.service';
+import { RuleService } from './rule.service';
+import { RuleEntity } from '../../common/entities/rule.entity';
 import { CreateRuleDto } from './dto/create-rule.dto';
 import { UpdateRuleDto } from './dto/update-rule.dto';
 
@@ -8,28 +9,28 @@ export class RuleController {
   constructor(private readonly ruleService: RuleService) {}
 
   @Get()
-  findAll(@Query('enabled_only') enabledOnly?: string): Rule[] {
+  async findAll(@Query('enabled_only') enabledOnly?: string): Promise<RuleEntity[]> {
     return this.ruleService.findAll(enabledOnly === 'true');
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string): Rule {
+  async findOne(@Param('id') id: string): Promise<RuleEntity> {
     return this.ruleService.findOne(id);
   }
 
   @Post()
-  create(@Body() dto: CreateRuleDto): Rule {
+  async create(@Body() dto: CreateRuleDto): Promise<RuleEntity> {
     return this.ruleService.create(dto);
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateRuleDto): Rule {
+  async update(@Param('id') id: string, @Body() dto: UpdateRuleDto): Promise<RuleEntity> {
     return this.ruleService.update(id, dto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    this.ruleService.remove(id);
+  async remove(@Param('id') id: string) {
+    await this.ruleService.remove(id);
     return { message: 'Rule deleted' };
   }
 }

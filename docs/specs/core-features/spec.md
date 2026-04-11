@@ -2,6 +2,8 @@
 
 本文档定义 Chat Bot 的核心功能：聊天系统、Agent 系统、规则系统、记忆系统和上下文管理。
 
+> 架构演进计划见 [plans/agent-architecture/evolution-plan.md](../../plans/agent-architecture/evolution-plan.md)
+
 ---
 
 ## 聊天系统
@@ -18,15 +20,6 @@
   → 后端 SSE 流 → convertSSEStream() → UIMessageChunk
   → Chat 实例自动更新 messages → Vue 响应式渲染
 ```
-
-### 前端关键文件
-
-| 文件 | 用途 |
-|------|------|
-| `composables/useAIChat.ts` | Chat 实例管理（单例），提供 sendMessage / stopStreaming / regenerate |
-| `composables/useChatTransport.ts` | 自定义 ChatTransport，SSE → UIMessageChunk 转换 |
-| `stores/chat.ts` | Pinia store，管理会话列表和当前会话状态 |
-| `api/chat.ts` | REST API 调用（会话 CRUD、消息历史） |
 
 ### SSE 事件类型（后端 → 前端）
 
@@ -47,20 +40,12 @@
 
 | 方法 | 端点 | 描述 |
 |------|------|------|
-| POST | `/api/v1/chat/completions` | 发送聊天消息（SSE 流式，ChatTransport 调用） |
+| POST | `/api/v1/chat/completions` | 发送聊天消息（SSE 流式） |
 | POST | `/api/v1/chat/sessions` | 创建新会话 |
 | GET | `/api/v1/chat/sessions` | 获取会话列表（分页） |
 | GET | `/api/v1/chat/sessions/{id}` | 获取特定会话 |
 | GET | `/api/v1/chat/sessions/{id}/messages` | 获取会话消息历史 |
 | PUT | `/api/v1/chat/sessions/{id}/pin` | 切换会话置顶状态 |
-
-### 错误处理
-
-| 错误类型 | 处理策略 |
-|---------|---------|
-| 连接超时 | 30秒无响应自动重连，最多3次 |
-| 网络中断 | 指数退避重连（1s, 2s, 4s, 8s） |
-| 服务端错误 | 显示错误提示，保留用户输入 |
 
 ### 约束
 
@@ -68,8 +53,8 @@
 2. 后端 SSE 事件必须在 `useChatTransport.ts` 中正确转换为 `UIMessageChunk`
 3. Chat 实例为模块级单例，所有组件共享同一份消息状态
 4. Agent 和 Rule 在请求时通过 ChatTransport 的 extraBody 注入
-5. 会话持久化存储在本地文件系统
-6. 失败消息保留在本地，支持手动重试（regenerate）
+5. 会话和消息持久化存储在 PostgreSQL（TypeORM）
+6. 失败消息保留在数据库，支持手动重试（regenerate）
 
 ---
 
@@ -80,17 +65,20 @@
 ### 数据模型
 
 ```typescript
+// TypeORM Entity: backend/src/common/entities/agent.entity.ts
 interface Agent {
-  id: string
+  id: string               // UUID，主键
   name: string
   description: string
   system_prompt: string
-  traits: string[]          // 性格特征列表
-  is_builtin: boolean       // 内置 Agent 不可删除
-  created_at?: Date
-  updated_at?: Date
+  traits: string[]          // simple-array 类型
+  is_builtin: boolean       // 内置 Agent 不可删除/修改
+  created_at: Date          // 自动生成
+  updated_at: Date          // 自动更新
 }
 ```
+
+持久化：PostgreSQL（TypeORM），启动时自动 seed 3 个内置 Agent。
 
 ### API 端点
 
@@ -117,17 +105,20 @@ interface Agent {
 ### 数据模型
 
 ```typescript
+// TypeORM Entity: backend/src/common/entities/rule.entity.ts
 interface Rule {
-  id: string
+  id: string               // UUID，主键
   name: string
   content: string
-  enabled: boolean                          // 是否启用
+  enabled: boolean
   category: 'behavior' | 'format' | 'constraint'
-  priority: number                          // 优先级
-  conflict_strategy: 'override' | 'merge' | 'reject'  // 冲突策略
-  is_builtin: boolean                       // 内置规则不可删除
+  priority: number
+  conflict_strategy: 'override' | 'merge' | 'reject'
+  is_builtin: boolean
 }
 ```
+
+持久化：PostgreSQL（TypeORM），启动时自动 seed 5 个内置 Rule。
 
 ### 规则类别
 
@@ -158,21 +149,44 @@ interface Rule {
 
 ## 记忆系统
 
-使用 AI 自动从对话中提取重要信息，存储为长期记忆。
+使用 AI 自动从对话中提取重要信息，存储为长期记忆。支持关键词过滤和语义检索两种查询方式。
 
 ### 数据模型
 
 ```typescript
+// TypeORM Entity: backend/src/common/entities/memory.entity.ts
 interface Memory {
-  id: string
+  id: string               // UUID，主键（同时作为 Milvus 关联 ID）
   content: string
   type: 'fact' | 'preference' | 'event'
-  source_session_id: string | null  // 来源会话
-  importance: number                // 1-10，重要程度
+  source_session_id: string | null
+  importance: number       // 1-10
   created_at: Date
   last_accessed: Date
 }
 ```
+
+### 存储架构
+
+```
+MemoryService
+  ├── TypeORM Repository → PostgreSQL（结构化数据：content, type, importance...）
+  └── MilvusService       → Milvus（embedding 向量）
+        ↑ EmbeddingService 生成向量（@langchain/openai OpenAIEmbeddings）
+```
+
+- **写入**：生成 embedding → 存 PG → 存 Milvus（Milvus 失败不阻塞）
+- **更新**：更新 PG，content 变更时重新生成 embedding 更新 Milvus
+- **删除**：PG + Milvus 同步删除
+- **语义检索**：embedding → Milvus 相似度搜索 → PG 取完整数据
+
+### Embedding 配置
+
+| 环境变量 | 说明 | 默认值 |
+|---------|------|--------|
+| `EMBEDDINGS_MODEL_NAME` | Embedding 模型名 | text-embedding-v3 |
+| `EMBEDDINGS_DIMENSION` | 向量维度 | 1536 |
+| `MILVUS_ADDRESS` | Milvus 地址 | localhost:19530 |
 
 ### 记忆类型
 
@@ -187,6 +201,7 @@ interface Memory {
 | 方法 | 端点 | 描述 |
 |------|------|------|
 | GET | `/api/v1/memories` | 获取记忆列表（支持 type、min_importance 过滤） |
+| GET | `/api/v1/memories/search` | 语义检索记忆（query, limit, type 参数） |
 | GET | `/api/v1/memories/{id}` | 获取特定记忆 |
 | POST | `/api/v1/memories` | 创建记忆 |
 | PUT | `/api/v1/memories/{id}` | 更新记忆 |
@@ -205,7 +220,7 @@ interface Memory {
 
 当前实现为简单拼接，无 Token 计算和消息截断逻辑。
 
-### 上下文构建流程（当前）
+### 上下文构建流程
 
 1. 加载系统提示词 = Agent.system_prompt + 启用的规则内容 + 记忆上下文
 2. 加载历史消息（全量，无截断）
@@ -218,22 +233,4 @@ interface Memory {
 - 无滑动窗口或消息摘要机制
 - 记忆注入无数量限制
 
-> 改进方案见 `docs/specs/agent-architecture/spec.md` Phase 2.2-2.3
-
----
-
-## 关键文件
-
-| 路径 | 用途 |
-|------|------|
-| `frontend/src/composables/useAIChat.ts` | AI SDK Chat 实例管理（单例） |
-| `frontend/src/composables/useChatTransport.ts` | 自定义 ChatTransport（SSE → UIMessageChunk） |
-| `frontend/src/stores/chat.ts` | Pinia 聊天状态管理 |
-| `frontend/src/api/chat.ts` | REST API 调用 |
-| `frontend/src/components/chat/` | 聊天 UI 组件 |
-| `backend/src/modules/chat/chat.controller.ts` | 聊天 API 路由（含 SSE） |
-| `backend/src/modules/chat/chat.service.ts` | 核心聊天逻辑 |
-| `backend/src/modules/langgraph/langgraph.service.ts` | LangGraph 工作流 |
-| `backend/src/modules/agent/` | Agent 模块（controller/service/dto） |
-| `backend/src/modules/rule/rule.service.ts` | 规则业务逻辑 |
-| `backend/src/modules/memory/memory.service.ts` | 记忆管理 |
+> 改进方案见 [plans/agent-architecture/evolution-plan.md](../../plans/agent-architecture/evolution-plan.md) Phase 2.2-2.3

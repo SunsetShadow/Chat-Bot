@@ -1,20 +1,11 @@
 import { Injectable, OnModuleInit, NotFoundException, BadRequestException } from '@nestjs/common';
-import { generateId } from '../../common/types';
-import { CreateRuleDto, RuleCategory, ConflictStrategy } from './dto/create-rule.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { RuleEntity, RuleCategory, ConflictStrategy } from '../../common/entities/rule.entity';
+import { CreateRuleDto } from './dto/create-rule.dto';
 import { UpdateRuleDto } from './dto/update-rule.dto';
 
-export interface Rule {
-  id: string;
-  name: string;
-  content: string;
-  enabled: boolean;
-  category: RuleCategory;
-  priority: number;
-  conflict_strategy: ConflictStrategy;
-  is_builtin: boolean;
-}
-
-const BUILTIN_RULES: Rule[] = [
+const BUILTIN_RULES: Partial<RuleEntity>[] = [
   {
     id: 'builtin-concise',
     name: '简洁回复',
@@ -69,33 +60,37 @@ const BUILTIN_RULES: Rule[] = [
 
 @Injectable()
 export class RuleService implements OnModuleInit {
-  private rules = new Map<string, Rule>();
+  constructor(
+    @InjectRepository(RuleEntity)
+    private ruleRepo: Repository<RuleEntity>,
+  ) {}
 
-  onModuleInit() {
+  async onModuleInit() {
     for (const rule of BUILTIN_RULES) {
-      this.rules.set(rule.id, { ...rule });
+      const exists = await this.ruleRepo.existsBy({ id: rule.id });
+      if (!exists) {
+        await this.ruleRepo.save(this.ruleRepo.create(rule));
+      }
     }
   }
 
-  findAll(enabledOnly = false): Rule[] {
-    const all = Array.from(this.rules.values());
+  async findAll(enabledOnly = false): Promise<RuleEntity[]> {
     if (enabledOnly) {
-      return all.filter((r) => r.enabled);
+      return this.ruleRepo.find({ where: { enabled: true } });
     }
-    return all;
+    return this.ruleRepo.find();
   }
 
-  findOne(id: string): Rule {
-    const rule = this.rules.get(id);
+  async findOne(id: string): Promise<RuleEntity> {
+    const rule = await this.ruleRepo.findOneBy({ id });
     if (!rule) {
       throw new NotFoundException(`Rule ${id} not found`);
     }
     return rule;
   }
 
-  create(dto: CreateRuleDto): Rule {
-    const rule: Rule = {
-      id: generateId(),
+  async create(dto: CreateRuleDto): Promise<RuleEntity> {
+    const rule = this.ruleRepo.create({
       name: dto.name,
       content: dto.content,
       enabled: true,
@@ -103,27 +98,26 @@ export class RuleService implements OnModuleInit {
       priority: 5,
       conflict_strategy: ConflictStrategy.MERGE,
       is_builtin: false,
-    };
-    this.rules.set(rule.id, rule);
-    return rule;
+    });
+    return this.ruleRepo.save(rule);
   }
 
-  update(id: string, dto: UpdateRuleDto): Rule {
-    const rule = this.findOne(id);
+  async update(id: string, dto: UpdateRuleDto): Promise<RuleEntity> {
+    const rule = await this.findOne(id);
     Object.assign(rule, dto);
-    this.rules.set(id, rule);
-    return rule;
+    return this.ruleRepo.save(rule);
   }
 
-  remove(id: string): void {
-    const rule = this.findOne(id);
+  async remove(id: string): Promise<void> {
+    const rule = await this.findOne(id);
     if (rule.is_builtin) {
       throw new BadRequestException('Cannot delete built-in rules');
     }
-    this.rules.delete(id);
+    await this.ruleRepo.delete(id);
   }
 
-  getEnabledRules(): Rule[] {
-    return this.findAll(true).sort((a, b) => b.priority - a.priority);
+  async getEnabledRules(): Promise<RuleEntity[]> {
+    const rules = await this.findAll(true);
+    return rules.sort((a, b) => b.priority - a.priority);
   }
 }

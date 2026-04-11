@@ -1,73 +1,104 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { generateId, getCurrentTimestamp } from '../../common/types';
-import { CreateMemoryDto, MemoryType } from './dto/create-memory.dto';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, In } from 'typeorm';
+import { v4 as uuidv4 } from 'uuid';
+import { MemoryEntity, MemoryType } from '../../common/entities/memory.entity';
+import { CreateMemoryDto } from './dto/create-memory.dto';
 import { UpdateMemoryDto } from './dto/update-memory.dto';
-
-export interface Memory {
-  id: string;
-  content: string;
-  type: MemoryType;
-  source_session_id: string | null;
-  importance: number;
-  created_at: Date;
-  last_accessed: Date;
-}
+import { EmbeddingService } from './embedding.service';
+import { MilvusService } from './milvus.service';
 
 @Injectable()
 export class MemoryService {
-  private memories = new Map<string, Memory>();
+  private readonly logger = new Logger(MemoryService.name);
 
-  findAll(type?: string, minImportance?: number): Memory[] {
-    let result = Array.from(this.memories.values());
+  constructor(
+    @InjectRepository(MemoryEntity)
+    private memoryRepo: Repository<MemoryEntity>,
+    private embeddingService: EmbeddingService,
+    private milvusService: MilvusService,
+  ) {}
+
+  async findAll(type?: string, minImportance?: number): Promise<MemoryEntity[]> {
+    const qb = this.memoryRepo.createQueryBuilder('m');
+
     if (type) {
-      result = result.filter((m) => m.type === type);
+      qb.andWhere('m.type = :type', { type });
     }
     if (minImportance) {
-      result = result.filter((m) => m.importance >= minImportance);
+      qb.andWhere('m.importance >= :minImportance', { minImportance });
     }
-    return result;
+
+    return qb.getMany();
   }
 
-  findOne(id: string): Memory {
-    const memory = this.memories.get(id);
+  async findOne(id: string): Promise<MemoryEntity> {
+    const memory = await this.memoryRepo.findOneBy({ id });
     if (!memory) {
       throw new NotFoundException(`Memory ${id} not found`);
     }
     return memory;
   }
 
-  create(dto: CreateMemoryDto): Memory {
-    const memory: Memory = {
-      id: generateId(),
+  async create(dto: CreateMemoryDto): Promise<MemoryEntity> {
+    const memory = this.memoryRepo.create({
+      id: uuidv4(),
       content: dto.content,
       type: dto.type || MemoryType.FACT,
-      source_session_id: dto.source_session_id || null,
+      source_session_id: dto.source_session_id || undefined,
       importance: dto.importance || 5,
-      created_at: getCurrentTimestamp(),
-      last_accessed: getCurrentTimestamp(),
-    };
-    this.memories.set(memory.id, memory);
-    return memory;
+      last_accessed: new Date(),
+    });
+    const saved = await this.memoryRepo.save(memory);
+
+    // Write to Milvus (failure does not block)
+    try {
+      const embedding = await this.embeddingService.embedQuery(dto.content);
+      await this.milvusService.insert(saved.id, embedding, saved.type);
+    } catch (error) {
+      this.logger.warn(`Failed to index memory ${saved.id} in Milvus: ${error.message}`);
+    }
+
+    return saved;
   }
 
-  update(id: string, dto: UpdateMemoryDto): Memory {
-    const memory = this.findOne(id);
+  async update(id: string, dto: UpdateMemoryDto): Promise<MemoryEntity> {
+    const memory = await this.findOne(id);
     Object.assign(memory, {
       ...dto,
-      last_accessed: getCurrentTimestamp(),
+      last_accessed: new Date(),
     });
-    this.memories.set(id, memory);
-    return memory;
+    const saved = await this.memoryRepo.save(memory);
+
+    // Re-generate embedding if content changed
+    if (dto.content) {
+      try {
+        await this.milvusService.delete(id);
+        const embedding = await this.embeddingService.embedQuery(dto.content);
+        await this.milvusService.insert(id, embedding, saved.type);
+      } catch (error) {
+        this.logger.warn(`Failed to re-index memory ${id} in Milvus: ${error.message}`);
+      }
+    }
+
+    return saved;
   }
 
-  remove(id: string): void {
-    const memory = this.findOne(id);
-    this.memories.delete(id);
+  async remove(id: string): Promise<void> {
+    await this.findOne(id);
+    await this.memoryRepo.delete(id);
+
+    try {
+      await this.milvusService.delete(id);
+    } catch (error) {
+      this.logger.warn(`Failed to delete memory ${id} from Milvus: ${error.message}`);
+    }
   }
 
-  buildMemoryContext(sessionId?: string): string {
-    const all = this.findAll().sort((a, b) => b.importance - a.importance);
-    if (all.length === 0) return '';
+  async buildMemoryContext(sessionId?: string): Promise<string> {
+    const all = await this.findAll();
+    const sorted = all.sort((a, b) => b.importance - a.importance);
+    if (sorted.length === 0) return '';
 
     const typeLabel: Record<string, string> = {
       [MemoryType.FACT]: '事实',
@@ -75,7 +106,23 @@ export class MemoryService {
       [MemoryType.EVENT]: '事件',
     };
 
-    const lines = all.map((m) => `- [${typeLabel[m.type] || m.type}] ${m.content}`);
+    const lines = sorted.map((m) => `- [${typeLabel[m.type] || m.type}] ${m.content}`);
     return `以下是关于用户的已知信息：\n${lines.join('\n')}`;
+  }
+
+  /**
+   * Semantic search: find similar memories via embedding
+   */
+  async searchBySemantic(query: string, limit = 10, memoryType?: string): Promise<MemoryEntity[]> {
+    const embedding = await this.embeddingService.embedQuery(query);
+    const ids = await this.milvusService.search(embedding, limit, memoryType);
+
+    if (ids.length === 0) return [];
+
+    const memories = await this.memoryRepo.findBy({ id: In(ids) });
+
+    // Sort by Milvus similarity order
+    const idOrder = new Map(ids.map((id, index) => [id, index]));
+    return memories.sort((a, b) => idOrder.get(a.id)! - idOrder.get(b.id)!);
   }
 }

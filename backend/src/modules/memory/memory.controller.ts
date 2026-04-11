@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
-import { MemoryService, Memory } from './memory.service';
+import { MemoryService } from './memory.service';
+import { MemoryEntity } from '../../common/entities/memory.entity';
 import { CreateMemoryDto } from './dto/create-memory.dto';
 import { UpdateMemoryDto } from './dto/update-memory.dto';
 
@@ -8,32 +9,46 @@ export class MemoryController {
   constructor(private readonly memoryService: MemoryService) {}
 
   @Get()
-  findAll(
+  async findAll(
     @Query('type') type?: string,
     @Query('min_importance') minImportance?: string,
-  ): Memory[] {
+  ): Promise<MemoryEntity[]> {
     const min = minImportance ? parseInt(minImportance, 10) : undefined;
     return this.memoryService.findAll(type, min);
   }
 
+  @Get('search')
+  async searchBySemantic(
+    @Query('query') query: string,
+    @Query('limit') limit?: string,
+    @Query('type') type?: string,
+  ) {
+    const results = await this.memoryService.searchBySemantic(
+      query,
+      limit ? parseInt(limit, 10) : 10,
+      type,
+    );
+    return { success: true, data: results, message: 'ok', code: 'SUCCESS' };
+  }
+
   @Get(':id')
-  findOne(@Param('id') id: string): Memory {
+  async findOne(@Param('id') id: string): Promise<MemoryEntity> {
     return this.memoryService.findOne(id);
   }
 
   @Post()
-  create(@Body() dto: CreateMemoryDto): Memory {
+  async create(@Body() dto: CreateMemoryDto): Promise<MemoryEntity> {
     return this.memoryService.create(dto);
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateMemoryDto): Memory {
+  async update(@Param('id') id: string, @Body() dto: UpdateMemoryDto): Promise<MemoryEntity> {
     return this.memoryService.update(id, dto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    this.memoryService.remove(id);
+  async remove(@Param('id') id: string) {
+    await this.memoryService.remove(id);
     return { message: 'Memory deleted' };
   }
 }

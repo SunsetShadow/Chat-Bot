@@ -1,20 +1,11 @@
 import { Injectable, OnModuleInit, NotFoundException, BadRequestException } from '@nestjs/common';
-import { generateId, getCurrentTimestamp } from '../../common/types';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { AgentEntity } from '../../common/entities/agent.entity';
 import { CreateAgentDto } from './dto/create-agent.dto';
 import { UpdateAgentDto } from './dto/update-agent.dto';
 
-export interface Agent {
-  id: string;
-  name: string;
-  description: string;
-  system_prompt: string;
-  traits: string[];
-  is_builtin: boolean;
-  created_at?: Date;
-  updated_at?: Date;
-}
-
-const BUILTIN_AGENTS: Agent[] = [
+const BUILTIN_AGENTS: Partial<AgentEntity>[] = [
   {
     id: 'builtin-general',
     name: '通用助手',
@@ -43,59 +34,57 @@ const BUILTIN_AGENTS: Agent[] = [
 
 @Injectable()
 export class AgentService implements OnModuleInit {
-  private agents = new Map<string, Agent>();
+  constructor(
+    @InjectRepository(AgentEntity)
+    private agentRepo: Repository<AgentEntity>,
+  ) {}
 
-  onModuleInit() {
+  async onModuleInit() {
     for (const agent of BUILTIN_AGENTS) {
-      this.agents.set(agent.id, { ...agent });
+      const exists = await this.agentRepo.existsBy({ id: agent.id });
+      if (!exists) {
+        await this.agentRepo.save(this.agentRepo.create(agent));
+      }
     }
   }
 
-  findAll(): Agent[] {
-    return Array.from(this.agents.values());
+  async findAll(): Promise<AgentEntity[]> {
+    return this.agentRepo.find();
   }
 
-  findOne(id: string): Agent {
-    const agent = this.agents.get(id);
+  async findOne(id: string): Promise<AgentEntity> {
+    const agent = await this.agentRepo.findOneBy({ id });
     if (!agent) {
       throw new NotFoundException(`Agent ${id} not found`);
     }
     return agent;
   }
 
-  create(dto: CreateAgentDto): Agent {
-    const agent: Agent = {
-      id: generateId(),
+  async create(dto: CreateAgentDto): Promise<AgentEntity> {
+    const agent = this.agentRepo.create({
       name: dto.name,
       description: dto.description || '',
       system_prompt: dto.system_prompt || '',
       traits: dto.traits || [],
       is_builtin: false,
-      created_at: getCurrentTimestamp(),
-      updated_at: getCurrentTimestamp(),
-    };
-    this.agents.set(agent.id, agent);
-    return agent;
+    });
+    return this.agentRepo.save(agent);
   }
 
-  update(id: string, dto: UpdateAgentDto): Agent {
-    const agent = this.findOne(id);
+  async update(id: string, dto: UpdateAgentDto): Promise<AgentEntity> {
+    const agent = await this.findOne(id);
     if (agent.is_builtin) {
       throw new BadRequestException('Cannot modify built-in agents');
     }
-    Object.assign(agent, {
-      ...dto,
-      updated_at: getCurrentTimestamp(),
-    });
-    this.agents.set(id, agent);
-    return agent;
+    Object.assign(agent, dto);
+    return this.agentRepo.save(agent);
   }
 
-  remove(id: string): void {
-    const agent = this.findOne(id);
+  async remove(id: string): Promise<void> {
+    const agent = await this.findOne(id);
     if (agent.is_builtin) {
       throw new BadRequestException('Cannot delete built-in agents');
     }
-    this.agents.delete(id);
+    await this.agentRepo.delete(id);
   }
 }

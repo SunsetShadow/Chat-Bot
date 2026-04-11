@@ -13,7 +13,7 @@ import { ChatService } from './chat.service';
 import { CreateCompletionDto } from './dto/create-completion.dto';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
-import { generateId } from '../../common/types';
+import { v4 as uuidv4 } from 'uuid';
 
 @Controller('api/v1/chat')
 export class ChatController {
@@ -34,7 +34,7 @@ export class ChatController {
     res.json({
       success: true,
       data: {
-        session_id: result.session.id,
+        session_id: result.session!.id,
         message: result.assistantMessage,
         finish_reason: result.finish_reason,
       },
@@ -45,7 +45,7 @@ export class ChatController {
     result: { session: any; messages: any[]; systemPrompt: string },
     res: Response,
   ) {
-    const messageId = generateId();
+    const messageId = uuidv4();
     const { session, messages, systemPrompt } = result;
 
     // 设置 SSE 响应头
@@ -92,33 +92,33 @@ export class ChatController {
   }
 
   @Post('sessions')
-  createSession(@Body() dto: CreateSessionDto) {
+  async createSession(@Body() dto: CreateSessionDto) {
     return this.chatService.createSession(dto);
   }
 
   @Get('sessions')
-  getSessions(
+  async getSessions(
     @Query('page') page?: string,
     @Query('page_size') pageSize?: string,
   ) {
     const p = page ? parseInt(page, 10) : 1;
     const ps = pageSize ? parseInt(pageSize, 10) : 20;
-    const result = this.chatService.getSessions(p, ps);
+    const result = await this.chatService.getSessions(p, ps);
     return { data: result.data, pagination: result.pagination };
   }
 
   @Get('sessions/:id')
-  getSession(@Param('id') id: string) {
+  async getSession(@Param('id') id: string) {
     return this.chatService.getSession(id);
   }
 
   @Put('sessions/:id/pin')
-  togglePin(@Param('id') id: string, @Body() dto: UpdateSessionDto) {
+  async togglePin(@Param('id') id: string, @Body() dto: UpdateSessionDto) {
     return this.chatService.togglePin(id, dto);
   }
 
   @Get('sessions/:id/messages')
-  getMessages(@Param('id') id: string) {
+  async getMessages(@Param('id') id: string) {
     return this.chatService.getMessages(id);
   }
 }

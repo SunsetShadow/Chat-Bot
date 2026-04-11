@@ -1,0 +1,103 @@
+{
+  "changeId": "integrate-typeorm-milvus",
+  "tasks": [
+    {
+      "number": 1,
+      "category": "阶段 1：基础设施搭建",
+      "task": "创建 Docker Compose + 安装依赖 + 配置 .env",
+      "steps": [
+        { "step": "创建 docker-compose.yml（PostgreSQL 16 + Milvus v2.4）", "completed": false },
+        { "step": "pnpm add @nestjs/typeorm typeorm pg @zilliz/milvus2-sdk-node", "completed": false },
+        { "step": "pnpm add -D @types/pg", "completed": false },
+        { "step": ".env 新增 DB / Milvus / Embedding 配置项", "completed": false },
+        { "step": "AppModule 注册 TypeORM.forRootAsync", "completed": false }
+      ]
+    },
+    {
+      "number": 2,
+      "category": "阶段 2：Entity 创建",
+      "task": "创建 5 个 TypeORM Entity",
+      "steps": [
+        { "step": "创建 backend/src/common/entities/session.entity.ts", "completed": false },
+        { "step": "创建 backend/src/common/entities/message.entity.ts", "completed": false },
+        { "step": "创建 backend/src/common/entities/agent.entity.ts", "completed": false },
+        { "step": "创建 backend/src/common/entities/rule.entity.ts", "completed": false },
+        { "step": "创建 backend/src/common/entities/memory.entity.ts", "completed": false }
+      ]
+    },
+    {
+      "number": 3,
+      "category": "阶段 3：AgentService 改造",
+      "task": "AgentService 从 Map 迁移到 TypeORM Repository",
+      "steps": [
+        { "step": "AgentModule 注册 TypeOrmModule.forFeature([AgentEntity])", "completed": false },
+        { "step": "AgentService 注入 Repository<AgentEntity>，替换 Map", "completed": false },
+        { "step": "onModuleInit 实现：检查并 seed 内置 Agent", "completed": false },
+        { "step": "findAll / findOne / create / update / remove 改用 Repository", "completed": false }
+      ]
+    },
+    {
+      "number": 4,
+      "category": "阶段 3：RuleService 改造",
+      "task": "RuleService 从 Map 迁移到 TypeORM Repository",
+      "steps": [
+        { "step": "RuleModule 注册 TypeOrmModule.forFeature([RuleEntity])", "completed": false },
+        { "step": "RuleService 注入 Repository<RuleEntity>，替换 Map", "completed": false },
+        { "step": "onModuleInit 实现：检查并 seed 内置 Rule", "completed": false },
+        { "step": "findAll / findOne / getEnabledRules / create / update / remove 改用 Repository", "completed": false }
+      ]
+    },
+    {
+      "number": 5,
+      "category": "阶段 3：ChatService 改造",
+      "task": "ChatService 从 Map 迁移到 TypeORM Repository",
+      "steps": [
+        { "step": "ChatModule 注册 TypeOrmModule.forFeature([SessionEntity, MessageEntity])", "completed": false },
+        { "step": "ChatService 注入 Repository<SessionEntity> + Repository<MessageEntity>", "completed": false },
+        { "step": "createSession / getSessions / getSession 改用 Repository，关联查询 messages", "completed": false },
+        { "step": "getMessages 改用 Repository 按 session_id 查询", "completed": false },
+        { "step": "togglePin 改用 Repository.update", "completed": false },
+        { "step": "createCompletion / streamCompletion 中 message 写入改用 Repository.save", "completed": false }
+      ]
+    },
+    {
+      "number": 6,
+      "category": "阶段 3：MemoryService 基础改造",
+      "task": "MemoryService 从 Map 迁移到 TypeORM Repository（暂不含 Milvus）",
+      "steps": [
+        { "step": "MemoryModule 注册 TypeOrmModule.forFeature([MemoryEntity])", "completed": false },
+        { "step": "MemoryService 注入 Repository<MemoryEntity>，替换 Map", "completed": false },
+        { "step": "findAll / findOne / create / update / remove 改用 Repository", "completed": false },
+        { "step": "buildMemoryContext 改用 Repository 查询", "completed": false }
+      ]
+    },
+    {
+      "number": 7,
+      "category": "阶段 4：Embedding 集成",
+      "task": "创建 EmbeddingService + MilvusService，接入 MemoryService",
+      "steps": [
+        { "step": "创建 embedding.service.ts：封装 OpenAIEmbeddings，模型名从 .env 读取", "completed": false },
+        { "step": "创建 milvus.service.ts：封装 Milvus 客户端，onModuleInit 自动建 collection + 索引", "completed": false },
+        { "step": "MilvusService 实现 insert / search / delete 方法", "completed": false },
+        { "step": "MemoryModule 注册 EmbeddingService + MilvusService", "completed": false },
+        { "step": "MemoryService.create：生成 embedding → 存 PG → 存 Milvus", "completed": false },
+        { "step": "MemoryService.remove：删除 PG → 删除 Milvus", "completed": false },
+        { "step": "新增语义检索方法：EmbeddingService.embedQuery → Milvus.search → PG 取数据", "completed": false }
+      ]
+    },
+    {
+      "number": 8,
+      "category": "阶段 5：验证",
+      "task": "启动验证 + 接口测试",
+      "steps": [
+        { "step": "docker compose up -d 启动 PG + Milvus", "completed": false },
+        { "step": "pnpm dev 启动后端，确认 TypeORM 连接成功 + 表自动创建", "completed": false },
+        { "step": "验证内置 Agent / Rule 自动 seed", "completed": false },
+        { "step": "验证 Session / Message CRUD（创建会话、发送消息、获取历史）", "completed": false },
+        { "step": "验证 Memory 写入：PG 存储 + Milvus 向量写入", "completed": false },
+        { "step": "验证 Memory 语义检索：输入查询 → Milvus 搜索 → 返回结果", "completed": false },
+        { "step": "pnpm build 后端编译通过", "completed": false }
+      ]
+    }
+  ]
+}

@@ -1,10 +1,7 @@
 import { IsString, IsOptional, IsNotEmpty, IsEnum, IsInt, Min, Max } from 'class-validator';
+import { MemoryType } from '../../../common/entities/memory.entity';
 
-export enum MemoryType {
-  FACT = 'fact',
-  PREFERENCE = 'preference',
-  EVENT = 'event',
-}
+export { MemoryType };
 
 export class CreateMemoryDto {
   @IsString()

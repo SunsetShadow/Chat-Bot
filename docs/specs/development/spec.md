@@ -26,7 +26,11 @@
 | 语言 | TypeScript | ^5.x |
 | 运行时 | Node.js | 20+ |
 | 包管理 | pnpm | ^10.x |
+| ORM | TypeORM + @nestjs/typeorm | ^0.3 / ^11.x |
+| 数据库 | PostgreSQL | 16 |
+| 向量数据库 | Milvus + @zilliz/milvus2-sdk-node | v2.4 / ^2.6 |
 | AI | OpenAI SDK (npm) | ^4.x |
+| AI | @langchain/openai | ^1.x |
 | 验证 | class-validator + class-transformer | ^0.14 / ^0.5 |
 | 环境变量 | @nestjs/config | ^4.x |
 
@@ -52,6 +56,7 @@ Chat-Bot/
 ├── backend/                     # 后端项目
 │   ├── src/
 │   │   ├── common/              # 公共层
+│   │   │   ├── entities/        # TypeORM 实体定义
 │   │   │   ├── types/           # 公共类型定义
 │   │   │   ├── filters/         # 异常过滤器
 │   │   │   └── interceptors/    # 拦截器
@@ -61,13 +66,19 @@ Chat-Bot/
 │   │       ├── agent/           # Agent 模块
 │   │       ├── chat/            # 聊天模块（含 SSE）
 │   │       ├── llm/             # LLM 集成模块
-│   │       ├── memory/          # 记忆模块
+│   │       ├── memory/          # 记忆模块（含 Milvus + Embedding）
 │   │       ├── model/           # 模型管理模块
 │   │       ├── rule/            # 规则模块
 │   │       └── upload/          # 上传模块
 │   └── package.json
 │
-└── docs/                        # 规范文档
+├── docker-compose.yml           # Milvus 容器编排
+│
+└── docs/                        # 文档
+    ├── specs/                   # 当前系统规范
+    ├── plans/                   # 未来演进计划
+    ├── references/              # 参考读物
+    └── changes/                 # 历史变更记录
 ```
 
 ## 命名规范
@@ -90,26 +101,6 @@ Chat-Bot/
 | 函数/变量 | camelCase | `getChatMessages` |
 | 模块目录 | kebab-case | `modules/chat/` |
 
-## API开发规则
-
-### 接口设计规则
-1. 遵循RESTful设计原则
-2. 使用HTTP状态码表示结果
-3. 响应格式统一为JSON
-4. 支持分页的接口必须包含元数据
-
-### 错误处理规则
-1. 统一的错误响应格式
-2. 错误信息要对用户友好
-3. 记录详细的错误日志
-4. 敏感信息不能暴露给客户端
-
-### 安全规则
-1. 所有接口都要有认证检查
-2. 使用HTTPS传输敏感数据
-3. 输入数据必须验证和清理
-4. 实施适当的限流策略
-
 ## 分层架构
 
 ```
@@ -117,9 +108,11 @@ Controllers (modules/*/controller.ts)
     ↓ 调用
 Services (modules/*/service.ts)
     ↓ 调用
+TypeORM Repository (结构化数据) / Milvus Service (向量数据)
+    ↓ 调用
 Providers (modules/llm/providers/)
     ↓ 操作
-Models/DTOs (modules/*/dto/)
+Entities (common/entities/) / DTOs (modules/*/dto/)
 ```
 
 ## 代码风格约束
@@ -130,7 +123,7 @@ Models/DTOs (modules/*/dto/)
 | 参数数量 | 不超过 3 个，超过时使用配置对象 |
 | 嵌套深度 | 最多 3 层，使用早期返回减少嵌套 |
 | 类型注解 | 公共 API 必须有类型注解 |
-| Lint 检查 | 所有代码必须通过 ESLint/Ruff |
+| Lint 检查 | 所有代码必须通过 ESLint |
 
 ## UI 风格约束
 
@@ -152,13 +145,6 @@ Models/DTOs (modules/*/dto/)
 - 圆角：`--radius-sm`、`--radius-md`、`--radius-lg`
 - 过渡：`--transition-fast`、`--transition-smooth`
 
-### 约束
-
-1. 不在组件 `<style>` 中写自定义 CSS，使用 Tailwind 类或 CSS 变量
-2. 新增颜色必须通过 CSS 变量定义
-3. 动画使用 `main.css` 中定义的 keyframes
-4. 滚动条样式已在 `main.css` 中定义，无需重复
-
 ## 关键文件
 
 | 路径 | 用途 |
@@ -173,7 +159,11 @@ Models/DTOs (modules/*/dto/)
 | `backend/src/modules/chat/chat.controller.ts` | 聊天 API 路由（含 SSE） |
 | `backend/src/modules/langgraph/langgraph.service.ts` | LangGraph 工作流集成 |
 | `backend/src/modules/agent/` | Agent 模块（controller/service/dto） |
-| `backend/src/modules/memory/memory.service.ts` | 记忆管理 |
+| `backend/src/modules/memory/memory.service.ts` | 记忆管理（PG + Milvus 双写） |
+| `backend/src/modules/memory/embedding.service.ts` | Embedding 生成（@langchain/openai） |
+| `backend/src/modules/memory/milvus.service.ts` | Milvus 向量数据库客户端 |
+| `backend/src/common/entities/` | TypeORM 实体定义 |
+| `docker-compose.yml` | Milvus 容器编排 |
 
 ## 约束
 
@@ -182,5 +172,7 @@ Models/DTOs (modules/*/dto/)
 3. 后端使用 NestJS 模块化架构，业务逻辑在 Service 层
 4. Agent 和 Rule 在请求时注入到系统提示词
 5. 始终考虑组件的可复用性
-7. 遵循Vue3最佳实践
-3. 确保类型安全
+6. 遵循 Vue 3 最佳实践
+7. 确保类型安全
+8. 结构化数据通过 TypeORM Repository 操作，Memory embedding 通过 Milvus 操作
+9. 内置数据（Agent/Rule）在应用启动时通过 `onModuleInit` 自动 seed

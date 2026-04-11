@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Body, Param } from '@nestjs/common';
-import { AgentService, Agent } from './agent.service';
+import { AgentService } from './agent.service';
+import { AgentEntity } from '../../common/entities/agent.entity';
 import { CreateAgentDto } from './dto/create-agent.dto';
 import { UpdateAgentDto } from './dto/update-agent.dto';
 
@@ -8,28 +9,28 @@ export class AgentController {
   constructor(private readonly agentService: AgentService) {}
 
   @Get()
-  findAll(): Agent[] {
+  async findAll(): Promise<AgentEntity[]> {
     return this.agentService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string): Agent {
+  async findOne(@Param('id') id: string): Promise<AgentEntity> {
     return this.agentService.findOne(id);
   }
 
   @Post()
-  create(@Body() dto: CreateAgentDto): Agent {
+  async create(@Body() dto: CreateAgentDto): Promise<AgentEntity> {
     return this.agentService.create(dto);
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateAgentDto): Agent {
+  async update(@Param('id') id: string, @Body() dto: UpdateAgentDto): Promise<AgentEntity> {
     return this.agentService.update(id, dto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    this.agentService.remove(id);
+  async remove(@Param('id') id: string) {
+    await this.agentService.remove(id);
     return { message: 'Agent deleted' };
   }
 }
