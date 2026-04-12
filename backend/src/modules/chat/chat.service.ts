@@ -54,10 +54,10 @@ export class ChatService {
     }));
 
     if (stream) {
-      return { session: sessionWithMessages, stream: true, messages, systemPrompt };
+      return { session: sessionWithMessages, stream: true, messages, systemPrompt, agent_id };
     }
 
-    const response = await this.langGraphService.chat(messages, systemPrompt, session.id);
+    const response = await this.langGraphService.chat(messages, systemPrompt, session.id, agent_id);
     const assistantMessage = this.messageRepo.create({
       id: uuidv4(),
       role: 'assistant' as MessageRole,
@@ -77,6 +77,7 @@ export class ChatService {
     systemPrompt: string,
     sessionId: string,
     messageId: string,
+    preferredAgent?: string,
   ): AsyncGenerator<{ event: string; data: any }> {
     yield {
       event: 'message_start',
@@ -87,7 +88,7 @@ export class ChatService {
     let hasError = false;
 
     try {
-      for await (const event of this.langGraphService.chatStream(messages, systemPrompt, sessionId)) {
+      for await (const event of this.langGraphService.chatStream(messages, systemPrompt, sessionId, preferredAgent)) {
         const base = { session_id: sessionId, message_id: messageId };
 
         switch (event.type) {
@@ -116,6 +117,13 @@ export class ChatService {
             yield { event: 'step_start', data: base };
             break;
 
+          case 'agent_switched':
+            yield {
+              event: 'agent_switched',
+              data: { ...base, from: event.fromAgent, to: event.toAgent },
+            };
+            break;
+
           case 'finish':
             yield { event: 'message_done', data: { ...base, finish_reason: event.finishReason } };
             break;
@@ -125,7 +133,7 @@ export class ChatService {
       hasError = true;
       yield {
         event: 'error',
-        data: { session_id: sessionId, error: error.message, code: 'LLM_ERROR' },
+        data: { session_id: sessionId, error: error instanceof Error ? error.message : String(error), code: 'LLM_ERROR' },
       };
     }
 
@@ -200,7 +208,9 @@ export class ChatService {
     try {
       const agent = await this.agentService.findOne(resolvedAgentId);
       if (agent.system_prompt) parts.push(agent.system_prompt);
-    } catch { /* skip */ }
+    } catch (e) {
+      console.warn(`[ChatService] Failed to load agent ${resolvedAgentId}:`, e instanceof Error ? e.message : e);
+    }
 
     const enabledRules = await this.ruleService.getEnabledRules();
     const targetRules = ruleIds

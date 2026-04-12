@@ -28,6 +28,7 @@ import { API_BASE_URL } from "@/api/request";
 export function createChatTransport(
   getExtraBody?: () => Record<string, unknown>,
   onSessionCreated?: (sessionId: string) => void,
+  onAgentSwitched?: (from: string, to: string) => void,
 ): ChatTransport<UIMessage> {
   return {
     async sendMessages({
@@ -77,7 +78,7 @@ export function createChatTransport(
         throw new Error("无法获取响应流");
       }
 
-      return convertSSEStream(response.body, onSessionCreated);
+      return convertSSEStream(response.body, onSessionCreated, onAgentSwitched);
     },
 
     async reconnectToStream(): Promise<ReadableStream<UIMessageChunk> | null> {
@@ -92,6 +93,7 @@ export function createChatTransport(
 function convertSSEStream(
   rawStream: ReadableStream<Uint8Array>,
   onSessionCreated?: (sessionId: string) => void,
+  onAgentSwitched?: (from: string, to: string) => void,
 ): ReadableStream<UIMessageChunk> {
   const reader = rawStream.getReader();
   const decoder = new TextDecoder();
@@ -122,6 +124,13 @@ function convertSSEStream(
             if (sessionId) {
               onSessionCreated(sessionId);
             }
+          }
+
+          // 处理 agent_switched 事件
+          if (event.event === "agent_switched" && onAgentSwitched) {
+            const from = (event.data.from as string) || "";
+            const to = (event.data.to as string) || "";
+            if (to) onAgentSwitched(from, to);
           }
 
           const chunks = convertEventToChunks(event, textPartId, messageId);

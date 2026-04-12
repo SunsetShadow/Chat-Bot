@@ -12,6 +12,11 @@ const routes: RouteRecordRaw[] = [
     name: "Settings",
     component: () => import("@/views/SettingsView.vue"),
   },
+  {
+    path: "/agentconfig",
+    name: "AgentConfig",
+    component: () => import("@/views/AgentConfigView.vue"),
+  },
 ];
 
 const router = createRouter({

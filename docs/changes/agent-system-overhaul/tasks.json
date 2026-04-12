@@ -1,0 +1,39 @@
+{
+  "changeId": "agent-system-overhaul",
+  "title": "Agent 系统全面重构",
+  "createdAt": "2026-04-12",
+  "status": "pending",
+  "phases": [
+    {
+      "name": "阶段 1：Bug 修复 + 配置页面完善",
+      "status": "pending",
+      "tasks": [
+        { "id": 1, "title": "修复 AgentConfigView Modal 弹窗", "status": "pending" },
+        { "id": 2, "title": "配置页面 UI 改进 — 表单校验与 Toast 提示", "status": "pending" },
+        { "id": 3, "title": "添加复制 Agent 和 Agent 模板预设", "status": "pending" },
+        { "id": 4, "title": "检查并修复 Naive UI Provider 配置", "status": "pending" },
+        { "id": 5, "title": "清理死代码", "status": "pending" }
+      ]
+    },
+    {
+      "name": "阶段 2：Agent 协作机制 + 工具系统",
+      "status": "pending",
+      "tasks": [
+        { "id": 6, "title": "Agent 实体新增字段", "status": "pending" },
+        { "id": 7, "title": "Agent 间委托工具", "status": "pending" },
+        { "id": 8, "title": "Supervisor 路由优化", "status": "pending" },
+        { "id": 9, "title": "工具权限分级", "status": "pending" },
+        { "id": 10, "title": "前端处理委托事件", "status": "pending" }
+      ]
+    },
+    {
+      "name": "阶段 3：聊天体验增强",
+      "status": "pending",
+      "tasks": [
+        { "id": 11, "title": "完善 Agent 实时指示器", "status": "pending" },
+        { "id": 12, "title": "添加 Agent 选择器到聊天界面", "status": "pending" },
+        { "id": 13, "title": "最终集成验证", "status": "pending" }
+      ]
+    }
+  ]
+}

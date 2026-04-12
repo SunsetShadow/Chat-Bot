@@ -90,7 +90,11 @@ const hasDetails = computed(
       </div>
 
       <!-- Tool Info -->
-      <NIcon :component="ConstructOutline" :size="13" class="text-[var(--color-primary)]" />
+      <NIcon
+        :component="ConstructOutline"
+        :size="13"
+        class="text-[var(--color-primary)]"
+      />
       <span class="font-mono text-xs text-[var(--color-primary)]">{{
         displayName
       }}</span>
@@ -109,7 +113,10 @@ const hasDetails = computed(
     </div>
 
     <!-- Details -->
-    <div v-if="expanded && hasDetails" class="border-t border-[var(--border-color)]">
+    <div
+      v-if="expanded && hasDetails"
+      class="border-t border-[var(--border-color)]"
+    >
       <!-- Input -->
       <div v-if="input" class="px-3 py-2 border-b border-[var(--border-color)]">
         <div
@@ -119,7 +126,8 @@ const hasDetails = computed(
         </div>
         <pre
           class="text-[12px] text-[var(--text-secondary)] whitespace-pre-wrap break-all font-mono leading-relaxed"
-        >{{ JSON.stringify(input, null, 2) }}</pre>
+          >{{ JSON.stringify(input, null, 2) }}</pre
+        >
       </div>
 
       <!-- Output -->
@@ -131,9 +139,12 @@ const hasDetails = computed(
         </div>
         <pre
           class="text-[12px] text-[var(--text-secondary)] whitespace-pre-wrap break-all font-mono leading-relaxed"
-        >{{
-          typeof output === "string" ? output : JSON.stringify(output, null, 2)
-        }}</pre>
+          >{{
+            typeof output === "string"
+              ? output
+              : JSON.stringify(output, null, 2)
+          }}</pre
+        >
       </div>
 
       <!-- Error -->

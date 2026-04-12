@@ -47,6 +47,16 @@ export interface Agent {
   description: string;
   system_prompt: string;
   traits: string[];
+  tools: string[];
+  skills: string[];
+  model_name?: string;
+  capabilities: string;
+  enabled: boolean;
+  temperature?: number;
+  avatar?: string;
+  category?: string;
+  max_turns?: number;
+  handoff_targets?: string[];
   is_builtin: boolean;
   created_at: string;
   updated_at: string;
@@ -57,6 +67,16 @@ export interface AgentCreate {
   description?: string;
   system_prompt?: string;
   traits?: string[];
+  tools?: string[];
+  skills?: string[];
+  model_name?: string;
+  capabilities?: string;
+  enabled?: boolean;
+  temperature?: number;
+  avatar?: string;
+  category?: string;
+  max_turns?: number;
+  handoff_targets?: string[];
 }
 
 export interface AgentUpdate {
@@ -64,6 +84,26 @@ export interface AgentUpdate {
   description?: string;
   system_prompt?: string;
   traits?: string[];
+  tools?: string[];
+  skills?: string[];
+  model_name?: string;
+  capabilities?: string;
+  enabled?: boolean;
+  temperature?: number;
+  avatar?: string;
+  category?: string;
+  max_turns?: number;
+  handoff_targets?: string[];
+}
+
+// 工具信息
+export type ToolPermission = "read" | "write" | "confirm";
+
+export interface ToolInfo {
+  name: string;
+  description: string;
+  permission_level: ToolPermission;
+  category: string;
 }
 
 // 规则相关类型
@@ -198,4 +238,16 @@ export interface PaginationMeta {
 export interface PaginatedResponse<T = unknown> extends BaseResponse {
   data: T[];
   pagination: PaginationMeta;
+}
+
+// Agent 模板预设
+export interface AgentTemplate {
+  name: string;
+  description: string;
+  system_prompt: string;
+  traits: string[];
+  tools: string[];
+  capabilities: string;
+  temperature: number;
+  icon: string;
 }

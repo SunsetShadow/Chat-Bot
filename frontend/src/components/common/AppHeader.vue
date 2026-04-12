@@ -2,7 +2,11 @@
 import { useRouter } from "vue-router";
 import { useAgentStore } from "@/stores/agent";
 import { NIcon, NButton } from "naive-ui";
-import { SettingsOutline, ChatbubblesOutline } from "@vicons/ionicons5";
+import {
+  SettingsOutline,
+  ChatbubblesOutline,
+  SparklesOutline,
+} from "@vicons/ionicons5";
 import ThemeToggle from "./ThemeToggle.vue";
 
 const router = useRouter();
@@ -10,6 +14,10 @@ const agentStore = useAgentStore();
 
 function goToSettings() {
   router.push("/settings");
+}
+
+function goToAgentConfig() {
+  router.push("/agentconfig");
 }
 </script>
 
@@ -39,6 +47,15 @@ function goToSettings() {
     </div>
     <div class="flex items-center gap-2">
       <ThemeToggle />
+      <NButton
+        text
+        class="text-[var(--text-secondary)] hover:text-[var(--color-primary)]"
+        @click="goToAgentConfig"
+      >
+        <template #icon>
+          <NIcon :component="SparklesOutline" size="20" />
+        </template>
+      </NButton>
       <NButton
         text
         class="text-[var(--text-secondary)] hover:text-[var(--color-primary)]"

@@ -23,9 +23,9 @@ watch(
   () => {
     const lastMsg = messages.value[messages.value.length - 1];
     if (!lastMsg) return 0;
-    const textPart = lastMsg.parts?.find((p: { type: string }) => p.type === "text") as
-      | { type: "text"; text: string }
-      | undefined;
+    const textPart = lastMsg.parts?.find(
+      (p: { type: string }) => p.type === "text",
+    ) as { type: "text"; text: string } | undefined;
     return textPart?.text?.length ?? 0;
   },
   () => {

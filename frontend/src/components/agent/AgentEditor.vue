@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { useAgentStore } from "@/stores/agent";
-import type { AgentCreate } from "@/types";
+import { getTools } from "@/api/chat";
+import type { AgentCreate, ToolInfo } from "@/types";
 import {
   AddOutline,
   CreateOutline,
@@ -16,29 +17,57 @@ const _emit = defineEmits<{
 const agentStore = useAgentStore();
 const showModal = ref(false);
 const editingAgentId = ref<string | null>(null);
+const availableTools = ref<ToolInfo[]>([]);
 
 const formValue = ref<AgentCreate>({
   name: "",
   description: "",
   system_prompt: "",
   traits: [],
+  tools: [],
+  skills: [],
+  model_name: "",
+  capabilities: "",
+  enabled: true,
+  temperature: undefined,
 });
+
+const editingBuiltin = ref(false);
 
 const modalTitle = computed(() =>
   editingAgentId.value ? "编辑 Agent" : "创建 Agent",
 );
 
-onMounted(() => {
+const toolOptions = computed(() =>
+  availableTools.value.map((t) => ({
+    label: t.name,
+    value: t.name,
+  })),
+);
+
+onMounted(async () => {
   agentStore.fetchAgents();
+  try {
+    availableTools.value = await getTools();
+  } catch {
+    console.warn("获取工具列表失败");
+  }
 });
 
 function openCreateModal() {
   editingAgentId.value = null;
+  editingBuiltin.value = false;
   formValue.value = {
     name: "",
     description: "",
     system_prompt: "",
     traits: [],
+    tools: [],
+    skills: [],
+    model_name: "",
+    capabilities: "",
+    enabled: true,
+    temperature: undefined,
   };
   showModal.value = true;
 }
@@ -48,11 +77,18 @@ function openEditModal(agentId: string) {
   if (!agent) return;
 
   editingAgentId.value = agentId;
+  editingBuiltin.value = agent.is_builtin;
   formValue.value = {
     name: agent.name,
     description: agent.description,
     system_prompt: agent.system_prompt,
     traits: [...agent.traits],
+    tools: [...(agent.tools || [])],
+    skills: [...(agent.skills || [])],
+    model_name: agent.model_name || "",
+    capabilities: agent.capabilities || "",
+    enabled: agent.enabled,
+    temperature: agent.temperature,
   };
   showModal.value = true;
 }
@@ -141,6 +177,13 @@ async function handleDelete(agentId: string) {
               >
                 {{ trait }}
               </span>
+              <span
+                v-for="tool in agent.tools"
+                :key="tool"
+                class="px-2.5 py-1 bg-[rgba(0,180,216,0.1)] border border-[rgba(0,180,216,0.25)] rounded font-mono text-[11px] text-[var(--neon-cyan)] tracking-wide"
+              >
+                {{ tool }}
+              </span>
             </div>
           </div>
           <div
@@ -187,10 +230,18 @@ async function handleDelete(agentId: string) {
       style="width: 520px"
     >
       <NForm :model="formValue" label-placement="left" label-width="90">
+        <div
+          v-if="editingBuiltin"
+          class="mb-4 px-4 py-2.5 bg-[rgba(139,92,246,0.08)] border border-[rgba(139,92,246,0.25)] rounded-[var(--radius-sm)] text-[12px] text-purple-400 leading-relaxed"
+        >
+          内置 Agent
+          仅允许修改行为配置（提示词、工具、温度等），不允许修改名称或删除。
+        </div>
         <NFormItem label="名称">
           <NInput
             v-model:value="formValue.name"
             placeholder="输入 Agent 名称"
+            :disabled="editingBuiltin"
           />
         </NFormItem>
         <NFormItem label="描述">
@@ -198,6 +249,7 @@ async function handleDelete(agentId: string) {
             v-model:value="formValue.description"
             type="textarea"
             placeholder="描述这个 Agent 的作用"
+            :disabled="editingBuiltin"
           />
         </NFormItem>
         <NFormItem label="系统提示词">
@@ -208,8 +260,43 @@ async function handleDelete(agentId: string) {
             placeholder="定义 Agent 的角色和行为规则"
           />
         </NFormItem>
+        <NFormItem label="能力描述">
+          <NInput
+            v-model:value="formValue.capabilities"
+            type="textarea"
+            :rows="2"
+            placeholder="描述 Agent 的核心能力，用于 Supervisor 路由决策"
+          />
+        </NFormItem>
         <NFormItem label="特征标签">
           <NDynamicTags v-model:value="formValue.traits" />
+        </NFormItem>
+        <NFormItem label="工具">
+          <NSelect
+            v-model:value="formValue.tools"
+            :options="toolOptions"
+            multiple
+            placeholder="选择可用工具"
+          />
+        </NFormItem>
+        <NFormItem label="模型">
+          <NInput
+            v-model:value="formValue.model_name"
+            placeholder="留空使用默认模型"
+            :disabled="editingBuiltin"
+          />
+        </NFormItem>
+        <NFormItem label="温度">
+          <NSlider
+            v-model:value="formValue.temperature"
+            :min="0"
+            :max="2"
+            :step="0.1"
+            :marks="{ 0: '精确', 1: '平衡', 2: '创意' }"
+          />
+        </NFormItem>
+        <NFormItem v-if="!editingBuiltin" label="启用">
+          <NSwitch v-model:value="formValue.enabled" />
         </NFormItem>
       </NForm>
       <template #footer>

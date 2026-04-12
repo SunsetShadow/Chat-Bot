@@ -14,6 +14,7 @@ import type {
   RuleUpdate,
   SessionDetailResponse,
   SessionResponse,
+  ToolInfo,
 } from "@/types";
 import { API_BASE_URL, del, get, post, put } from "./request";
 
@@ -130,6 +131,16 @@ export async function updateAgent(
  */
 export async function deleteAgent(id: string): Promise<void> {
   await del(`/api/v1/agents/${id}`);
+}
+
+// ============ 工具相关 API ============
+
+/**
+ * 获取可用工具列表
+ */
+export async function getTools(): Promise<ToolInfo[]> {
+  const response = await get<DataResponse<ToolInfo[]>>("/api/v1/tools");
+  return response.data;
 }
 
 // ============ 规则相关 API ============

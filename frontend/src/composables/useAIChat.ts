@@ -10,6 +10,9 @@ import { useChatStore } from "@/stores/chat";
 // 模块级单例：所有组件共享同一个 Chat 实例
 let chatInstance: Chat<UIMessage> | null = null;
 
+// 当前活跃 Agent（多 Agent 模式下由 supervisor 动态切换）
+const activeAgent = ref<string | null>(null);
+
 function getChatInstance(): Chat<UIMessage> {
   if (!chatInstance) {
     const chatStore = useChatStore();
@@ -34,6 +37,9 @@ function getChatInstance(): Chat<UIMessage> {
             chatStore.setCurrentSessionId(sessionId);
             chatStore.addSessionToList(sessionId);
           }
+        },
+        (_from, to) => {
+          activeAgent.value = to;
         },
       ),
       onError: (err) => {
@@ -132,11 +138,13 @@ export function useAIChat() {
 
   function clearMessages() {
     chat.messages = [];
+    activeAgent.value = null;
   }
 
   function resetChat() {
     chat.messages = [];
     chatInstance = null;
+    activeAgent.value = null;
   }
 
   return {
@@ -144,6 +152,7 @@ export function useAIChat() {
     status,
     isLoading,
     error,
+    activeAgent,
     sendMessage,
     stopStreaming,
     regenerate,

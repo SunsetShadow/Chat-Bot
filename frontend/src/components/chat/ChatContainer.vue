@@ -1,16 +1,22 @@
 <script setup lang="ts">
 import { watch } from "vue";
+import { useRouter } from "vue-router";
 import SessionList from "./SessionList.vue";
 import MessageList from "./MessageList.vue";
 import MessageInput from "./MessageInput.vue";
 import AgentSelector from "@/components/agent/AgentSelector.vue";
+import AgentIndicator from "@/components/chat/AgentIndicator.vue";
 import RuleEditor from "@/components/rules/RuleEditor.vue";
 import ThemeToggle from "@/components/common/ThemeToggle.vue";
 import { useChatStore } from "@/stores/chat";
+import { useAgentStore } from "@/stores/agent";
 import { useAIChat } from "@/composables/useAIChat";
+import { SparklesOutline, SettingsOutline } from "@vicons/ionicons5";
 
+const router = useRouter();
 const chatStore = useChatStore();
-const { loadMessages, clearMessages } = useAIChat();
+const agentStore = useAgentStore();
+const { loadMessages, clearMessages, activeAgent } = useAIChat();
 
 // 会话切换时同步历史消息到 AI SDK Chat 实例
 // 只在用户主动切换会话时同步，新建会话（oldId === null）时不干预 Chat 实例
@@ -46,10 +52,27 @@ watch(
       >
         <div class="flex items-center gap-4">
           <AgentSelector />
+          <AgentIndicator
+            :agent-id="activeAgent || agentStore.currentAgentId || ''"
+          />
         </div>
         <div class="flex items-center gap-4">
           <RuleEditor />
           <ThemeToggle />
+          <button
+            class="flex items-center justify-center w-9 h-9 bg-transparent border border-[var(--border-color)] rounded-[var(--radius-sm)] text-[var(--text-muted)] cursor-pointer transition-all duration-150 hover:border-[var(--neon-purple)] hover:text-[var(--neon-purple)]"
+            title="Agent 配置"
+            @click="router.push('/agentconfig')"
+          >
+            <NIcon :component="SparklesOutline" :size="18" />
+          </button>
+          <button
+            class="flex items-center justify-center w-9 h-9 bg-transparent border border-[var(--border-color)] rounded-[var(--radius-sm)] text-[var(--text-muted)] cursor-pointer transition-all duration-150 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+            title="设置"
+            @click="router.push('/settings')"
+          >
+            <NIcon :component="SettingsOutline" :size="18" />
+          </button>
           <div class="flex items-center gap-2">
             <div
               class="w-2 h-2 bg-[var(--color-secondary)] rounded-full animate-pulse"

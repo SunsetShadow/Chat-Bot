@@ -80,9 +80,9 @@ function isSourceUrlPart(part: { type: string }): part is SourceUrlUIPart {
   return part.type === "source-url";
 }
 
-function isSourceDocumentPart(
-  part: { type: string },
-): part is SourceDocumentUIPart {
+function isSourceDocumentPart(part: {
+  type: string;
+}): part is SourceDocumentUIPart {
   return part.type === "source-document";
 }
 
