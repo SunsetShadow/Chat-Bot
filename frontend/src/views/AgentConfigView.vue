@@ -28,6 +28,37 @@ const agentStore = useAgentStore();
 const message = useMessage();
 const dialog = useDialog();
 
+function createEmptyForm(): AgentCreate {
+  return {
+    name: "",
+    description: "",
+    system_prompt: "",
+    traits: [],
+    tools: [],
+    skills: [],
+    model_name: "",
+    capabilities: "",
+    enabled: true,
+    temperature: undefined,
+  };
+}
+
+function agentToFormValues(agent: Agent | AgentTemplate, overrides?: Partial<AgentCreate>): AgentCreate {
+  return {
+    name: agent.name,
+    description: agent.description || "",
+    system_prompt: agent.system_prompt || "",
+    traits: [...(agent.traits || [])],
+    tools: [...(agent.tools || [])],
+    skills: [...(('skills' in agent ? agent.skills : []) || [])],
+    model_name: ('model_name' in agent ? agent.model_name : undefined) || "",
+    capabilities: agent.capabilities || "",
+    enabled: 'enabled' in agent ? agent.enabled : true,
+    temperature: agent.temperature,
+    ...overrides,
+  };
+}
+
 // 工具列表
 const availableTools = ref<ToolInfo[]>([]);
 const toolsLoaded = ref(false);
@@ -109,35 +140,13 @@ function openTemplateModal() {
 }
 
 function applyTemplate(template: AgentTemplate) {
-  formValue.value = {
-    name: template.name,
-    description: template.description,
-    system_prompt: template.system_prompt,
-    traits: [...template.traits],
-    tools: [...template.tools],
-    skills: [],
-    model_name: "",
-    capabilities: template.capabilities,
-    enabled: true,
-    temperature: template.temperature,
-  };
+  formValue.value = agentToFormValues(template);
   showTemplateModal.value = false;
   showModal.value = true;
 }
 
 function duplicateAgent(agent: Agent) {
-  formValue.value = {
-    name: `${agent.name} (副本)`,
-    description: agent.description,
-    system_prompt: agent.system_prompt,
-    traits: [...agent.traits],
-    tools: [...agent.tools],
-    skills: [...agent.skills],
-    model_name: agent.model_name || "",
-    capabilities: agent.capabilities || "",
-    enabled: true,
-    temperature: agent.temperature,
-  };
+  formValue.value = agentToFormValues(agent, { name: `${agent.name} (副本)` });
   editingAgentId.value = null;
   editingBuiltin.value = false;
   showModal.value = true;
@@ -202,36 +211,14 @@ function toggleExpand(id: string) {
 function openCreateModal() {
   editingAgentId.value = null;
   editingBuiltin.value = false;
-  formValue.value = {
-    name: "",
-    description: "",
-    system_prompt: "",
-    traits: [],
-    tools: [],
-    skills: [],
-    model_name: "",
-    capabilities: "",
-    enabled: true,
-    temperature: undefined,
-  };
+  formValue.value = createEmptyForm();
   showModal.value = true;
 }
 
 function openEditModal(agent: Agent) {
   editingAgentId.value = agent.id;
   editingBuiltin.value = agent.is_builtin;
-  formValue.value = {
-    name: agent.name,
-    description: agent.description,
-    system_prompt: agent.system_prompt,
-    traits: [...agent.traits],
-    tools: [...agent.tools],
-    skills: [...agent.skills],
-    model_name: agent.model_name || "",
-    capabilities: agent.capabilities || "",
-    enabled: agent.enabled,
-    temperature: agent.temperature,
-  };
+  formValue.value = agentToFormValues(agent);
   showModal.value = true;
 }
 

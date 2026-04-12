@@ -62,39 +62,8 @@ export interface Agent {
   updated_at: string;
 }
 
-export interface AgentCreate {
-  name: string;
-  description?: string;
-  system_prompt?: string;
-  traits?: string[];
-  tools?: string[];
-  skills?: string[];
-  model_name?: string;
-  capabilities?: string;
-  enabled?: boolean;
-  temperature?: number;
-  avatar?: string;
-  category?: string;
-  max_turns?: number;
-  handoff_targets?: string[];
-}
-
-export interface AgentUpdate {
-  name?: string;
-  description?: string;
-  system_prompt?: string;
-  traits?: string[];
-  tools?: string[];
-  skills?: string[];
-  model_name?: string;
-  capabilities?: string;
-  enabled?: boolean;
-  temperature?: number;
-  avatar?: string;
-  category?: string;
-  max_turns?: number;
-  handoff_targets?: string[];
-}
+export type AgentCreate = Omit<Agent, 'id' | 'is_builtin' | 'created_at' | 'updated_at'>;
+export type AgentUpdate = Partial<AgentCreate>;
 
 // 工具信息
 export type ToolPermission = "read" | "write" | "confirm";

@@ -46,14 +46,7 @@ export class LangGraphService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    this.model = new ChatOpenAI({
-      modelName: this.configService.openaiModel,
-      openAIApiKey: this.configService.openaiApiKey,
-      configuration: {
-        baseURL: this.configService.openaiBaseUrl || undefined,
-      },
-      streaming: true,
-    });
+    this.model = this.createModel(this.configService.openaiModel);
 
     // 构建单 Agent 后备图
     const tools = this.toolRegistry.getAll();
@@ -263,23 +256,7 @@ export class LangGraphService implements OnModuleInit {
           for (const [tcId, tc] of toolCalls) {
             if (!tc.inputEmitted) {
               tc.inputEmitted = true;
-              try {
-                const args = JSON.parse(tc.argsBuffer);
-                yield {
-                  type: 'tool_input',
-                  toolCallId: tcId,
-                  toolName: tc.name,
-                  args,
-                };
-              } catch (e) {
-                console.warn('[LangGraph] Failed to parse tool args:', tcId, e);
-                yield {
-                  type: 'tool_input',
-                  toolCallId: tcId,
-                  toolName: tc.name,
-                  args: {},
-                };
-              }
+              yield* emitToolInput(tcId, tc);
             }
           }
         }
@@ -292,23 +269,7 @@ export class LangGraphService implements OnModuleInit {
 
         if (tc && !tc.inputEmitted) {
           tc.inputEmitted = true;
-          try {
-            const args = JSON.parse(tc.argsBuffer);
-            yield {
-              type: 'tool_input',
-              toolCallId,
-              toolName: tc.name,
-              args,
-            };
-          } catch (e) {
-            console.warn('[LangGraph] Failed to parse tool args:', toolCallId, e);
-            yield {
-              type: 'tool_input',
-              toolCallId,
-              toolName: tc.name,
-              args: {},
-            };
-          }
+          yield* emitToolInput(toolCallId, tc);
         }
 
         if (!tc?.outputEmitted) {
@@ -362,5 +323,19 @@ export class LangGraphService implements OnModuleInit {
       }
     }
     return result;
+  }
+}
+
+/** 从 tool call buffer 解析并 emit tool_input 事件 */
+function* emitToolInput(
+  tcId: string,
+  tc: { name: string; argsBuffer: string },
+): Generator<StreamEvent> {
+  try {
+    const args = JSON.parse(tc.argsBuffer);
+    yield { type: 'tool_input', toolCallId: tcId, toolName: tc.name, args };
+  } catch (e) {
+    console.warn('[LangGraph] Failed to parse tool args:', tcId, e);
+    yield { type: 'tool_input', toolCallId: tcId, toolName: tc.name, args: {} };
   }
 }
