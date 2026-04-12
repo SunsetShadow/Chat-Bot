@@ -139,7 +139,7 @@ export class LangGraphService implements OnModuleInit {
     sessionId: string,
     preferredAgent?: string,
   ): Promise<{ content: string; finish_reason: string }> {
-    const langchainMessages = this.buildMessages(messages, systemPrompt);
+    const langchainMessages = this.buildMessages(messages, systemPrompt, preferredAgent);
     const graph = await this.getGraph();
 
     const result = (await graph.invoke(
@@ -160,7 +160,7 @@ export class LangGraphService implements OnModuleInit {
     sessionId: string,
     preferredAgent?: string,
   ): AsyncGenerator<StreamEvent> {
-    const langchainMessages = this.buildMessages(messages, systemPrompt);
+    const langchainMessages = this.buildMessages(messages, systemPrompt, preferredAgent);
     const graph = await this.getGraph();
 
     let sawToolOutput = false;
@@ -342,10 +342,17 @@ export class LangGraphService implements OnModuleInit {
   private buildMessages(
     messages: { role: string; content: string }[],
     systemPrompt: string,
+    preferredAgent?: string,
   ) {
     const result: any[] = [];
     if (systemPrompt) {
       result.push(new SystemMessage(systemPrompt));
+    }
+    // 注入 preferredAgent 偏好提示，让 supervisor 在路由时感知用户选择
+    if (preferredAgent) {
+      result.push(new SystemMessage(
+        `[路由偏好] 用户指定了偏好 Agent: ${preferredAgent}。如果该 Agent 的能力适合当前请求，请优先路由到该 Agent。`,
+      ));
     }
     for (const msg of messages) {
       if (msg.role === 'user') {

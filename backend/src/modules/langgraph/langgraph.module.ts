@@ -47,8 +47,13 @@ export class LangGraphModule implements OnModuleInit {
 
     // 注册 Agent 间委托工具
     this.toolRegistry.register(
-      createDelegateToAgentTool((id) => {
-        return undefined;
+      createDelegateToAgentTool(async (id) => {
+        try {
+          const agent = await this.agentService.findOne(id);
+          return { name: agent.name, capabilities: agent.capabilities || agent.description };
+        } catch {
+          return undefined;
+        }
       }),
       {
         permission_level: 'read',

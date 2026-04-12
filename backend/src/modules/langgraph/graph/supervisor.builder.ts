@@ -29,7 +29,6 @@ export function buildSupervisorGraph(
   agentDefinitions: AgentDefinition[],
   toolLookup: (name: string) => DynamicStructuredTool | undefined,
   modelFactory?: (modelName: string) => ChatOpenAI,
-  preferredAgent?: string,
 ): CompiledStateGraph<any, any, any> {
   const checkpointer = new MemorySaver();
 
@@ -77,17 +76,6 @@ export function buildSupervisorGraph(
     .map((def) => `- ${def.name}: ${def.capabilities || ''}`)
     .join('\n');
 
-  // 构建偏好提示
-  let preferenceHint = '';
-  if (preferredAgent) {
-    const agent = enabledAgents.find(
-      (d) => d.id === preferredAgent || d.name === preferredAgent,
-    );
-    if (agent) {
-      preferenceHint = `\n\n用户偏好使用: ${agent.name}。如果适合当前问题请优先选择该助手。`;
-    }
-  }
-
   const supervisor = createSupervisor({
     agents: workerAgents as any,
     llm: model,
@@ -95,7 +83,6 @@ export function buildSupervisorGraph(
 
 可用助手及其专业领域：
 ${agentDescriptions}
-${preferenceHint}
 
 调度规则：
 1. 仔细分析用户意图和请求类型

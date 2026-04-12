@@ -2,7 +2,7 @@ import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 
 export function createDelegateToAgentTool(
-  agentLookup: (id: string) => { name: string; capabilities: string } | undefined,
+  agentLookup: (id: string) => Promise<{ name: string; capabilities: string } | undefined>,
 ) {
   return new DynamicStructuredTool({
     name: 'delegate_to_agent',
@@ -14,17 +14,21 @@ export function createDelegateToAgentTool(
       context: z.string().optional().describe('传递给目标 Agent 的上下文信息'),
     }),
     func: async ({ agent_id, task, context }) => {
-      const target = agentLookup(agent_id);
-      if (!target) {
-        return `错误：找不到 Agent "${agent_id}"。请检查 Agent ID 是否正确。`;
+      try {
+        const target = await agentLookup(agent_id);
+        if (!target) {
+          return `错误：找不到 Agent "${agent_id}"。请检查 Agent ID 是否正确。`;
+        }
+        return JSON.stringify({
+          __delegation__: true,
+          target_agent: agent_id,
+          target_name: target.name,
+          task,
+          context: context || '',
+        });
+      } catch (e) {
+        return `错误：查找 Agent 时出错 - ${e instanceof Error ? e.message : String(e)}`;
       }
-      return JSON.stringify({
-        __delegation__: true,
-        target_agent: agent_id,
-        target_name: target.name,
-        task,
-        context: context || '',
-      });
     },
   });
 }

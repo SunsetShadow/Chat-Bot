@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useRouter } from "vue-router";
-import AgentEditor from "@/components/agent/AgentEditor.vue";
 import RuleEditor from "@/components/rules/RuleEditor.vue";
 import { useMemoryStore } from "@/stores/memory";
 import { useThemeStore, type ThemeMode } from "@/stores/theme";
@@ -13,6 +12,7 @@ import {
   SunnyOutline,
   MoonOutline,
   DesktopOutline,
+  OpenOutline,
 } from "@vicons/ionicons5";
 
 const router = useRouter();
@@ -56,10 +56,19 @@ function goBack() {
     <div class="settings-content">
       <div class="tabs-wrapper glass-card">
         <NTabs v-model:value="activeTab" type="line" animated>
-          <!-- Agents Tab -->
+          <!-- Agents Tab — 跳转到独立配置页面 -->
           <NTabPane name="agents" tab="Agent 管理">
             <div class="tab-content">
-              <AgentEditor />
+              <div class="redirect-card" @click="router.push('/agentconfig')">
+                <div class="redirect-icon">
+                  <NIcon :component="SparklesOutline" :size="32" />
+                </div>
+                <div class="redirect-info">
+                  <h3>Agent 配置中心</h3>
+                  <p>创建、编辑、管理 AI Agent，配置工具、技能和系统提示词</p>
+                </div>
+                <NIcon :component="OpenOutline" :size="18" class="redirect-arrow" />
+              </div>
             </div>
           </NTabPane>
 
@@ -277,6 +286,60 @@ function goBack() {
 
 .tab-content {
   padding: 20px 0;
+}
+
+.redirect-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px 28px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-smooth);
+}
+
+.redirect-card:hover {
+  border-color: var(--neon-purple);
+  background: rgba(155, 93, 229, 0.08);
+}
+
+.redirect-icon {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(155, 93, 229, 0.2), rgba(155, 93, 229, 0.05));
+  border: 1px solid rgba(155, 93, 229, 0.3);
+  border-radius: var(--radius-md);
+  color: var(--neon-purple);
+  flex-shrink: 0;
+}
+
+.redirect-info h3 {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.redirect-info p {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.redirect-arrow {
+  color: var(--text-muted);
+  transition: transform var(--transition-fast);
+}
+
+.redirect-card:hover .redirect-arrow {
+  transform: translateX(4px);
+  color: var(--neon-purple);
 }
 
 .section-header {
