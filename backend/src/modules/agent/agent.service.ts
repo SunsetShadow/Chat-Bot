@@ -1,4 +1,5 @@
 import { Injectable, OnModuleInit, NotFoundException, BadRequestException } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AgentEntity } from '../../common/entities/agent.entity';
@@ -83,6 +84,7 @@ export class AgentService implements OnModuleInit {
 
   async create(dto: CreateAgentDto): Promise<AgentEntity> {
     const agent = this.agentRepo.create({
+      id: randomUUID(),
       name: dto.name,
       description: dto.description || '',
       system_prompt: dto.system_prompt || '',
