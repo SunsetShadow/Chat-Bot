@@ -72,7 +72,7 @@ Chat-Bot/
 │   │       ├── agent/           #   Agent CRUD + 内置定义
 │   │       ├── chat/            #   聊天模块（SSE）
 │   │       ├── langgraph/       #   LangGraph 工作流
-│   │       │   ├── graph/       #     supervisor.builder.ts
+│   │       │   ├── graph/       #     graph.builder.ts + supervisor.builder.ts + nodes/
 │   │       │   └── tools/       #     工具系统
 │   │       │       ├── base/    #       tool.helper.ts（safeTool）
 │   │       │       └── collections/ # 按域分组（search/communication/system/file-system）
@@ -154,6 +154,7 @@ CSS 变量使用 `main.css` 中的定义，不硬编码：
 | `modules/chat/chat.service.ts` | 核心聊天逻辑 |
 | `modules/langgraph/langgraph.service.ts` | LangGraph 工作流集成（流式输出） |
 | `modules/langgraph/langgraph.module.ts` | 模块注册（工具 + Agent 回调） |
+| `modules/langgraph/graph/graph.builder.ts` | 单 Agent 图构建（旧，仍在使用） |
 | `modules/langgraph/graph/supervisor.builder.ts` | Supervisor 多 Agent 图构建 |
 | `modules/langgraph/tools/tool-registry.service.ts` | 工具注册中心（权限 + 分类） |
 | `modules/langgraph/tools/tool.loader.ts` | 工具统一加载器 |

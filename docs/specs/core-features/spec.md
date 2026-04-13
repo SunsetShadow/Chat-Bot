@@ -120,7 +120,7 @@ interface Agent {
 1. 每个 Agent 必须有唯一的名称
 2. system_prompt 不能为空
 3. 删除 Agent 不影响已有的聊天会话
-4. Agent 变更时触发 Supervisor 图重建（通过 `setRebuildCallback`）
+4. Agent 变更时触发 Supervisor 图重建
 
 ---
 
@@ -157,7 +157,7 @@ ToolRegistryService（注册中心）
 | `web_search` | search | read | Bocha 联网搜索 | `BOCHA_API_KEY` |
 | `send_mail` | communication | write | SMTP 发送邮件 | `MAIL_HOST/USER/PASS` |
 | `time_now` | system | read | 获取服务器时间 | 无 |
-| `execute_command` | system | write | 执行系统命令 | 无 |
+| `execute_command` | system | write | 执行系统命令 | OS shell（需白名单限制） |
 | `read_file` | file | read | 读取文件（限 50KB） | 无 |
 | `write_file` | file | write | 写入文件 | 无 |
 | `list_directory` | file | read | 列出目录内容 | 无 |

@@ -26,24 +26,9 @@ cd frontend && pnpm lint    # 前端 ESLint
   → SSE 流 → ChatTransport → UIMessageChunk → Vue 响应式渲染
 ```
 
-## 后端模块
-
-```
-modules/
-├── chat/           # 编排层：Controller (SSE) + Service
-├── langgraph/      # LangGraph 工作流
-│   ├── graph/      #   supervisor.builder.ts — Supervisor 多 Agent 图
-│   └── tools/      #   工具系统（registry + loader + collections/ + 业务工具）
-├── agent/          # Agent CRUD + 内置定义
-├── rule/           # 规则 CRUD
-├── memory/         # 记忆（PG + Milvus 双写）
-├── model/          # 模型管理
-└── upload/         # 文件上传
-```
-
 ## 环境配置
 
-见 `backend/.env.example`。关键配置项：`OPENAI_*`、`BOCHA_API_KEY`、`MAIL_*`、`DB_*`、`MILVUS_ADDRESS`。
+见 `backend/.env.example`。
 
 ## 详细文档
 
@@ -57,6 +42,4 @@ modules/
 
 ## 已知问题
 
-- `llm/` 模块是遗留代码，待清理
-- 无 token 计算、消息截断、滑动窗口
-- HITL 确认机制、Agent 协作可视化未实现
+见 [plans/后续.md](docs/plans/后续.md) 和 [core-features/spec.md](docs/specs/core-features/spec.md) 底部"已知限制"。
