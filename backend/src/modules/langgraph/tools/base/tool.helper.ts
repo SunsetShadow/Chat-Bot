@@ -1,6 +1,5 @@
-import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { DynamicStructuredTool, StructuredToolInterface } from '@langchain/core/tools';
+import { DynamicStructuredTool } from '@langchain/core/tools';
 
 /**
  * 统一工具错误格式 — 给 Agent 返回友好的错误消息，而非 stack trace
@@ -34,4 +33,4 @@ export function safeTool<T extends z.ZodTypeAny>(
   });
 }
 
-export type { DynamicStructuredTool, StructuredToolInterface };
+export type { DynamicStructuredTool };

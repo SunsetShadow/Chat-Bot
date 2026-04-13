@@ -7,7 +7,7 @@ import { MemoryService } from '../../memory/memory.service';
  */
 export function createKnowledgeQueryTool(memoryService: MemoryService) {
   return tool(
-    async ({ query }) => {
+    async ({ query: _query }) => {
       try {
         const context = await memoryService.buildMemoryContext();
         if (!context) {

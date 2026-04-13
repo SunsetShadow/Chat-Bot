@@ -44,6 +44,8 @@ const stateLabel = computed(() => {
       return "已完成";
     case "output-error":
       return "执行失败";
+    default:
+      return "";
   }
 });
 

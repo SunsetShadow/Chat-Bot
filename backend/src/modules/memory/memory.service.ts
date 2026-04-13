@@ -95,7 +95,7 @@ export class MemoryService {
     }
   }
 
-  async buildMemoryContext(sessionId?: string): Promise<string> {
+  async buildMemoryContext(_sessionId?: string): Promise<string> {
     const all = await this.findAll();
     const sorted = all.sort((a, b) => b.importance - a.importance);
     if (sorted.length === 0) return '';

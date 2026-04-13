@@ -293,7 +293,6 @@ export class LangGraphService implements OnModuleInit {
           toolCallId: tcId,
           output: '已执行',
         };
-        sawToolOutput = true;
       }
     }
 

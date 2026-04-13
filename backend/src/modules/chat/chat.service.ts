@@ -8,7 +8,6 @@ import { AgentService } from '../agent/agent.service';
 import { RuleService } from '../rule/rule.service';
 import { MemoryService } from '../memory/memory.service';
 import { LangGraphService } from '../langgraph/langgraph.service';
-import type { StreamEvent } from '../langgraph/langgraph.service';
 import { CreateCompletionDto } from './dto/create-completion.dto';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
