@@ -1,8 +1,10 @@
 import { Module, OnModuleInit } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ModuleRef } from '@nestjs/core';
 import { LangGraphService } from './langgraph.service';
 import { MemoryModule } from '../memory/memory.module';
 import { AgentModule } from '../agent/agent.module';
+import { CronJobModule } from '../cron-job/cron-job.module';
 import { AgentService } from '../agent/agent.service';
 import { AppConfigService } from '../../config/config.service';
 import { ToolRegistryService } from './tools/tool-registry.service';
@@ -11,16 +13,19 @@ import { registerAllTools } from './tools/tool.loader';
 import { createMemoryExtractTool } from './tools/memory-extract.tool';
 import { createKnowledgeQueryTool } from './tools/knowledge-query.tool';
 import { createDelegateToAgentTool } from './tools/delegate-to-agent.tool';
+import { createCronJobTool } from './tools/cron-job.tool';
 import { MemoryService } from '../memory/memory.service';
+import { JobService } from '../cron-job/job.service';
 
 @Module({
-  imports: [ConfigModule, MemoryModule, AgentModule],
+  imports: [ConfigModule, MemoryModule, AgentModule, CronJobModule],
   controllers: [ToolController],
   providers: [LangGraphService, AppConfigService, ToolRegistryService],
   exports: [LangGraphService],
 })
 export class LangGraphModule implements OnModuleInit {
   constructor(
+    private moduleRef: ModuleRef,
     private toolRegistry: ToolRegistryService,
     private memoryService: MemoryService,
     private langGraphService: LangGraphService,
@@ -43,6 +48,16 @@ export class LangGraphModule implements OnModuleInit {
       category: 'memory',
       description: '查询已保存的知识和记忆',
     });
+
+    // 注册定时任务管理工具
+    this.toolRegistry.register(
+      createCronJobTool(this.moduleRef.get(JobService, { strict: false })),
+      {
+        permission_level: 'write',
+        category: 'orchestration',
+        description: '创建和管理 AI 定时任务',
+      },
+    );
 
     // 注册 Agent 间委托工具
     this.toolRegistry.register(
