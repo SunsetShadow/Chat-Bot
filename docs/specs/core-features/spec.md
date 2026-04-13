@@ -1,6 +1,6 @@
 # 核心功能规范
 
-本文档定义 Chat Bot 的核心功能：聊天系统、Agent 系统、工具系统、规则系统、记忆系统和上下文管理。
+本文档定义 Chat Bot 的核心功能：聊天系统、Agent 系统、工具系统、规则系统、记忆系统、定时任务系统和上下文管理。
 
 > 架构演进计划见 [plans/后续.md](../../plans/后续.md)
 
@@ -70,12 +70,17 @@ Supervisor（调度器）
   ├── Worker Agent A (createReactAgent) — 独立 system_prompt + 工具集 + 可选模型
   ├── Worker Agent B (createReactAgent) — ...
   └── Worker Agent C (createReactAgent) — ...
+
+独立执行图（不经过 Supervisor）
+  └── builtin-job-executor (createReactAgent) — 定时任务执行专用
 ```
 
-- Supervisor 根据 Agent 的 `capabilities` 描述进行路由决策
+- Supervisor 根据 Agent 的 `capabilities` + 工具列表进行路由决策
+- `HIDDEN_AGENTS` 中的 Agent 不参与 Supervisor 路由，拥有独立的执行图
 - 每个 Worker Agent 拥有独立的 system prompt、工具集、可选模型和 temperature
 - 支持 `preferredAgent` 偏好提示
 - Agent 变更时自动触发 Supervisor 图重建
+- 定时任务执行通过 `LangGraphService.executeAsAgent()` 独立运行，不经过 Supervisor
 
 ### 数据模型
 
@@ -141,7 +146,8 @@ ToolRegistryService（注册中心）
   │   └── file-system.tools.ts    — read_file, write_file, list_directory
   ├── memory-extract.tool.ts      — 从对话提取记忆
   ├── knowledge-query.tool.ts     — 语义查询记忆
-  └── delegate-to-agent.tool.ts   — Agent 间委托
+  ├── delegate-to-agent.tool.ts   — Agent 间委托
+  └── cron-job.tool.ts            — 定时任务管理（add/list/toggle）
 ```
 
 ### 工具权限与分类
@@ -164,13 +170,15 @@ ToolRegistryService（注册中心）
 | `extract_memory` | memory | write | 提取对话记忆 | MemoryService |
 | `knowledge_query` | memory | read | 语义查询记忆 | MemoryService |
 | `delegate_to_agent` | orchestration | read | Agent 间委托 | AgentService |
+| `cron_job` | orchestration | write | 定时任务管理（创建/查看/启停） | JobService |
 
 ### 注册流程
 
 1. `LangGraphModule.onModuleInit()` 触发注册
 2. `registerAllTools()` 批量注册通用工具集合（collections/）
-3. 逐一注册业务工具（memory-extract、knowledge-query、delegate-to-agent）
-4. 每个 Agent 通过 `tools` 字段绑定所需的工具名列表
+3. 逐一注册业务工具（memory-extract、knowledge-query、delegate-to-agent、cron-job）
+4. 所有工具注册完成后，调用 `LangGraphService.initGraph()` 构建 Supervisor 图和执行器图
+5. 每个 Agent 通过 `tools` 字段绑定所需的工具名列表
 
 ### API 端点
 
@@ -302,6 +310,108 @@ MemoryService
 2. 低重要度的记忆应该被过滤
 3. 敏感信息不应被存储为记忆
 4. 每次对话注入的记忆不超过 10 条
+
+---
+
+## 定时任务系统
+
+AI 驱动的定时任务系统，用户通过自然语言对话创建定时任务，由独立的后台执行 Agent 调用工具完成操作。
+
+### 架构
+
+```
+用户对话 → cron_job 工具 → JobService.addJob() → 数据库 + 运行时注册
+                                                                ↓
+定时触发 → JobService.executeJob() → LangGraphService.executeAsAgent()
+                                        ↓
+                                    builtin-job-executor（独立执行图）
+                                        ↓
+                                    调用工具（send_mail / web_search / ...）
+                                        ↓
+                                    JobExecutionService 记录结果
+```
+
+**双 Agent 分离设计**：
+- 对话 Agent（如 `builtin-general`）绑定 `cron_job` 工具，负责解析用户意图并创建任务
+- 执行 Agent（`builtin-job-executor`）隐藏于 Supervisor 路由之外，拥有独立的执行图和工具集
+
+### 数据模型
+
+```typescript
+// TypeORM Entity: backend/src/common/entities/job.entity.ts
+interface Job {
+  id: string                    // UUID，主键
+  instruction: string           // 自然语言任务指令
+  type: 'cron' | 'every' | 'at' // 任务类型
+  cron: string | null           // Cron 表达式（type=cron）
+  every_ms: number | null       // 间隔毫秒（type=every）
+  at: Date | null               // 执行时间（type=at）
+  timezone: string              // 时区，默认 Asia/Shanghai
+  is_enabled: boolean           // 是否启用
+  allowed_tools: string[]       // 执行时可用的工具白名单
+  timeout_ms: number            // 执行超时（默认 60000ms）
+  max_retries: number           // 最大重试次数（默认 3）
+  consecutive_failures: number  // 连续失败计数
+  auto_disable_threshold: number// 自动停用阈值（默认 5）
+  agent_id: string | null       // 执行 Agent ID
+  created_by_session: string | null
+  last_run: Date | null
+  created_at: Date
+  updated_at: Date
+}
+
+// TypeORM Entity: backend/src/common/entities/job-execution.entity.ts
+interface JobExecution {
+  id: string
+  job_id: string
+  status: 'running' | 'success' | 'failed'
+  result: string | null
+  error: string | null
+  duration_ms: number | null
+  retry_attempt: number
+  started_at: Date
+  finished_at: Date | null
+}
+```
+
+### 任务类型
+
+| 类型 | 触发方式 | 参数 | 示例 |
+|------|---------|------|------|
+| `cron` | Cron 表达式 | `cron` | "0 8 * * *"（每天 8 点） |
+| `every` | 固定间隔 | `every_ms`（毫秒） | 300000（每 5 分钟） |
+| `at` | 一次性定时 | `at`（ISO 8601） | "2026-04-14T15:00:00Z" |
+
+### 执行机制
+
+1. 任务到期触发 → `executeJob()` 加锁防并发
+2. 调用 `LangGraphService.executeAsAgent(instruction, sessionId)` 执行
+3. 执行器 Agent 根据指令自主决定调用哪些工具
+4. 分层重试：可重试错误（timeout / rate-limit / 网络错误）自动重试，延迟递增
+5. 连续失败达到阈值自动停用任务
+6. 一次性任务（`at` 类型）执行后自动禁用
+
+### API 端点
+
+| 方法 | 端点 | 描述 |
+|------|------|------|
+| GET | `/api/v1/cron-jobs` | 获取所有任务（含运行状态和最近执行） |
+| GET | `/api/v1/cron-jobs/{id}` | 获取特定任务 |
+| POST | `/api/v1/cron-jobs` | 创建任务 |
+| PATCH | `/api/v1/cron-jobs/{id}/toggle` | 启用/停用任务 |
+| DELETE | `/api/v1/cron-jobs/{id}` | 删除任务 |
+| POST | `/api/v1/cron-jobs/{id}/trigger` | 手动触发执行 |
+| GET | `/api/v1/cron-jobs/{id}/executions` | 获取执行历史 |
+| GET | `/api/v1/cron-jobs/{id}/executions/latest` | 获取最近一次执行 |
+
+### 约束
+
+1. 工具通过 `safeTool()` + `ToolRegistryService` 注册，不使用 `@Injectable` Service 模式
+2. `builtin-job-executor` 必须在 `HIDDEN_AGENTS` 中，不参与 Supervisor 路由
+3. 执行 Agent 的工具集独立于对话 Agent，通过 DB `tools` 字段配置
+4. 调度参数结构化存储，任务指令保持自然语言（用户原始表述）
+5. 任务执行有超时保护，默认 60 秒
+6. 前端管理页面位于 `/cron-jobs`，赛博朋克主题风格
 
 ---
 

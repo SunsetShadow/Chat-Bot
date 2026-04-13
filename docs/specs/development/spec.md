@@ -71,8 +71,9 @@ Chat-Bot/
 │   │   └── modules/             # 业务模块
 │   │       ├── agent/           #   Agent CRUD + 内置定义
 │   │       ├── chat/            #   聊天模块（SSE）
+│   │       ├── cron-job/        #   定时任务模块（调度 + 执行）
 │   │       ├── langgraph/       #   LangGraph 工作流
-│   │       │   ├── graph/       #     graph.builder.ts + supervisor.builder.ts + nodes/
+│   │       │   ├── graph/       #     graph.builder.ts + supervisor.builder.ts
 │   │       │   └── tools/       #     工具系统
 │   │       │       ├── base/    #       tool.helper.ts（safeTool）
 │   │       │       └── collections/ # 按域分组（search/communication/system/file-system）
@@ -143,6 +144,8 @@ CSS 变量使用 `main.css` 中的定义，不硬编码：
 | `stores/chat.ts` | Pinia store，会话列表和当前会话状态 |
 | `api/chat.ts` | REST API 调用（会话 CRUD、消息历史） |
 | `components/chat/ToolCallBlock.vue` | 工具调用实时显示组件 |
+| `api/cron-job.ts` | 定时任务 API 调用层 |
+| `stores/cron-job.ts` | 定时任务 Pinia store |
 | `assets/main.css` | CSS 变量和全局样式 |
 | `types/index.ts` | TypeScript 接口定义 |
 
@@ -152,14 +155,18 @@ CSS 变量使用 `main.css` 中的定义，不硬编码：
 |------|------|
 | `modules/chat/chat.controller.ts` | 聊天 API 路由（含 SSE） |
 | `modules/chat/chat.service.ts` | 核心聊天逻辑 |
-| `modules/langgraph/langgraph.service.ts` | LangGraph 工作流集成（流式输出） |
-| `modules/langgraph/langgraph.module.ts` | 模块注册（工具 + Agent 回调） |
+| `modules/langgraph/langgraph.service.ts` | LangGraph 工作流集成（Supervisor + 独立执行器 + 流式输出） |
+| `modules/langgraph/langgraph.module.ts` | 模块注册（工具 + Agent 回调 + 图初始化） |
 | `modules/langgraph/graph/graph.builder.ts` | 单 Agent 图构建（旧，仍在使用） |
-| `modules/langgraph/graph/supervisor.builder.ts` | Supervisor 多 Agent 图构建 |
+| `modules/langgraph/graph/supervisor.builder.ts` | Supervisor 多 Agent 图构建（含隐藏 Agent 过滤） |
 | `modules/langgraph/tools/tool-registry.service.ts` | 工具注册中心（权限 + 分类） |
 | `modules/langgraph/tools/tool.loader.ts` | 工具统一加载器 |
 | `modules/langgraph/tools/base/tool.helper.ts` | safeTool 错误包装 |
-| `modules/agent/` | Agent 模块（controller/service/dto） |
+| `modules/langgraph/tools/cron-job.tool.ts` | 定时任务工具（add/list/toggle） |
+| `modules/cron-job/job.service.ts` | 定时任务调度引擎（CRUD + 运行时 + 重试） |
+| `modules/cron-job/job-execution.service.ts` | 任务执行记录（CRUD + 查询） |
+| `modules/cron-job/cron-job.controller.ts` | 定时任务 API 路由 |
+| `modules/agent/` | Agent 模块（controller/service/dto + 内置同步） |
 | `modules/memory/memory.service.ts` | 记忆管理（PG + Milvus 双写） |
 | `modules/memory/milvus.service.ts` | Milvus 向量数据库客户端 |
 | `config/config.service.ts` | 应用配置服务（环境变量封装） |
