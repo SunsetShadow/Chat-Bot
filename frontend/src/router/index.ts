@@ -17,6 +17,11 @@ const routes: RouteRecordRaw[] = [
     name: "AgentConfig",
     component: () => import("@/views/AgentConfigView.vue"),
   },
+  {
+    path: "/cron-jobs",
+    name: "CronJobs",
+    component: () => import("@/views/CronJobsView.vue"),
+  },
 ];
 
 const router = createRouter({
