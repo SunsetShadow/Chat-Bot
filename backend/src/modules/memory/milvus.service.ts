@@ -1,56 +1,92 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { MilvusClient, DataType, MetricType, IndexType } from '@zilliz/milvus2-sdk-node';
 
 const COLLECTION_NAME = 'memories';
 
 @Injectable()
 export class MilvusService implements OnModuleInit {
-  private client: MilvusClient;
+  private client: any = null;
   private readonly logger = new Logger(MilvusService.name);
 
   constructor(private configService: ConfigService) {}
 
   async onModuleInit() {
-    const address = this.configService.get('MILVUS_ADDRESS', 'localhost:19530');
-    const dimension = this.configService.get<number>('EMBEDDINGS_DIMENSION', 1536);
+    const milvusEnabled = this.configService.get('MILVUS_ENABLED', 'false');
+    if (milvusEnabled !== 'true') {
+      this.logger.warn('Milvus disabled (MILVUS_ENABLED not set to "true"), vector features disabled');
+      return;
+    }
 
-    this.client = new MilvusClient({ address });
-    await this.ensureCollection(dimension);
-    this.logger.log('Milvus connected and collection ready');
+    try {
+      const { MilvusClient, DataType, IndexType, MetricType } = await import('@zilliz/milvus2-sdk-node');
+      const address = this.configService.get('MILVUS_ADDRESS', 'localhost:19530');
+      const dimension = this.configService.get<number>('EMBEDDINGS_DIMENSION', 1536);
+
+      this.client = new MilvusClient({ address });
+      await this.ensureCollection(dimension, DataType, IndexType, MetricType);
+      this.logger.log('Milvus connected and collection ready');
+    } catch (error) {
+      this.client = null;
+      this.logger.warn(`Milvus unavailable, vector features disabled: ${error instanceof Error ? error.message : error}`);
+    }
+  }
+
+  get isConnected(): boolean {
+    return this.client !== null;
   }
 
   async insert(id: string, embedding: number[], memoryType: string): Promise<void> {
-    await this.client.insert({
-      collection_name: COLLECTION_NAME,
-      data: [{ id, embedding, memory_type: memoryType }],
-    });
+    if (!this.client) return;
+    try {
+      await this.client.insert({
+        collection_name: COLLECTION_NAME,
+        data: [{ id, embedding, memory_type: memoryType }],
+      });
+    } catch (error) {
+      this.logger.warn(`Milvus insert failed: ${error instanceof Error ? error.message : error}`);
+    }
   }
 
   async search(embedding: number[], limit: number, memoryType?: string): Promise<string[]> {
-    const searchParams: any = {
-      collection_name: COLLECTION_NAME,
-      vector: embedding,
-      limit,
-      output_fields: ['id'],
-    };
+    if (!this.client) return [];
+    try {
+      const searchParams: any = {
+        collection_name: COLLECTION_NAME,
+        vector: embedding,
+        limit,
+        output_fields: ['id'],
+      };
 
-    if (memoryType) {
-      searchParams.filter = `memory_type == "${memoryType}"`;
+      if (memoryType) {
+        searchParams.filter = `memory_type == "${memoryType}"`;
+      }
+
+      const results = await this.client.search(searchParams);
+      return results.results.map((r: any) => r.id);
+    } catch (error) {
+      this.logger.warn(`Milvus search failed: ${error instanceof Error ? error.message : error}`);
+      return [];
     }
-
-    const results = await this.client.search(searchParams);
-    return results.results.map((r: any) => r.id);
   }
 
   async delete(id: string): Promise<void> {
-    await this.client.delete({
-      collection_name: COLLECTION_NAME,
-      ids: [id],
-    });
+    if (!this.client) return;
+    try {
+      await this.client.delete({
+        collection_name: COLLECTION_NAME,
+        ids: [id],
+      });
+    } catch (error) {
+      this.logger.warn(`Milvus delete failed: ${error instanceof Error ? error.message : error}`);
+    }
   }
 
-  private async ensureCollection(dimension: number): Promise<void> {
+  private async ensureCollection(
+    dimension: number,
+    DataType: any,
+    IndexType: any,
+    MetricType: any,
+  ): Promise<void> {
     const exists = await this.client.hasCollection({ collection_name: COLLECTION_NAME });
     if (exists.value) return;
 

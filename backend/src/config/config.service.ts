@@ -65,6 +65,9 @@ export class AppConfigService {
   get bochaApiKey(): string {
     return this.configService.get<string>('BOCHA_API_KEY', '');
   }
+  get bochaApiUrl(): string {
+    return this.configService.get<string>('BOCHA_API_URL', 'https://api.bochaai.com');
+  }
 
   // SMTP 邮件
   get mailHost(): string {

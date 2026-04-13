@@ -56,7 +56,7 @@ export function createSendMailTool(deps: MailToolDeps) {
         to,
         subject,
         text: body,
-        html: `<p>${body.replace(/\n/g, '<br>')}</p>`,
+        html: `<p>${body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}</p>`,
       });
 
       return `邮件已成功发送到 ${to}，主题为「${subject}」`;

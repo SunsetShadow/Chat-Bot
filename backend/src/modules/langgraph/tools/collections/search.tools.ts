@@ -3,6 +3,7 @@ import { safeTool } from '../base/tool.helper';
 
 export interface SearchToolDeps {
   bochaApiKey: string;
+  bochaApiUrl: string;
 }
 
 /**
@@ -31,7 +32,7 @@ export function createWebSearchTool(deps: SearchToolDeps) {
         return '搜索功能未配置：缺少 BOCHA_API_KEY 环境变量。请在 .env 中配置后使用。';
       }
 
-      const response = await fetch('https://api.bochaai.com/v1/web-search', {
+      const response = await fetch(`${deps.bochaApiUrl}/v1/web-search`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${deps.bochaApiKey}`,

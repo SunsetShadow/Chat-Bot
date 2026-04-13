@@ -1,11 +1,11 @@
 import { z } from 'zod';
-import fs from 'node:fs/promises';
+import { stat, readFile, mkdir, writeFile, readdir } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
 import path from 'node:path';
 import { safeTool } from '../base/tool.helper';
 
-/**
- * 创建读取文件工具
- */
+const MAX_FILE_SIZE = 50000;
+
 export function createReadFileTool() {
   return safeTool(
     'read_file',
@@ -23,19 +23,32 @@ export function createReadFileTool() {
       filePath: z.string().describe('文件路径，可以是相对路径或绝对路径'),
     }),
     async ({ filePath }) => {
-      const content = await fs.readFile(filePath, 'utf-8');
-      // 限制输出长度，避免超出上下文
-      if (content.length > 50000) {
-        return `文件内容过长（${content.length} 字符），仅显示前 50000 字符:\n\n${content.slice(0, 50000)}\n\n... (已截断)`;
+      const fileStat = await stat(filePath);
+      if (fileStat.size > MAX_FILE_SIZE) {
+        const content = await readFirstChars(filePath, MAX_FILE_SIZE);
+        return `文件过大（${fileStat.size} 字节），仅显示前 ${MAX_FILE_SIZE} 字符:\n\n${content}\n\n... (已截断)`;
       }
-      return content;
+      return await readFile(filePath, 'utf-8');
     },
   );
 }
 
-/**
- * 创建写入文件工具
- */
+function readFirstChars(filePath: string, maxChars: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let result = '';
+    const stream = createReadStream(filePath, { encoding: 'utf-8', highWaterMark: maxChars });
+    stream.on('data', (chunk: string) => {
+      result += chunk;
+      if (result.length >= maxChars) {
+        stream.destroy();
+        resolve(result.slice(0, maxChars));
+      }
+    });
+    stream.on('end', () => resolve(result));
+    stream.on('error', reject);
+  });
+}
+
 export function createWriteFileTool() {
   return safeTool(
     'write_file',
@@ -55,16 +68,13 @@ export function createWriteFileTool() {
       content: z.string().describe('要写入的内容'),
     }),
     async ({ filePath, content }) => {
-      await fs.mkdir(path.dirname(filePath), { recursive: true });
-      await fs.writeFile(filePath, content, 'utf-8');
+      await mkdir(path.dirname(filePath), { recursive: true });
+      await writeFile(filePath, content, 'utf-8');
       return `文件已写入: ${filePath}（${content.length} 字符）`;
     },
   );
 }
 
-/**
- * 创建列出目录工具
- */
 export function createListDirectoryTool() {
   return safeTool(
     'list_directory',
@@ -82,7 +92,7 @@ export function createListDirectoryTool() {
     }),
     async ({ dirPath }) => {
       const targetPath = dirPath || process.cwd();
-      const entries = await fs.readdir(targetPath, { withFileTypes: true });
+      const entries = await readdir(targetPath, { withFileTypes: true });
 
       if (entries.length === 0) return `目录 ${targetPath} 为空。`;
 
