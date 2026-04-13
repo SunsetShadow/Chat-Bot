@@ -1,0 +1,77 @@
+{
+  "changeId": "ai-cron-job",
+  "title": "AI 定时任务系统",
+  "spec": "docs/superpowers/specs/2026-04-13-ai-cron-job-design.md",
+  "plan": "docs/superpowers/plans/2026-04-13-ai-cron-job.md",
+  "tasks": [
+    {
+      "id": 1,
+      "title": "数据模型 — JobEntity + JobExecutionEntity",
+      "status": "pending",
+      "taskRef": "Task 1"
+    },
+    {
+      "id": 2,
+      "title": "JobExecutionService — 执行记录管理",
+      "status": "pending",
+      "dependsOn": [1],
+      "taskRef": "Task 2"
+    },
+    {
+      "id": 3,
+      "title": "CronJobModule + AppModule 集成",
+      "status": "pending",
+      "dependsOn": [2],
+      "taskRef": "Task 3"
+    },
+    {
+      "id": 4,
+      "title": "JobService — 调度核心",
+      "status": "pending",
+      "dependsOn": [3],
+      "taskRef": "Task 4"
+    },
+    {
+      "id": 5,
+      "title": "DTO + Controller — REST API",
+      "status": "pending",
+      "dependsOn": [4],
+      "taskRef": "Task 5"
+    },
+    {
+      "id": 6,
+      "title": "cron_job LangChain 工具 + 注册",
+      "status": "pending",
+      "dependsOn": [4],
+      "taskRef": "Task 6"
+    },
+    {
+      "id": 7,
+      "title": "Seed 执行 Agent + System Prompt 规则",
+      "status": "pending",
+      "dependsOn": [3],
+      "taskRef": "Task 7"
+    },
+    {
+      "id": 8,
+      "title": "前端 — 类型+API+Store+路由",
+      "status": "pending",
+      "dependsOn": [5],
+      "taskRef": "Task 8"
+    },
+    {
+      "id": 9,
+      "title": "前端管理页面（frontend-design 技能）",
+      "status": "pending",
+      "dependsOn": [8],
+      "taskRef": "Task 9"
+    },
+    {
+      "id": 10,
+      "title": "端到端集成测试 + Lint",
+      "status": "pending",
+      "dependsOn": [9],
+      "taskRef": "Task 10"
+    }
+  ]
+}
