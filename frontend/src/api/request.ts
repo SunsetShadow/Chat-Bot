@@ -1,5 +1,5 @@
 export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8088";
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean>;
@@ -87,4 +87,14 @@ export function put<T>(url: string, data?: unknown): Promise<T> {
  */
 export function del<T>(url: string): Promise<T> {
   return request<T>(url, { method: "DELETE" });
+}
+
+/**
+ * PATCH 请求
+ */
+export function patch<T>(url: string, data?: unknown): Promise<T> {
+  return request<T>(url, {
+    method: "PATCH",
+    body: data ? JSON.stringify(data) : undefined,
+  });
 }

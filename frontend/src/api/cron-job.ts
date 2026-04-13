@@ -1,4 +1,4 @@
-import { get, post, del } from "./request";
+import { get, post, del, patch } from "./request";
 import type {
   CronJob,
   CreateJobRequest,
@@ -20,7 +20,7 @@ export async function createJob(data: CreateJobRequest) {
 }
 
 export async function toggleJob(id: string, enabled?: boolean) {
-  return post<{ success: boolean; data: CronJob }>(`${BASE}/${id}/toggle`, { enabled });
+  return patch<{ success: boolean; data: CronJob }>(`${BASE}/${id}/toggle`, { enabled });
 }
 
 export async function deleteJob(id: string) {
