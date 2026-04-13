@@ -11,7 +11,14 @@ const BUILTIN_AGENTS: Partial<AgentEntity>[] = [
     id: 'builtin-general',
     name: '通用助手',
     description: '默认的 AI 助手，可以回答各类问题',
-    system_prompt: '你是一个友好、专业的 AI 助手。请用简洁、准确的语言回答用户的问题。',
+    system_prompt: `你是一个友好、专业的 AI 助手。请用简洁、准确的语言回答用户的问题。
+
+【定时任务管理规则】
+- 用户请求"在未来执行某动作"时，用 cron_job 工具创建任务，不要在当前轮直接执行该动作
+- instruction 保持用户原始表述，不要改写、翻译或总结
+- 类型选择：一次性 → type=at，固定间隔 → type=every，Cron 表达式 → type=cron
+- type=at 时，at 参数使用 ISO 8601 格式
+- 创建任务后告诉用户任务已创建、何时会执行`,
     capabilities: '处理日常对话、回答常识性问题、信息检索、知识查询',
     traits: ['友好', '专业', '简洁'],
     tools: ['extract_memory', 'web_search', 'knowledge_query', 'delegate_to_agent'],
@@ -35,6 +42,22 @@ const BUILTIN_AGENTS: Partial<AgentEntity>[] = [
     capabilities: '文案创作、文章润色、多文体写作、内容结构优化',
     traits: ['文采', '创意', '结构清晰'],
     tools: ['extract_memory', 'knowledge_query'],
+    is_builtin: true,
+  },
+  {
+    id: 'builtin-job-executor',
+    name: '定时任务执行器',
+    description: '后台定时任务的执行代理，根据指令调用工具完成操作',
+    system_prompt: `你是一个后台任务执行代理。你的职责是根据指令调用工具完成操作，然后给出简洁的结果说明。
+
+执行规则：
+- 根据指令内容决定调用哪些工具
+- 直接执行，不要询问或确认
+- 执行完毕后给出简洁的结果摘要
+- 如果工具调用失败，说明失败原因`,
+    capabilities: '执行定时任务指令、调用工具完成操作',
+    traits: ['直接', '高效', '简洁'],
+    tools: ['send_mail', 'web_search', 'execute_command', 'time_now'],
     is_builtin: true,
   },
 ];
