@@ -60,4 +60,29 @@ export class AppConfigService {
   get allowedDocTypes(): string[] {
     return ['application/pdf', 'text/plain', 'text/markdown'];
   }
+
+  // Bocha 搜索
+  get bochaApiKey(): string {
+    return this.configService.get<string>('BOCHA_API_KEY', '');
+  }
+
+  // SMTP 邮件
+  get mailHost(): string {
+    return this.configService.get<string>('MAIL_HOST', '');
+  }
+  get mailPort(): number {
+    return parseInt(this.configService.get<string>('MAIL_PORT', '587'), 10);
+  }
+  get mailSecure(): boolean {
+    return this.configService.get<string>('MAIL_SECURE', 'false') === 'true';
+  }
+  get mailUser(): string {
+    return this.configService.get<string>('MAIL_USER', '');
+  }
+  get mailPass(): string {
+    return this.configService.get<string>('MAIL_PASS', '');
+  }
+  get mailFrom(): string {
+    return this.configService.get<string>('MAIL_FROM', '');
+  }
 }

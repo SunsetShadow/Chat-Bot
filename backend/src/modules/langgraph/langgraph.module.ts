@@ -7,9 +7,9 @@ import { AgentService } from '../agent/agent.service';
 import { AppConfigService } from '../../config/config.service';
 import { ToolRegistryService } from './tools/tool-registry.service';
 import { ToolController } from './tools/tool.controller';
+import { registerAllTools } from './tools/tool.loader';
 import { createMemoryExtractTool } from './tools/memory-extract.tool';
 import { createKnowledgeQueryTool } from './tools/knowledge-query.tool';
-import { createWebSearchTool } from './tools/web-search.tool';
 import { createDelegateToAgentTool } from './tools/delegate-to-agent.tool';
 import { MemoryService } from '../memory/memory.service';
 
@@ -25,10 +25,14 @@ export class LangGraphModule implements OnModuleInit {
     private memoryService: MemoryService,
     private langGraphService: LangGraphService,
     private agentService: AgentService,
+    private configService: AppConfigService,
   ) {}
 
   onModuleInit() {
-    // 注册工具（含权限和分类）
+    // 注册通用工具集合（搜索、邮件、系统、文件系统）
+    registerAllTools(this.toolRegistry, this.configService);
+
+    // 注册业务工具（记忆、知识、Agent 委托）
     this.toolRegistry.register(createMemoryExtractTool(this.memoryService), {
       permission_level: 'write',
       category: 'memory',
@@ -38,11 +42,6 @@ export class LangGraphModule implements OnModuleInit {
       permission_level: 'read',
       category: 'memory',
       description: '查询已保存的知识和记忆',
-    });
-    this.toolRegistry.register(createWebSearchTool(), {
-      permission_level: 'read',
-      category: 'search',
-      description: '搜索互联网获取最新信息',
     });
 
     // 注册 Agent 间委托工具
