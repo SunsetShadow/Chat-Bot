@@ -1,6 +1,7 @@
 import { Module, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { SecurityMiddleware } from './middleware/security.middleware';
 import { AppController } from './app.controller';
 import { ModelService } from './modules/model/model.service';
@@ -10,6 +11,7 @@ import { RuleModule } from './modules/rule/rule.module';
 import { MemoryModule } from './modules/memory/memory.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { ModelModule } from './modules/model/model.module';
+import { CronJobModule } from './modules/cron-job/cron-job.module';
 
 @Module({
   imports: [
@@ -27,12 +29,14 @@ import { ModelModule } from './modules/model/model.module';
       }),
       inject: [ConfigService],
     }),
+    ScheduleModule.forRoot(),
     ChatModule,
     AgentModule,
     RuleModule,
     MemoryModule,
     UploadModule,
     ModelModule,
+    CronJobModule,
   ],
   controllers: [AppController],
   providers: [ModelService],
