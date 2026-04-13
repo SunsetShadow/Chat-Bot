@@ -1,8 +1,8 @@
 # 核心功能规范
 
-本文档定义 Chat Bot 的核心功能：聊天系统、Agent 系统、规则系统、记忆系统和上下文管理。
+本文档定义 Chat Bot 的核心功能：聊天系统、Agent 系统、工具系统、规则系统、记忆系统和上下文管理。
 
-> 架构演进计划见 [plans/agent-architecture/evolution-plan.md](../../plans/agent-architecture/evolution-plan.md)
+> 架构演进计划见 [plans/后续.md](../../plans/后续.md)
 
 ---
 
@@ -32,6 +32,7 @@
 | `tool_call_delta` | `tool-input-delta` | 工具参数流式传输 |
 | `tool_call_input` | `tool-input-available` | 完整工具输入 |
 | `tool_call_output` | `tool-output-available` | 工具执行结果 |
+| `agent_switch` | — | Agent 切换事件（多 Agent 协作） |
 | `step_start` | — | 新步骤开始（不生成 chunk） |
 | `done` | — | 会话完成（不生成 chunk） |
 | `error` | `error` | 错误事件 |
@@ -60,7 +61,21 @@
 
 ## Agent 系统
 
-允许用户选择不同的 AI 人设角色，每个 Agent 拥有自定义的系统提示词。
+基于 LangGraph Supervisor 模式的多 Agent 协作系统。Supervisor 根据用户请求自动路由到最合适的专业 Agent，支持 Agent 间任务委托。
+
+### 架构
+
+```
+Supervisor（调度器）
+  ├── Worker Agent A (createReactAgent) — 独立 system_prompt + 工具集 + 可选模型
+  ├── Worker Agent B (createReactAgent) — ...
+  └── Worker Agent C (createReactAgent) — ...
+```
+
+- Supervisor 根据 Agent 的 `capabilities` 描述进行路由决策
+- 每个 Worker Agent 拥有独立的 system prompt、工具集、可选模型和 temperature
+- 支持 `preferredAgent` 偏好提示
+- Agent 变更时自动触发 Supervisor 图重建
 
 ### 数据模型
 
@@ -72,13 +87,23 @@ interface Agent {
   description: string
   system_prompt: string
   traits: string[]          // simple-array 类型
+  tools: string[]           // Agent 绑定的工具名列表
+  skills: string[]          // 技能标签
+  model_name?: string       // 可选独立模型
+  capabilities: string      // 能力描述（Supervisor 路由依据）
+  enabled: boolean          // 是否启用
+  temperature?: number      // 可选温度参数
+  avatar?: string           // Agent 头像
+  category?: string         // 分类
+  max_turns?: number        // 最大轮次
+  handoff_targets: string[] // 可委托目标 Agent 列表
   is_builtin: boolean       // 内置 Agent 不可删除/修改
-  created_at: Date          // 自动生成
-  updated_at: Date          // 自动更新
+  created_at: Date
+  updated_at: Date
 }
 ```
 
-持久化：PostgreSQL（TypeORM），启动时自动 seed 3 个内置 Agent。
+持久化：PostgreSQL（TypeORM），启动时自动 seed 内置 Agent。
 
 ### API 端点
 
@@ -95,6 +120,70 @@ interface Agent {
 1. 每个 Agent 必须有唯一的名称
 2. system_prompt 不能为空
 3. 删除 Agent 不影响已有的聊天会话
+4. Agent 变更时触发 Supervisor 图重建（通过 `setRebuildCallback`）
+
+---
+
+## 工具系统
+
+统一的工具注册和管理系统，支持权限分级、分类管理和批量注册。
+
+### 架构
+
+```
+ToolRegistryService（注册中心）
+  ├── tool.loader.ts         ← 统一加载器，批量注册工具集合
+  ├── base/tool.helper.ts    ← safeTool 错误包装
+  ├── collections/           ← 按能力域分组的工具
+  │   ├── search.tools.ts         — web_search (Bocha)
+  │   ├── communication.tools.ts  — send_mail (SMTP)
+  │   ├── system.tools.ts         — time_now, execute_command
+  │   └── file-system.tools.ts    — read_file, write_file, list_directory
+  ├── memory-extract.tool.ts      — 从对话提取记忆
+  ├── knowledge-query.tool.ts     — 语义查询记忆
+  └── delegate-to-agent.tool.ts   — Agent 间委托
+```
+
+### 工具权限与分类
+
+**权限级别**：`read`（只读） | `write`（写入） | `confirm`（需确认，待实现）
+
+**工具类别**：`search` | `communication` | `system` | `file` | `memory` | `orchestration` | `general`
+
+### 工具清单
+
+| 工具名 | 类别 | 权限 | 功能 | 外部依赖 |
+|--------|------|------|------|---------|
+| `web_search` | search | read | Bocha 联网搜索 | `BOCHA_API_KEY` |
+| `send_mail` | communication | write | SMTP 发送邮件 | `MAIL_HOST/USER/PASS` |
+| `time_now` | system | read | 获取服务器时间 | 无 |
+| `execute_command` | system | write | 执行系统命令 | 无 |
+| `read_file` | file | read | 读取文件（限 50KB） | 无 |
+| `write_file` | file | write | 写入文件 | 无 |
+| `list_directory` | file | read | 列出目录内容 | 无 |
+| `extract_memory` | memory | write | 提取对话记忆 | MemoryService |
+| `knowledge_query` | memory | read | 语义查询记忆 | MemoryService |
+| `delegate_to_agent` | orchestration | read | Agent 间委托 | AgentService |
+
+### 注册流程
+
+1. `LangGraphModule.onModuleInit()` 触发注册
+2. `registerAllTools()` 批量注册通用工具集合（collections/）
+3. 逐一注册业务工具（memory-extract、knowledge-query、delegate-to-agent）
+4. 每个 Agent 通过 `tools` 字段绑定所需的工具名列表
+
+### API 端点
+
+| 方法 | 端点 | 描述 |
+|------|------|------|
+| GET | `/api/v1/tools` | 获取所有工具（含权限信息） |
+
+### 约束
+
+1. 所有工具使用 `safeTool()` 包装，统一错误格式，避免 stack trace 泄露给 Agent
+2. 工具通过 `ToolRegistryService` 集中管理，按名查找
+3. 新增工具只需在 `collections/` 中创建文件并在 `tool.loader.ts` 中注册
+4. `execute_command` 和 `write_file` 具有安全风险，生产环境需加白名单限制
 
 ---
 
@@ -225,12 +314,13 @@ MemoryService
 1. 加载系统提示词 = Agent.system_prompt + 启用的规则内容 + 记忆上下文
 2. 加载历史消息（全量，无截断）
 3. 添加当前用户输入
-4. 发送到 LLM
+4. 构建 Supervisor Graph（根据启用的 Agent 和工具配置动态构建）
+5. 发送到 LLM
 
 ### 已知限制
 
 - 无 Token 计数，依赖模型自身的上下文窗口截断
 - 无滑动窗口或消息摘要机制
-- 记忆注入无数量限制
+- 记忆注入数量限制为 10 条
 
-> 改进方案见 [plans/agent-architecture/evolution-plan.md](../../plans/agent-architecture/evolution-plan.md) Phase 2.2-2.3
+> 改进方案见 [plans/后续.md](../../plans/后续.md)

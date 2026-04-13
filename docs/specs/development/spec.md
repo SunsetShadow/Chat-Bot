@@ -1,5 +1,8 @@
 # 开发规范
 
+本文档定义项目的开发标准：技术栈、目录结构、命名规范、代码风格、关键文件索引。
+功能详细规范见 [core-features/spec.md](../core-features/spec.md)。
+
 ## 技术栈
 
 ### 前端
@@ -29,10 +32,13 @@
 | ORM | TypeORM + @nestjs/typeorm | ^0.3 / ^11.x |
 | 数据库 | PostgreSQL | 16 |
 | 向量数据库 | Milvus + @zilliz/milvus2-sdk-node | v2.4 / ^2.6 |
-| AI | OpenAI SDK (npm) | ^4.x |
+| AI | @langchain/langgraph + langgraph-supervisor | ^1.2 / ^1.0 |
 | AI | @langchain/openai | ^1.x |
+| Schema 校验 | zod | ^4.x |
+| 邮件 | nodemailer | ^8.x |
 | 验证 | class-validator + class-transformer | ^0.14 / ^0.5 |
 | 环境变量 | @nestjs/config | ^4.x |
+| 代码检查 | ESLint + typescript-eslint | ^9.x / ^8.x |
 
 ## 目录结构
 
@@ -43,10 +49,10 @@ Chat-Bot/
 │   │   ├── api/                 # API 调用层
 │   │   ├── assets/              # 静态资源
 │   │   ├── components/          # Vue 组件
-│   │   │   ├── agent/           # Agent 相关组件
-│   │   │   ├── chat/            # 聊天相关组件
-│   │   │   ├── common/          # 通用组件
-│   │   │   └── rules/           # 规则相关组件
+│   │   │   ├── agent/           #   Agent 相关组件
+│   │   │   ├── chat/            #   聊天相关组件
+│   │   │   ├── common/          #   通用组件
+│   │   │   └── rules/           #   规则相关组件
 │   │   ├── composables/         # Vue Composables
 │   │   ├── stores/              # Pinia 状态管理
 │   │   ├── types/               # TypeScript 类型定义
@@ -56,29 +62,32 @@ Chat-Bot/
 ├── backend/                     # 后端项目
 │   ├── src/
 │   │   ├── common/              # 公共层
-│   │   │   ├── entities/        # TypeORM 实体定义
-│   │   │   ├── types/           # 公共类型定义
-│   │   │   ├── filters/         # 异常过滤器
-│   │   │   └── interceptors/    # 拦截器
+│   │   │   ├── entities/        #   TypeORM 实体定义
+│   │   │   ├── types/           #   公共类型定义
+│   │   │   ├── filters/         #   异常过滤器
+│   │   │   └── interceptors/    #   拦截器
 │   │   ├── config/              # 配置模块
 │   │   ├── middleware/          # 中间件
 │   │   └── modules/             # 业务模块
-│   │       ├── agent/           # Agent 模块
-│   │       ├── chat/            # 聊天模块（含 SSE）
-│   │       ├── llm/             # LLM 集成模块
-│   │       ├── memory/          # 记忆模块（含 Milvus + Embedding）
-│   │       ├── model/           # 模型管理模块
-│   │       ├── rule/            # 规则模块
-│   │       └── upload/          # 上传模块
+│   │       ├── agent/           #   Agent CRUD + 内置定义
+│   │       ├── chat/            #   聊天模块（SSE）
+│   │       ├── langgraph/       #   LangGraph 工作流
+│   │       │   ├── graph/       #     supervisor.builder.ts
+│   │       │   └── tools/       #     工具系统
+│   │       │       ├── base/    #       tool.helper.ts（safeTool）
+│   │       │       └── collections/ # 按域分组（search/communication/system/file-system）
+│   │       ├── memory/          #   记忆模块（PG + Milvus + Embedding）
+│   │       ├── model/           #   模型管理
+│   │       ├── rule/            #   规则 CRUD
+│   │       └── upload/          #   文件上传
 │   └── package.json
 │
 ├── docker-compose.yml           # Milvus 容器编排
-│
 └── docs/                        # 文档
-    ├── specs/                   # 当前系统规范
-    ├── plans/                   # 未来演进计划
-    ├── references/              # 参考读物
-    └── changes/                 # 历史变更记录
+    ├── specs/                   #   当前系统规范
+    ├── plans/                   #   未来演进计划
+    ├── references/              #   参考读物
+    └── changes/                 #   历史变更记录
 ```
 
 ## 命名规范
@@ -101,21 +110,7 @@ Chat-Bot/
 | 函数/变量 | camelCase | `getChatMessages` |
 | 模块目录 | kebab-case | `modules/chat/` |
 
-## 分层架构
-
-```
-Controllers (modules/*/controller.ts)
-    ↓ 调用
-Services (modules/*/service.ts)
-    ↓ 调用
-TypeORM Repository (结构化数据) / Milvus Service (向量数据)
-    ↓ 调用
-Providers (modules/llm/providers/)
-    ↓ 操作
-Entities (common/entities/) / DTOs (modules/*/dto/)
-```
-
-## 代码风格约束
+## 代码风格
 
 | 约束 | 说明 |
 |------|------|
@@ -125,9 +120,7 @@ Entities (common/entities/) / DTOs (modules/*/dto/)
 | 类型注解 | 公共 API 必须有类型注解 |
 | Lint 检查 | 所有代码必须通过 ESLint |
 
-## UI 风格约束
-
-### 样式规范
+## UI 风格
 
 | 约束 | 说明 |
 |------|------|
@@ -136,43 +129,44 @@ Entities (common/entities/) / DTOs (modules/*/dto/)
 | CSS 变量 | 使用 `main.css` 中定义的 CSS 变量 |
 | 字体 | Sora（正文）、JetBrains Mono（代码） |
 
-### CSS 变量使用
+CSS 变量使用 `main.css` 中的定义，不硬编码：
+颜色（`--color-primary`、`--bg-primary`、`--text-primary`）、阴影（`--shadow-sm/md/lg`）、圆角（`--radius-sm/md/lg`）、过渡（`--transition-fast/smooth`）。
 
-颜色、阴影、圆角等使用 `main.css` 中的 CSS 变量，而非硬编码值：
+## 关键文件索引
 
-- 颜色：`--color-primary`、`--bg-primary`、`--text-primary` 等
-- 阴影：`--shadow-sm`、`--shadow-md`、`--shadow-lg`
-- 圆角：`--radius-sm`、`--radius-md`、`--radius-lg`
-- 过渡：`--transition-fast`、`--transition-smooth`
-
-## 关键文件
+### 前端
 
 | 路径 | 用途 |
 |------|------|
-| `frontend/src/assets/main.css` | CSS 变量和全局样式 |
-| `frontend/src/types/index.ts` | 所有 TypeScript 接口定义 |
-| `frontend/src/composables/useAIChat.ts` | AI SDK Chat 实例管理（单例） |
-| `frontend/src/composables/useChatTransport.ts` | 自定义 ChatTransport（SSE → UIMessageChunk） |
-| `frontend/src/stores/chat.ts` | Pinia 聊天状态管理 |
-| `frontend/src/api/chat.ts` | REST API 调用（会话管理等） |
-| `backend/src/modules/chat/chat.service.ts` | 核心聊天逻辑 |
-| `backend/src/modules/chat/chat.controller.ts` | 聊天 API 路由（含 SSE） |
-| `backend/src/modules/langgraph/langgraph.service.ts` | LangGraph 工作流集成 |
-| `backend/src/modules/agent/` | Agent 模块（controller/service/dto） |
-| `backend/src/modules/memory/memory.service.ts` | 记忆管理（PG + Milvus 双写） |
-| `backend/src/modules/memory/embedding.service.ts` | Embedding 生成（@langchain/openai） |
-| `backend/src/modules/memory/milvus.service.ts` | Milvus 向量数据库客户端 |
-| `backend/src/common/entities/` | TypeORM 实体定义 |
+| `composables/useAIChat.ts` | AI SDK Chat 实例（单例），sendMessage / stopStreaming / regenerate |
+| `composables/useChatTransport.ts` | 自定义 ChatTransport，SSE → UIMessageChunk |
+| `stores/chat.ts` | Pinia store，会话列表和当前会话状态 |
+| `api/chat.ts` | REST API 调用（会话 CRUD、消息历史） |
+| `components/chat/ToolCallBlock.vue` | 工具调用实时显示组件 |
+| `assets/main.css` | CSS 变量和全局样式 |
+| `types/index.ts` | TypeScript 接口定义 |
+
+### 后端
+
+| 路径 | 用途 |
+|------|------|
+| `modules/chat/chat.controller.ts` | 聊天 API 路由（含 SSE） |
+| `modules/chat/chat.service.ts` | 核心聊天逻辑 |
+| `modules/langgraph/langgraph.service.ts` | LangGraph 工作流集成（流式输出） |
+| `modules/langgraph/langgraph.module.ts` | 模块注册（工具 + Agent 回调） |
+| `modules/langgraph/graph/supervisor.builder.ts` | Supervisor 多 Agent 图构建 |
+| `modules/langgraph/tools/tool-registry.service.ts` | 工具注册中心（权限 + 分类） |
+| `modules/langgraph/tools/tool.loader.ts` | 工具统一加载器 |
+| `modules/langgraph/tools/base/tool.helper.ts` | safeTool 错误包装 |
+| `modules/agent/` | Agent 模块（controller/service/dto） |
+| `modules/memory/memory.service.ts` | 记忆管理（PG + Milvus 双写） |
+| `modules/memory/milvus.service.ts` | Milvus 向量数据库客户端 |
+| `config/config.service.ts` | 应用配置服务（环境变量封装） |
+| `common/entities/` | TypeORM 实体定义 |
+
+### 基础设施
+
+| 路径 | 用途 |
+|------|------|
 | `docker-compose.yml` | Milvus 容器编排 |
-
-## 约束
-
-1. 前端使用 `<script setup lang="ts">` 语法
-2. 所有聊天消息通过 SSE 流式传输
-3. 后端使用 NestJS 模块化架构，业务逻辑在 Service 层
-4. Agent 和 Rule 在请求时注入到系统提示词
-5. 始终考虑组件的可复用性
-6. 遵循 Vue 3 最佳实践
-7. 确保类型安全
-8. 结构化数据通过 TypeORM Repository 操作，Memory embedding 通过 Milvus 操作
-9. 内置数据（Agent/Rule）在应用启动时通过 `onModuleInit` 自动 seed
+| `backend/.env.example` | 环境变量模板 |
