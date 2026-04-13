@@ -1,4 +1,4 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Module, OnModuleInit, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ModuleRef } from '@nestjs/core';
 import { LangGraphService } from './langgraph.service';
@@ -18,7 +18,7 @@ import { MemoryService } from '../memory/memory.service';
 import { JobService } from '../cron-job/job.service';
 
 @Module({
-  imports: [ConfigModule, MemoryModule, AgentModule, CronJobModule],
+  imports: [ConfigModule, MemoryModule, AgentModule, forwardRef(() => CronJobModule)],
   controllers: [ToolController],
   providers: [LangGraphService, AppConfigService, ToolRegistryService],
   exports: [LangGraphService],
@@ -33,7 +33,7 @@ export class LangGraphModule implements OnModuleInit {
     private configService: AppConfigService,
   ) {}
 
-  onModuleInit() {
+  async onModuleInit() {
     // 注册通用工具集合（搜索、邮件、系统、文件系统）
     registerAllTools(this.toolRegistry, this.configService);
 
@@ -75,6 +75,9 @@ export class LangGraphModule implements OnModuleInit {
         description: '将任务委托给另一个更专业的 Agent 处理',
       },
     );
+
+    // 所有工具注册完成后，构建 LangGraph
+    await this.langGraphService.initGraph();
 
     // 注册 agent 变更回调，触发 supervisor 图重建
     this.agentService.setRebuildCallback(() => {

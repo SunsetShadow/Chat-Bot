@@ -15,7 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { JobEntity } from '../../common/entities/job.entity';
 import { JobExecutionEntity } from '../../common/entities/job-execution.entity';
 import { JobExecutionService } from './job-execution.service';
-import { ChatService } from '../chat/chat.service';
+import { LangGraphService } from '../langgraph/langgraph.service';
 
 @Injectable()
 export class JobService implements OnApplicationBootstrap, OnApplicationShutdown {
@@ -29,8 +29,8 @@ export class JobService implements OnApplicationBootstrap, OnApplicationShutdown
     @Inject(SchedulerRegistry)
     private schedulerRegistry: SchedulerRegistry,
     private execService: JobExecutionService,
-    @Inject(forwardRef(() => ChatService))
-    private chatService: ChatService,
+    @Inject(forwardRef(() => LangGraphService))
+    private langGraphService: LangGraphService,
   ) {}
 
   // ─────────────────────────────────────────────
@@ -299,13 +299,9 @@ export class JobService implements OnApplicationBootstrap, OnApplicationShutdown
   // 6. 辅助方法
   // ─────────────────────────────────────────────
   private async runWithTimeout(instruction: string, timeoutMs: number): Promise<string> {
+    const sessionId = `job-${Date.now()}`;
     const execute = async (): Promise<string> => {
-      const result = await this.chatService.createCompletion({
-        message: instruction,
-        stream: false,
-        agent_id: 'builtin-job-executor',
-      });
-      return result.assistantMessage?.content ?? '';
+      return this.langGraphService.executeAsAgent(instruction, sessionId);
     };
 
     if (timeoutMs <= 0) return execute();

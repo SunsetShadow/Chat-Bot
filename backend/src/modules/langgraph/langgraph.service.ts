@@ -1,5 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ChatOpenAI } from '@langchain/openai';
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import {
   HumanMessage,
   SystemMessage,
@@ -36,8 +37,12 @@ export class LangGraphService implements OnModuleInit {
   private model: ChatOpenAI;
   private singleAgentGraph: CompiledStateGraph<any, any, any>;
   private supervisorGraph: CompiledStateGraph<any, any, any> | null = null;
+  private executorGraph: CompiledStateGraph<any, any, any> | null = null;
   private graphVersion = 0;
   private rebuildNeeded = false;
+
+  /** 不参与 supervisor 路由的 agent ID（仅供内部执行调用） */
+  private static readonly HIDDEN_AGENTS = ['builtin-job-executor'];
 
   constructor(
     private configService: AppConfigService,
@@ -47,13 +52,16 @@ export class LangGraphService implements OnModuleInit {
 
   async onModuleInit() {
     this.model = this.createModel(this.configService.openaiModel);
+    // 图构建延迟到 LangGraphModule.onModuleInit 注册完工具后调用 initGraph()
+  }
 
-    // 构建单 Agent 后备图
+  /** 由 LangGraphModule.onModuleInit 在工具注册完成后调用 */
+  async initGraph() {
     const tools = this.toolRegistry.getAll();
+    console.log(`[LangGraphService] initGraph: ${tools.length} tools registered: ${tools.map(t => t.name)}`);
     this.singleAgentGraph = buildGraph(this.model, tools);
-
-    // 构建多 Agent Supervisor 图
     await this.rebuildSupervisorGraph();
+    await this.rebuildExecutorGraph();
   }
 
   /**
@@ -66,16 +74,18 @@ export class LangGraphService implements OnModuleInit {
       return;
     }
 
-    const definitions: AgentDefinition[] = agents.map((a) => ({
-      id: a.id,
-      name: a.name,
-      system_prompt: a.system_prompt,
-      capabilities: a.capabilities || a.description,
-      tools: a.tools || [],
-      model_name: a.model_name || undefined,
-      temperature: a.temperature ?? undefined,
-      enabled: a.enabled !== false,
-    }));
+    const definitions: AgentDefinition[] = agents
+      .filter((a) => !LangGraphService.HIDDEN_AGENTS.includes(a.id))
+      .map((a) => ({
+        id: a.id,
+        name: a.name,
+        system_prompt: a.system_prompt,
+        capabilities: a.capabilities || a.description,
+        tools: a.tools || [],
+        model_name: a.model_name || undefined,
+        temperature: a.temperature ?? undefined,
+        enabled: a.enabled !== false,
+      }));
 
     this.supervisorGraph = buildSupervisorGraph(
       this.model,
@@ -84,6 +94,49 @@ export class LangGraphService implements OnModuleInit {
       (modelName) => this.createModel(modelName),
     );
     this.graphVersion++;
+  }
+
+  /**
+   * 构建定时任务执行器的独立图（不经过 supervisor）
+   */
+  async rebuildExecutorGraph() {
+    const agents = await this.agentService.findAll();
+    const executorDef = agents.find((a) => a.id === 'builtin-job-executor');
+    if (!executorDef) return;
+
+    const agentTools = (executorDef.tools || [])
+      .map((name) => this.toolRegistry.get(name))
+      .filter((t): t is DynamicStructuredTool => t !== undefined);
+
+    const { createReactAgent } = await import('@langchain/langgraph/prebuilt');
+    const { MemorySaver } = await import('@langchain/langgraph');
+
+    const agent = createReactAgent({
+      llm: this.model as any,
+      tools: agentTools as any,
+      prompt: executorDef.system_prompt,
+      name: executorDef.id,
+    });
+
+    this.executorGraph = agent as any;
+  }
+
+  /**
+   * 以指定 Agent 身份执行指令（供 CronJobService 调用）
+   */
+  async executeAsAgent(instruction: string, sessionId: string): Promise<string> {
+    if (!this.executorGraph) {
+      await this.rebuildExecutorGraph();
+    }
+    if (!this.executorGraph) return '[错误] 执行器 Agent 不可用';
+
+    const result = (await this.executorGraph.invoke(
+      { messages: [{ role: 'user', content: instruction }] },
+      { configurable: { thread_id: sessionId } },
+    )) as any;
+
+    const lastMsg = result.messages[result.messages.length - 1];
+    return lastMsg?.content || '';
   }
 
   /**

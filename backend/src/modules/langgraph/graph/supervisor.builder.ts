@@ -73,7 +73,7 @@ export function buildSupervisorGraph(
 
   // Agent 能力描述，供 Supervisor 路由决策
   const agentDescriptions = enabledAgents
-    .map((def) => `- ${def.name}: ${def.capabilities || ''}`)
+    .map((def) => `- ${def.name}（${def.id}）: ${def.capabilities || ''} | 可用工具: ${def.tools.join(', ') || '无'}`)
     .join('\n');
 
   const supervisor = createSupervisor({
@@ -92,10 +92,15 @@ ${agentDescriptions}
 5. 复杂的多步骤任务可以拆分后分步处理
 6. 直接调用助手，不要解释你的选择理由
 
+特殊路由规则（最高优先级）：
+- 定时任务、提醒、闹钟、日程相关的请求 → 必须路由到拥有 cron_job 工具的助手
+- 记忆提取和知识查询 → 路由到拥有相应工具的助手
+
 示例匹配：
 - "帮我写一段 Python 代码" → 编程专家
 - "翻译这段话" → 翻译专家（如果有）
-- "分析这组数据" → 数据分析师（如果有）
+- "每天早上8点提醒我喝水" → 拥有 cron_job 工具的通用助手
+- "设置一个定时任务" → 拥有 cron_job 工具的通用助手
 - 日常闲聊或综合问题 → 通用助手`,
     outputMode: 'last_message',
     addHandoffBackMessages: true,

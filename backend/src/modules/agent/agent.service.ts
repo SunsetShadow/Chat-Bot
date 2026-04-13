@@ -13,15 +13,17 @@ const BUILTIN_AGENTS: Partial<AgentEntity>[] = [
     description: '默认的 AI 助手，可以回答各类问题',
     system_prompt: `你是一个友好、专业的 AI 助手。请用简洁、准确的语言回答用户的问题。
 
-【定时任务管理规则】
-- 用户请求"在未来执行某动作"时，用 cron_job 工具创建任务，不要在当前轮直接执行该动作
+【定时任务管理规则 — 最高优先级】
+- 用户提到"提醒""定时""每天""每隔""X点"等时间相关请求时，必须直接调用 cron_job 工具
+- 绝对不要将定时任务请求转交（transfer/delegate）给其他 Agent，由你亲自调用 cron_job 工具完成
 - instruction 保持用户原始表述，不要改写、翻译或总结
-- 类型选择：一次性 → type=at，固定间隔 → type=every，Cron 表达式 → type=cron
+- 类型选择：一次性（"明天""X分钟后"）→ type=at，固定间隔（"每X分钟""每天"）→ type=every，Cron 表达式 → type=cron
 - type=at 时，at 参数使用 ISO 8601 格式
+- type=every 时，everyMs 参数为毫秒数（如"每天"=86400000，"每5分钟"=300000）
 - 创建任务后告诉用户任务已创建、何时会执行`,
     capabilities: '处理日常对话、回答常识性问题、信息检索、知识查询',
     traits: ['友好', '专业', '简洁'],
-    tools: ['extract_memory', 'web_search', 'knowledge_query', 'delegate_to_agent'],
+    tools: ['extract_memory', 'web_search', 'knowledge_query', 'delegate_to_agent', 'cron_job'],
     is_builtin: true,
   },
   {
@@ -82,12 +84,25 @@ export class AgentService implements OnModuleInit {
       if (!exists) {
         await this.agentRepo.save(this.agentRepo.create(def));
       } else {
-        // 更新已有内置 Agent 的 capabilities 和 tools（仅当为空时）
+        // 同步内置 Agent 的 tools 和 system_prompt（保持数据库与代码定义一致）
         const agent = await this.agentRepo.findOneBy({ id: def.id });
-        if (agent && (!agent.capabilities || agent.capabilities === '')) {
-          agent.capabilities = def.capabilities || '';
-          if (def.tools) agent.tools = def.tools;
-          await this.agentRepo.save(agent);
+        if (agent) {
+          let changed = false;
+          if (def.tools && JSON.stringify(agent.tools) !== JSON.stringify(def.tools)) {
+            agent.tools = def.tools;
+            changed = true;
+          }
+          if (def.system_prompt && agent.system_prompt !== def.system_prompt) {
+            agent.system_prompt = def.system_prompt;
+            changed = true;
+          }
+          if (def.capabilities && (!agent.capabilities || agent.capabilities !== def.capabilities)) {
+            agent.capabilities = def.capabilities;
+            changed = true;
+          }
+          if (changed) {
+            await this.agentRepo.save(agent);
+          }
         }
       }
     }

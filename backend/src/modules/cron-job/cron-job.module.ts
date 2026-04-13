@@ -5,12 +5,12 @@ import { JobExecutionEntity } from '../../common/entities/job-execution.entity';
 import { JobService } from './job.service';
 import { JobExecutionService } from './job-execution.service';
 import { CronJobController } from './cron-job.controller';
-import { ChatModule } from '../chat/chat.module';
+import { LangGraphModule } from '../langgraph/langgraph.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([JobEntity, JobExecutionEntity]),
-    forwardRef(() => ChatModule),
+    forwardRef(() => LangGraphModule),
   ],
   controllers: [CronJobController],
   providers: [JobService, JobExecutionService],
