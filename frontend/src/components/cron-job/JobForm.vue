@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed } from "vue";
 import {
   NForm,
   NFormItem,
@@ -9,7 +9,6 @@ import {
   NInputNumber,
   NDatePicker,
   NSelect,
-  NSwitch,
 } from "naive-ui";
 import type { FormInst } from "naive-ui";
 import type { CreateJobRequest, JobType } from "@/types/cron-job";

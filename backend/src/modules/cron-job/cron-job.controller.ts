@@ -49,7 +49,7 @@ export class CronJobController {
 
   @Post()
   async create(@Body() dto: CreateJobDto) {
-    let input: any = {
+    const input: any = {
       instruction: dto.instruction,
       type: dto.type,
       timezone: dto.timezone,

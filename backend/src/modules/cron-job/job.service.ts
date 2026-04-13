@@ -12,7 +12,7 @@ import { Repository } from 'typeorm';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
 import { v4 as uuidv4 } from 'uuid';
-import { JobEntity, JobType } from '../../common/entities/job.entity';
+import { JobEntity } from '../../common/entities/job.entity';
 import { JobExecutionEntity } from '../../common/entities/job-execution.entity';
 import { JobExecutionService } from './job-execution.service';
 import { ChatService } from '../chat/chat.service';
@@ -121,20 +121,21 @@ export class JobService implements OnApplicationBootstrap, OnApplicationShutdown
       id: uuidv4(),
       instruction: input.instruction,
       type: input.type,
-      cron: input.type === 'cron' ? input.cron : null,
-      every_ms: input.type === 'every' ? input.every_ms : null,
-      at: input.type === 'at' ? input.at : null,
       timezone: input.timezone || 'Asia/Shanghai',
-      allowed_tools: input.allowed_tools || null,
       timeout_ms: input.timeout_ms ?? 60000,
       max_retries: input.max_retries ?? 3,
-      agent_id: input.agent_id || null,
-      created_by_session: input.created_by_session || null,
       is_enabled: true,
       consecutive_failures: 0,
       auto_disable_threshold: 5,
-      last_run: null,
-    });
+    } as Partial<JobEntity>);
+
+    // 按类型设置调度参数
+    if (input.type === 'cron') entity.cron = input.cron;
+    if (input.type === 'every') entity.every_ms = input.every_ms;
+    if (input.type === 'at') entity.at = input.at;
+    if (input.allowed_tools) entity.allowed_tools = input.allowed_tools;
+    if (input.agent_id) entity.agent_id = input.agent_id;
+    if (input.created_by_session) entity.created_by_session = input.created_by_session;
 
     const saved = await this.jobRepo.save(entity);
     await this.startRuntime(saved);

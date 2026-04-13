@@ -1,13 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import {
   NIcon,
   NModal,
-  NButton,
   NSpin,
-  NEmpty,
-  NPopconfirm,
   useMessage,
   useDialog,
 } from "naive-ui";

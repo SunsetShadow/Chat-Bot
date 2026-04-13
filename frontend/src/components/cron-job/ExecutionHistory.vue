@@ -10,7 +10,7 @@ import {
   NScrollbar,
 } from "naive-ui";
 import { useCronJobStore } from "@/stores/cron-job";
-import type { JobExecution, JobExecutionStatus } from "@/types/cron-job";
+import type { JobExecutionStatus } from "@/types/cron-job";
 
 const store = useCronJobStore();
 
