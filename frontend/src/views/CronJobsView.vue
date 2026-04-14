@@ -9,7 +9,7 @@ import {
   useDialog,
 } from "naive-ui";
 import {
-  ArrowBackOutline,
+  ChevronBackOutline,
   AddOutline,
   PlayOutline,
   PauseOutline,
@@ -171,14 +171,19 @@ function truncateInstruction(text: string, max = 80): string {
 <template>
   <div class="cron-jobs-view">
     <!-- Header -->
-    <header class="config-header glass-card">
-      <button class="back-btn" @click="goBack">
-        <NIcon :component="ArrowBackOutline" :size="20" />
+    <header class="page-header glass-card">
+      <button class="text-back-btn" @click="goBack">
+        <NIcon :component="ChevronBackOutline" :size="18" />
         <span>返回</span>
       </button>
-      <div class="header-title">
-        <span class="label-mono">Cron Jobs</span>
-        <h2>定时任务管理</h2>
+      <div class="page-title-group">
+        <div class="title-icon-wrap">
+          <NIcon :component="TimeOutline" :size="22" />
+        </div>
+        <div>
+          <span class="title-mono">CRON JOBS</span>
+          <h1 class="page-title">定时任务管理</h1>
+        </div>
       </div>
       <div class="header-actions">
         <button class="refresh-btn" @click="store.fetchJobs()">
@@ -350,53 +355,69 @@ function truncateInstruction(text: string, max = 80): string {
 }
 
 /* === Header === */
-.config-header {
+.page-header {
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 16px 24px;
+  gap: 16px;
+  padding: 20px 28px;
 }
 
-.back-btn {
-  display: flex;
+.text-back-btn {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: transparent;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
+  gap: 4px;
+  background: none;
+  border: none;
   color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: 13px;
   cursor: pointer;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
 }
 
-.back-btn:hover {
-  border-color: var(--neon-cyan);
-  color: var(--neon-cyan);
+.text-back-btn:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
 }
 
-.header-title {
-  flex: 1;
+.page-title-group {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
 }
 
-.header-title h2 {
-  font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
+.title-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  color: var(--color-primary);
+  flex-shrink: 0;
 }
 
-.label-mono {
+.title-mono {
+  display: block;
   font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 1px;
+  font-size: 10px;
+  letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.page-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
 }
 
 .header-actions {
@@ -427,7 +448,7 @@ function truncateInstruction(text: string, max = 80): string {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 20px;
+  padding: 9px 18px;
   background: var(--color-primary);
   border: none;
   border-radius: var(--radius-sm);

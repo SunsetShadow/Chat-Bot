@@ -133,6 +133,8 @@ Chat-Bot/
 CSS 变量使用 `main.css` 中的定义，不硬编码：
 颜色（`--color-primary`、`--bg-primary`、`--text-primary`）、阴影（`--shadow-sm/md/lg`）、圆角（`--radius-sm/md/lg`）、过渡（`--transition-fast/smooth`）。
 
+Naive UI 组件库：[Naive UI](https://naiveui.com/zh-CN/os-theme/components/)
+
 ## 关键文件索引
 
 ### 前端

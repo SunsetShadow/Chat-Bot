@@ -11,7 +11,7 @@ import type {
   AgentTemplate,
 } from "@/types";
 import {
-  ArrowBackOutline,
+  ChevronBackOutline,
   AddOutline,
   CreateOutline,
   TrashOutline,
@@ -22,6 +22,10 @@ import {
   CopyOutline,
   FlashOutline,
 } from "@vicons/ionicons5";
+
+const props = withDefaults(defineProps<{ embedded?: boolean }>(), {
+  embedded: false,
+});
 
 const router = useRouter();
 const agentStore = useAgentStore();
@@ -280,30 +284,47 @@ function truncatePrompt(prompt: string, max = 120): string {
 </script>
 
 <template>
-  <div class="agent-config-view">
-    <!-- Header -->
-    <header class="config-header glass-card">
-      <button class="back-btn" @click="goBack">
-        <NIcon :component="ArrowBackOutline" :size="20" />
+  <div class="agent-config-view" :class="{ embedded }">
+    <!-- Page Header (standalone only) -->
+    <header v-if="!embedded" class="page-header glass-card">
+      <button class="text-back-btn" @click="goBack">
+        <NIcon :component="ChevronBackOutline" :size="18" />
         <span>返回</span>
       </button>
-      <div class="header-title">
-        <span class="label-mono">Agent Config</span>
-        <h2>Agent 配置中心</h2>
+      <div class="page-title-group">
+        <div class="title-icon-wrap">
+          <NIcon :component="SparklesOutline" :size="22" />
+        </div>
+        <div>
+          <span class="title-mono">AGENT CONFIG</span>
+          <h1 class="page-title">Agent 配置中心</h1>
+        </div>
       </div>
-      <div class="create-actions">
-        <button class="create-btn template" @click="openTemplateModal">
-          <NIcon :component="FlashOutline" :size="18" />
+      <div class="header-actions">
+        <button class="btn-outline" @click="openTemplateModal">
+          <NIcon :component="FlashOutline" :size="16" />
           <span>模板创建</span>
         </button>
-        <button class="create-btn" @click="openCreateModal">
-          <NIcon :component="AddOutline" :size="18" />
+        <button class="btn-primary" @click="openCreateModal">
+          <NIcon :component="AddOutline" :size="16" />
           <span>空白创建</span>
         </button>
       </div>
     </header>
 
-    <!-- 多 Agent 协作状态 -->
+    <!-- Embedded Mode Toolbar -->
+    <div v-if="embedded" class="embedded-toolbar">
+      <button class="btn-outline btn-sm" @click="openTemplateModal">
+        <NIcon :component="FlashOutline" :size="14" />
+        <span>模板创建</span>
+      </button>
+      <button class="btn-primary btn-sm" @click="openCreateModal">
+        <NIcon :component="AddOutline" :size="14" />
+        <span>空白创建</span>
+      </button>
+    </div>
+
+    <!-- Multi-Agent Cooperation Bar -->
     <div class="cooperation-bar glass-card">
       <div class="coop-icon">
         <NIcon :component="GitMergeOutline" :size="20" />
@@ -312,13 +333,14 @@ function truncatePrompt(prompt: string, max = 120): string {
         <span class="coop-label">多 Agent 协作</span>
         <span class="coop-hint">{{ cooperationHint }}</span>
       </div>
-      <div
-        class="coop-status"
-        :class="{ active: agentStore.agents.length >= 2 }"
+      <NSwitch
+        :value="agentStore.agents.length >= 2"
+        size="small"
+        disabled
       >
-        <span class="status-dot"></span>
-        <span>{{ agentStore.agents.length >= 2 ? "已启用" : "未启用" }}</span>
-      </div>
+        <template #checked>已启用</template>
+        <template #unchecked>未启用</template>
+      </NSwitch>
     </div>
 
     <!-- Agent 列表 -->
@@ -658,67 +680,95 @@ function truncatePrompt(prompt: string, max = 120): string {
 
 <style scoped>
 .agent-config-view {
-  height: 100vh;
   display: flex;
   flex-direction: column;
-  padding: 16px;
   gap: 16px;
+  padding: 16px;
+  height: 100vh;
 }
 
-.config-header {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 16px 24px;
+.agent-config-view.embedded {
+  height: 100%;
+  padding: 0;
 }
 
-.back-btn {
+/* === Page Header === */
+.page-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: transparent;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
+  gap: 16px;
+  padding: 20px 28px;
+}
+
+.text-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
   color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: 13px;
   cursor: pointer;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
 }
 
-.back-btn:hover {
-  border-color: var(--neon-cyan);
-  color: var(--neon-cyan);
+.text-back-btn:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
 }
 
-.header-title {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.header-title h2 {
-  font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.label-mono {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.create-btn {
+.page-title-group {
   display: flex;
   align-items: center;
+  gap: 14px;
+  flex: 1;
+}
+
+.title-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.title-mono {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.page-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.header-actions {
+  display: flex;
   gap: 8px;
-  padding: 10px 20px;
+}
+
+/* === Buttons === */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
   background: var(--color-primary);
   border: none;
   border-radius: var(--radius-sm);
@@ -730,11 +780,49 @@ function truncatePrompt(prompt: string, max = 120): string {
   transition: all var(--transition-fast);
 }
 
-.create-btn:hover {
+:root.dark .btn-primary {
+  color: var(--text-inverse);
+}
+
+.btn-primary:hover {
   background: var(--color-primary-hover);
 }
 
-/* 协作状态栏 */
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  background: transparent;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  color: var(--color-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-outline:hover {
+  background: var(--color-primary-light);
+}
+
+.btn-sm {
+  padding: 7px 14px;
+  font-size: 12px;
+}
+
+/* === Embedded Toolbar === */
+.embedded-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 0 8px 0;
+}
+
+/* === Cooperation Bar === */
 .cooperation-bar {
   display: flex;
   align-items: center;
@@ -748,15 +836,17 @@ function truncatePrompt(prompt: string, max = 120): string {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(
-    135deg,
-    rgba(0, 245, 212, 0.15),
-    rgba(0, 245, 212, 0.05)
-  );
+  background: linear-gradient(135deg, rgba(0, 245, 212, 0.15), rgba(0, 245, 212, 0.05));
   border: 1px solid rgba(0, 245, 212, 0.2);
   border-radius: var(--radius-sm);
   color: var(--neon-cyan);
   flex-shrink: 0;
+}
+
+:root:not(.dark) .coop-icon {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(6, 182, 212, 0.03));
+  border-color: rgba(6, 182, 212, 0.2);
+  color: #0891b2;
 }
 
 .coop-info {
@@ -777,47 +867,7 @@ function truncatePrompt(prompt: string, max = 120): string {
   color: var(--text-muted);
 }
 
-.coop-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  background: var(--bg-tertiary);
-  color: var(--text-muted);
-}
-
-.coop-status.active {
-  background: rgba(6, 214, 160, 0.1);
-  border: 1px solid rgba(6, 214, 160, 0.3);
-  color: var(--neon-green);
-}
-
-.status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--text-muted);
-}
-
-.coop-status.active .status-dot {
-  background: var(--neon-green);
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.4;
-  }
-}
-
-/* Agent 列表 */
+/* === Agent 列表 === */
 .agent-list-content {
   flex: 1;
   overflow-y: auto;
@@ -960,6 +1010,11 @@ function truncatePrompt(prompt: string, max = 120): string {
 .action-btn.edit:hover {
   border-color: var(--color-primary);
   color: var(--color-primary);
+}
+
+.action-btn.copy:hover {
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
 }
 
 .action-btn.delete:hover {
@@ -1109,6 +1164,10 @@ function truncatePrompt(prompt: string, max = 120): string {
   color: #fff;
 }
 
+:root.dark .modal-btn.submit {
+  color: var(--text-inverse);
+}
+
 .modal-btn.submit:hover {
   background: var(--color-primary-hover);
 }
@@ -1163,27 +1222,6 @@ function truncatePrompt(prompt: string, max = 120): string {
 .empty-hint {
   font-size: 13px;
   color: var(--text-muted);
-}
-
-/* 创建按钮组 */
-.create-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.create-btn.template {
-  background: rgba(0, 245, 212, 0.1);
-  border: 1px solid rgba(0, 245, 212, 0.3);
-}
-
-.create-btn.template:hover {
-  background: rgba(0, 245, 212, 0.2);
-}
-
-/* 复制按钮 */
-.action-btn.copy:hover {
-  border-color: var(--neon-cyan);
-  color: var(--neon-cyan);
 }
 
 /* 模板网格 */
