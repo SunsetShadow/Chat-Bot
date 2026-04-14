@@ -59,8 +59,8 @@ export const useChatStore = defineStore("chat", () => {
     error.value = null;
     try {
       const session = await apiGetSession(sessionId);
-      currentSession.value = session;
       messages.value = session.messages;
+      currentSession.value = session;
       return session;
     } catch (e) {
       error.value = e instanceof Error ? e.message : "获取会话详情失败";

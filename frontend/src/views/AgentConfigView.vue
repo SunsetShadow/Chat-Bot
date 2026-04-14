@@ -457,6 +457,7 @@ function truncatePrompt(prompt: string, max = 120): string {
               </div>
               <div class="card-actions">
                 <button
+                  v-if="agent.id !== 'builtin-job-executor'"
                   class="action-btn edit"
                   title="编辑"
                   @click="openEditModal(agent)"

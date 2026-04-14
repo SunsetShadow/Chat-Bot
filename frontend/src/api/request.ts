@@ -1,5 +1,5 @@
 export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8088";
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean>;

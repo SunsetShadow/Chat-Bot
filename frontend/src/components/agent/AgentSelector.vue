@@ -13,10 +13,12 @@ onMounted(() => {
 });
 
 const agentOptions = computed(() =>
-  agentStore.agents.map((agent) => ({
-    label: agent.name,
-    value: agent.id,
-  })),
+  agentStore.agents
+    .filter((agent) => agent.id !== 'builtin-job-executor')
+    .map((agent) => ({
+      label: agent.name,
+      value: agent.id,
+    })),
 );
 
 function handleChange(agentId: string) {

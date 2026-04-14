@@ -2,12 +2,15 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
+import { ChatOpenAI } from '@langchain/openai';
+import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { SessionEntity } from '../../common/entities/session.entity';
 import { MessageEntity, MessageRole } from '../../common/entities/message.entity';
 import { AgentService } from '../agent/agent.service';
 import { RuleService } from '../rule/rule.service';
 import { MemoryService } from '../memory/memory.service';
 import { LangGraphService } from '../langgraph/langgraph.service';
+import { AppConfigService } from '../../config/config.service';
 import { CreateCompletionDto } from './dto/create-completion.dto';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
@@ -23,10 +26,11 @@ export class ChatService {
     private ruleService: RuleService,
     private memoryService: MemoryService,
     private langGraphService: LangGraphService,
+    private configService: AppConfigService,
   ) {}
 
   async createCompletion(dto: CreateCompletionDto) {
-    const { message, session_id, stream, agent_id, rule_ids } = dto;
+    const { message, session_id, stream, agent_id, rule_ids, web_search } = dto;
 
     const session = session_id
       ? await this.getSession(session_id)
@@ -46,7 +50,7 @@ export class ChatService {
       relations: ['messages'],
     });
 
-    const systemPrompt = await this.buildSystemPrompt(agent_id, rule_ids);
+    const systemPrompt = await this.buildSystemPrompt(agent_id, rule_ids, web_search);
     const messages = sessionWithMessages!.messages.map((m) => ({
       role: m.role,
       content: m.content,
@@ -67,6 +71,9 @@ export class ChatService {
 
     session.updated_at = new Date();
     await this.sessionRepo.save(session);
+
+    // 异步生成对话标题
+    this.generateTitleIfNeeded(session.id, messages, response.content).catch(() => {});
 
     return { session: sessionWithMessages, assistantMessage, finish_reason: response.finish_reason };
   }
@@ -146,6 +153,9 @@ export class ChatService {
       await this.messageRepo.save(msg);
 
       await this.sessionRepo.update(sessionId, { updated_at: new Date() });
+
+      // 异步生成对话标题（仅当标题为默认值时）
+      this.generateTitleIfNeeded(sessionId, messages, fullContent).catch(() => {});
     }
 
     if (!hasError) {
@@ -200,7 +210,7 @@ export class ChatService {
     return session.messages;
   }
 
-  private async buildSystemPrompt(agentId?: string, ruleIds?: string[]): Promise<string> {
+  private async buildSystemPrompt(agentId?: string, ruleIds?: string[], webSearch?: boolean): Promise<string> {
     const parts: string[] = [];
 
     const resolvedAgentId = agentId || 'builtin-general';
@@ -209,6 +219,12 @@ export class ChatService {
       if (agent.system_prompt) parts.push(agent.system_prompt);
     } catch (e) {
       console.warn(`[ChatService] Failed to load agent ${resolvedAgentId}:`, e instanceof Error ? e.message : e);
+    }
+
+    if (webSearch) {
+      parts.push(
+        '[联网搜索模式] 用户明确要求联网搜索。你必须首先调用 web_search 工具搜索相关信息，然后基于搜索结果回答用户问题。在回答中引用搜索结果的来源。不要在没有搜索的情况下直接回答。',
+      );
     }
 
     const enabledRules = await this.ruleService.getEnabledRules();
@@ -223,5 +239,51 @@ export class ChatService {
     if (memoryContext) parts.push(memoryContext);
 
     return parts.join('\n\n');
+  }
+
+  /**
+   * 异步生成对话标题（仅当标题为默认值 "New Chat" 时触发）
+   * 使用轻量 LLM 调用，不阻塞主流程
+   */
+  private async generateTitleIfNeeded(
+    sessionId: string,
+    historyMessages: { role: string; content: string }[],
+    assistantReply: string,
+  ): Promise<void> {
+    const session = await this.sessionRepo.findOne({ where: { id: sessionId } });
+    if (!session || session.title !== 'New Chat') return;
+
+    // 取用户第一条消息和 AI 回复的前 200 字符
+    const firstUserMsg = historyMessages.find((m) => m.role === 'user');
+    if (!firstUserMsg) return;
+
+    const userContent = firstUserMsg.content.substring(0, 200);
+    const aiContent = assistantReply.substring(0, 200);
+
+    try {
+      const model = new ChatOpenAI({
+        modelName: this.configService.openaiModel,
+        openAIApiKey: this.configService.openaiApiKey,
+        configuration: { baseURL: this.configService.openaiBaseUrl || undefined },
+        maxTokens: 30,
+        temperature: 0,
+      });
+
+      const result = await model.invoke([
+        new SystemMessage(
+          '根据以下对话内容生成一个简洁的标题（不超过15个中文字符）。要求：直接输出标题，不要任何解释、标点、引号。突出核心话题或意图。标题语言与对话语言一致。',
+        ),
+        new HumanMessage(`用户：${userContent}\nAI：${aiContent}`),
+      ]);
+
+      const title = (result.content as string).trim().replace(/[""''""。！？，、]/g, '');
+      if (title && title.length > 0 && title.length <= 30) {
+        await this.sessionRepo.update(sessionId, { title });
+        console.log(`[ChatService] 标题已生成: "${title}" (session: ${sessionId.substring(0, 8)}...)`);
+      }
+    } catch (e) {
+      // 标题生成失败不影响主流程，静默处理
+      console.warn('[ChatService] 标题生成失败:', e instanceof Error ? e.message : e);
+    }
   }
 }

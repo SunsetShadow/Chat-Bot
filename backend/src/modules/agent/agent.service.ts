@@ -147,6 +147,10 @@ export class AgentService implements OnModuleInit {
   async update(id: string, dto: UpdateAgentDto): Promise<AgentEntity> {
     const agent = await this.findOne(id);
 
+    if (agent.is_builtin && id === 'builtin-job-executor') {
+      throw new BadRequestException('Cannot modify built-in job executor agent');
+    }
+
     if (agent.is_builtin) {
       // 内置 Agent：只允许修改行为配置，不允许结构性变更
       const allowed = ['system_prompt', 'description', 'tools', 'skills', 'traits', 'capabilities', 'temperature', 'avatar', 'category', 'max_turns', 'handoff_targets'];

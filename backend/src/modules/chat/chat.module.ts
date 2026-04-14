@@ -8,6 +8,7 @@ import { AgentModule } from '../agent/agent.module';
 import { RuleModule } from '../rule/rule.module';
 import { MemoryModule } from '../memory/memory.module';
 import { LangGraphModule } from '../langgraph/langgraph.module';
+import { AppConfigService } from '../../config/config.service';
 
 @Module({
   imports: [
@@ -18,7 +19,7 @@ import { LangGraphModule } from '../langgraph/langgraph.module';
     LangGraphModule,
   ],
   controllers: [ChatController],
-  providers: [ChatService],
+  providers: [ChatService, AppConfigService],
   exports: [ChatService],
 })
 export class ChatModule {}
