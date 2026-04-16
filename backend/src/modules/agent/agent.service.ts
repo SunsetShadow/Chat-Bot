@@ -9,8 +9,8 @@ import { UpdateAgentDto } from './dto/update-agent.dto';
 const BUILTIN_AGENTS: Partial<AgentEntity>[] = [
   {
     id: 'builtin-general',
-    name: '通用助手',
-    description: '默认的 AI 助手，可以回答各类问题',
+    name: '超级助手',
+    description: '智能调度助手，可以协调多个专业 Agent 协作完成复杂任务',
     system_prompt: `你是一个友好、专业的 AI 助手。请用简洁、准确的语言回答用户的问题。
 
 【定时任务管理规则 — 最高优先级】
@@ -21,10 +21,11 @@ const BUILTIN_AGENTS: Partial<AgentEntity>[] = [
 - type=at 时，at 参数使用 ISO 8601 格式
 - type=every 时，everyMs 参数为毫秒数（如"每天"=86400000，"每5分钟"=300000）
 - 创建任务后告诉用户任务已创建、何时会执行`,
-    capabilities: '处理日常对话、回答常识性问题、信息检索、知识查询',
+    capabilities: '多 Agent 任务编排、日常对话、信息检索、知识查询、定时任务管理',
     traits: ['友好', '专业', '简洁'],
-    tools: ['extract_memory', 'web_search', 'knowledge_query', 'delegate_to_agent', 'cron_job'],
+    tools: ['extract_memory', 'web_search', 'knowledge_query', 'cron_job'],
     is_builtin: true,
+    standalone: false,
   },
   {
     id: 'builtin-programmer',
@@ -35,6 +36,7 @@ const BUILTIN_AGENTS: Partial<AgentEntity>[] = [
     traits: ['专业', '代码规范', '最佳实践'],
     tools: ['extract_memory', 'web_search'],
     is_builtin: true,
+    standalone: false,
   },
   {
     id: 'builtin-writer',
@@ -45,6 +47,7 @@ const BUILTIN_AGENTS: Partial<AgentEntity>[] = [
     traits: ['文采', '创意', '结构清晰'],
     tools: ['extract_memory', 'knowledge_query'],
     is_builtin: true,
+    standalone: false,
   },
   {
     id: 'builtin-job-executor',
@@ -61,6 +64,7 @@ const BUILTIN_AGENTS: Partial<AgentEntity>[] = [
     traits: ['直接', '高效', '简洁'],
     tools: ['send_mail', 'web_search', 'execute_command', 'time_now'],
     is_builtin: true,
+    standalone: false,
   },
 ];
 
@@ -100,6 +104,18 @@ export class AgentService implements OnModuleInit {
             agent.capabilities = def.capabilities;
             changed = true;
           }
+          if (def.name && agent.name !== def.name) {
+            agent.name = def.name;
+            changed = true;
+          }
+          if (def.description && agent.description !== def.description) {
+            agent.description = def.description;
+            changed = true;
+          }
+          if (def.standalone !== undefined && agent.standalone !== def.standalone) {
+            agent.standalone = def.standalone;
+            changed = true;
+          }
           if (changed) {
             await this.agentRepo.save(agent);
           }
@@ -137,6 +153,7 @@ export class AgentService implements OnModuleInit {
       category: dto.category || undefined,
       max_turns: dto.max_turns || undefined,
       handoff_targets: dto.handoff_targets || [],
+      standalone: dto.standalone !== undefined ? dto.standalone : true,
       is_builtin: false,
     });
     const saved = await this.agentRepo.save(agent);

@@ -7,9 +7,12 @@ import {
   AIMessageChunk,
   AIMessage,
 } from '@langchain/core/messages';
+import { MemorySaver } from '@langchain/langgraph';
+import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { AppConfigService } from '../../config/config.service';
 import { ToolRegistryService } from './tools/tool-registry.service';
 import { AgentService } from '../agent/agent.service';
+import { AgentEntity } from '../../common/entities/agent.entity';
 import { buildGraph } from './graph/graph.builder';
 import { buildSupervisorGraph, AgentDefinition } from './graph/supervisor.builder';
 import { CompiledStateGraph } from '@langchain/langgraph';
@@ -38,6 +41,7 @@ export class LangGraphService implements OnModuleInit {
   private singleAgentGraph: CompiledStateGraph<any, any, any>;
   private supervisorGraph: CompiledStateGraph<any, any, any> | null = null;
   private executorGraph: CompiledStateGraph<any, any, any> | null = null;
+  private standaloneGraphs = new Map<string, CompiledStateGraph<any, any, any>>();
   private graphVersion = 0;
   private rebuildNeeded = false;
 
@@ -108,9 +112,6 @@ export class LangGraphService implements OnModuleInit {
       .map((name) => this.toolRegistry.get(name))
       .filter((t): t is DynamicStructuredTool => t !== undefined);
 
-    const { createReactAgent } = await import('@langchain/langgraph/prebuilt');
-    const { MemorySaver } = await import('@langchain/langgraph');
-
     const agent = createReactAgent({
       llm: this.model as any,
       tools: agentTools as any,
@@ -161,8 +162,6 @@ export class LangGraphService implements OnModuleInit {
       .map((name) => this.toolRegistry.get(name))
       .filter((t): t is DynamicStructuredTool => t !== undefined);
 
-    const { createReactAgent } = await import('@langchain/langgraph/prebuilt');
-
     const agent = createReactAgent({
       llm: this.model as any,
       tools: agentTools as any,
@@ -192,18 +191,69 @@ export class LangGraphService implements OnModuleInit {
    */
   scheduleRebuild() {
     this.rebuildNeeded = true;
+    this.standaloneGraphs.clear();
   }
 
   /**
-   * 获取当前使用的图（supervisor 优先，否则 single-agent）
-   * 如果标记了需要重建，先重建再返回
+   * 根据选择的 Agent 获取合适的图：
+   * - standalone Agent → 该 Agent 的独立图
+   * - 否则 → supervisorGraph || singleAgentGraph
    */
-  private async getGraph(): Promise<CompiledStateGraph<any, any, any>> {
+  private async getGraph(preferredAgent?: string): Promise<CompiledStateGraph<any, any, any>> {
     if (this.rebuildNeeded) {
       this.rebuildNeeded = false;
       await this.rebuildSupervisorGraph();
     }
+
+    if (preferredAgent) {
+      try {
+        const agent = await this.agentService.findOne(preferredAgent);
+        if (agent.standalone) {
+          return this.buildStandaloneGraph(agent);
+        }
+      } catch {
+        // Agent 不存在，回退到默认逻辑
+      }
+    }
+
     return this.supervisorGraph || this.singleAgentGraph;
+  }
+
+  /**
+   * 为指定 Agent 构建独立图（不经过 Supervisor）
+   */
+  private buildStandaloneGraph(agent: AgentEntity): CompiledStateGraph<any, any, any> {
+    const cached = this.standaloneGraphs.get(agent.id);
+    if (cached) return cached;
+
+    const agentTools = (agent.tools || [])
+      .map((name) => this.toolRegistry.get(name))
+      .filter((t): t is DynamicStructuredTool => t !== undefined);
+
+    let agentModel: ChatOpenAI = this.model;
+    if (agent.model_name) {
+      agentModel = this.createModel(agent.model_name);
+    }
+    if (agent.temperature !== undefined && agent.temperature !== null) {
+      agentModel = new ChatOpenAI({
+        modelName: (agentModel as any).modelName || (agentModel as any).lc_kwargs?.modelName,
+        openAIApiKey: (agentModel as any).lc_kwargs?.openAIApiKey,
+        configuration: (agentModel as any).lc_kwargs?.configuration,
+        streaming: true,
+        temperature: agent.temperature,
+      });
+    }
+
+    const graph = createReactAgent({
+      llm: agentModel,
+      tools: agentTools,
+      prompt: agent.system_prompt,
+      name: agent.id,
+      checkpointer: new MemorySaver(),
+    }) as unknown as CompiledStateGraph<any, any, any>;
+
+    this.standaloneGraphs.set(agent.id, graph);
+    return graph;
   }
 
   /**
@@ -220,7 +270,7 @@ export class LangGraphService implements OnModuleInit {
     preferredAgent?: string,
   ): Promise<{ content: string; finish_reason: string }> {
     const langchainMessages = this.buildMessages(messages, systemPrompt, preferredAgent);
-    const graph = await this.getGraph();
+    const graph = await this.getGraph(preferredAgent);
 
     const result = (await graph.invoke(
       { messages: langchainMessages },
@@ -241,7 +291,10 @@ export class LangGraphService implements OnModuleInit {
     preferredAgent?: string,
   ): AsyncGenerator<StreamEvent> {
     const langchainMessages = this.buildMessages(messages, systemPrompt, preferredAgent);
-    const graph = await this.getGraph();
+    const graph = await this.getGraph(preferredAgent);
+
+    const isHandoffTool = (name: string) =>
+      name.startsWith('transfer_to_') || name === 'transfer_back_to_supervisor';
 
     let sawToolOutput = false;
     let currentAgent = '';
@@ -299,7 +352,10 @@ export class LangGraphService implements OnModuleInit {
         }
 
         if (aiMsg.content && typeof aiMsg.content === 'string') {
-          yield { type: 'text', content: aiMsg.content };
+          // 过滤 Supervisor 内部 handoff 提示文本
+          if (aiMsg.content !== 'Transferring back to supervisor') {
+            yield { type: 'text', content: aiMsg.content };
+          }
         }
 
         if (
@@ -312,6 +368,17 @@ export class LangGraphService implements OnModuleInit {
 
             if (!toolCalls.has(tcId)) {
               const tcName = chunk.name || 'unknown';
+              // 过滤 Supervisor 内部 handoff 工具（transfer_to_* / transfer_back），不向前端暴露
+              if (isHandoffTool(tcName)) {
+                toolCalls.set(tcId, {
+                  name: tcName,
+                  argsBuffer: '',
+                  inputEmitted: true,   // 标记已处理，避免补发
+                  outputEmitted: true,  // 标记已完成，避免补发
+                });
+                indexToId.set(idx, tcId);
+                continue;
+              }
               toolCalls.set(tcId, {
                 name: tcName,
                 argsBuffer: '',
@@ -327,6 +394,7 @@ export class LangGraphService implements OnModuleInit {
             }
 
             const tc = toolCalls.get(tcId)!;
+            if (tc && isHandoffTool(tc.name)) continue;
             if (chunk.args) {
               tc.argsBuffer += chunk.args;
               yield {
@@ -354,6 +422,19 @@ export class LangGraphService implements OnModuleInit {
           (message as any).tool_call_id || (message as any).id || '';
         const tc = toolCalls.get(toolCallId);
 
+        // 跳过已知 handoff 工具
+        if (tc && isHandoffTool(tc.name)) {
+          tc.outputEmitted = true;
+          continue;
+        }
+
+        // 兜底：框架内部创建的 handoff 工具可能不在 toolCalls 中，通过内容判断
+        const rawContent = (message as any).content;
+        const outputStr = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent);
+        if (!tc && outputStr.includes('transferred back to supervisor')) {
+          continue;
+        }
+
         if (tc && !tc.inputEmitted) {
           tc.inputEmitted = true;
           yield* emitToolInput(toolCallId, tc);
@@ -361,11 +442,7 @@ export class LangGraphService implements OnModuleInit {
 
         if (!tc?.outputEmitted) {
           if (tc) tc.outputEmitted = true;
-          const output =
-            typeof (message as any).content === 'string'
-              ? (message as any).content
-              : JSON.stringify((message as any).content);
-          yield { type: 'tool_output', toolCallId, output };
+          yield { type: 'tool_output', toolCallId, output: outputStr };
           sawToolOutput = true;
         }
       }
@@ -398,7 +475,7 @@ export class LangGraphService implements OnModuleInit {
     // 注入 preferredAgent 偏好提示，让 supervisor 在路由时感知用户选择
     if (preferredAgent) {
       result.push(new SystemMessage(
-        `[路由偏好] 用户指定了偏好 Agent: ${preferredAgent}。如果该 Agent 的能力适合当前请求，请优先路由到该 Agent。`,
+        `[路由偏好] 用户当前选择了助手 "${preferredAgent}"。对于该助手能力范围内的简单请求，请优先路由到该助手。对于需要多助手协作的复杂任务，请按照编排规则自由调度最合适的助手组合，不必局限于偏好助手。`,
       ));
     }
     for (const msg of messages) {

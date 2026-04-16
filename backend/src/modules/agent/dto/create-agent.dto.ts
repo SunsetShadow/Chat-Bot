@@ -57,4 +57,7 @@ export class CreateAgentDto {
   @IsString({ each: true })
   @IsOptional()
   handoff_targets?: string[];
+
+  @IsOptional()
+  standalone?: boolean;
 }

@@ -47,6 +47,10 @@ export class AgentEntity {
   @Column('simple-array', { default: '' })
   handoff_targets: string[];
 
+  /** true = 独立运行，不经过 Supervisor 编排 */
+  @Column({ default: false })
+  standalone: boolean;
+
   @Column({ default: false })
   is_builtin: boolean;
 

@@ -12,7 +12,6 @@ import { ToolController } from './tools/tool.controller';
 import { registerAllTools } from './tools/tool.loader';
 import { createMemoryExtractTool } from './tools/memory-extract.tool';
 import { createKnowledgeQueryTool } from './tools/knowledge-query.tool';
-import { createDelegateToAgentTool } from './tools/delegate-to-agent.tool';
 import { createCronJobTool } from './tools/cron-job.tool';
 import { MemoryService } from '../memory/memory.service';
 import { JobService } from '../cron-job/job.service';
@@ -56,23 +55,6 @@ export class LangGraphModule implements OnModuleInit {
         permission_level: 'write',
         category: 'orchestration',
         description: '创建和管理 AI 定时任务',
-      },
-    );
-
-    // 注册 Agent 间委托工具
-    this.toolRegistry.register(
-      createDelegateToAgentTool(async (id) => {
-        try {
-          const agent = await this.agentService.findOne(id);
-          return { name: agent.name, capabilities: agent.capabilities || agent.description };
-        } catch {
-          return undefined;
-        }
-      }),
-      {
-        permission_level: 'read',
-        category: 'orchestration',
-        description: '将任务委托给另一个更专业的 Agent 处理',
       },
     );
 

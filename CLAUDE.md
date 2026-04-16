@@ -4,7 +4,7 @@
 
 ## 项目概述
 
-Vue 3 + NestJS 聊天应用，使用 AI SDK 驱动流式聊天，LangGraph Supervisor 模式编排多 Agent 工作流。支持多 Agent 协作与委托、工具权限分级、规则系统、AI 记忆提取与语义检索、定时任务系统（含全局通知）。UI 主题：赛博朋克/霓虹未来主义。
+Vue 3 + NestJS 聊天应用，使用 AI SDK 驱动流式聊天，LangGraph Supervisor 模式编排多 Agent 工作流。支持多 Agent 协作编排（Supervisor 多步路由）、standalone 模式（自定义 Agent 独立运行）、工具权限分级、规则系统、AI 记忆提取与语义检索、定时任务系统（含全局通知）。UI 主题：赛博朋克/霓虹未来主义。
 
 ## 开发命令
 
@@ -22,7 +22,9 @@ cd frontend && pnpm lint    # 前端 ESLint
 用户输入 → useAIChat.sendMessage()
   → ChatTransport → POST /api/v1/chat/completions
   → ChatController → ChatService → LangGraphService
-  → Supervisor (按 capabilities 路由) → Worker Agent (createReactAgent + tools)
+  → getGraph(preferredAgent):
+      standalone Agent? → 单 Agent 独立图 (createReactAgent + 该 Agent 的 tools/prompt/model)
+      否则?             → Supervisor 图 (多 Agent 编排，按 capabilities 路由)
   → SSE 流 → ChatTransport → UIMessageChunk → Vue 响应式渲染
 ```
 

@@ -221,6 +221,11 @@ export class ChatService {
       console.warn(`[ChatService] Failed to load agent ${resolvedAgentId}:`, e instanceof Error ? e.message : e);
     }
 
+    // 自动注入当前时间，让 Agent 始终感知当前日期
+    const now = new Date();
+    const timeContext = `当前时间：${now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })} ${now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`;
+    parts.push(timeContext);
+
     if (webSearch) {
       parts.push(
         '[联网搜索模式] 用户明确要求联网搜索。你必须首先调用 web_search 工具搜索相关信息，然后基于搜索结果回答用户问题。在回答中引用搜索结果的来源。不要在没有搜索的情况下直接回答。',
