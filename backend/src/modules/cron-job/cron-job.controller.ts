@@ -33,7 +33,6 @@ export class CronJobController {
       success: true,
       data: {
         ...job,
-        running: this.jobService.listJobs().then((jobs) => jobs.find((j) => j.id === id)?.running ?? false),
         last_execution: lastExec
           ? {
               status: lastExec.status,

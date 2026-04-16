@@ -51,7 +51,8 @@ Chat-Bot/
 │   │   ├── components/          # Vue 组件
 │   │   │   ├── agent/           #   Agent 相关组件
 │   │   │   ├── chat/            #   聊天相关组件
-│   │   │   ├── common/          #   通用组件
+│   │   │   ├── common/          #   通用组件（AppHeader、NotificationBell、ThemeToggle）
+│   │   │   ├── cron-job/        #   定时任务组件（JobForm、ExecutionHistory）
 │   │   │   └── rules/           #   规则相关组件
 │   │   ├── composables/         # Vue Composables
 │   │   ├── stores/              # Pinia 状态管理
@@ -71,11 +72,11 @@ Chat-Bot/
 │   │   └── modules/             # 业务模块
 │   │       ├── agent/           #   Agent CRUD + 内置定义
 │   │       ├── chat/            #   聊天模块（SSE）
-│   │       ├── cron-job/        #   定时任务模块（调度 + 执行）
+│   │       ├── cron-job/        #   定时任务模块（调度 + 执行 + 通知）
 │   │       ├── langgraph/       #   LangGraph 工作流
 │   │       │   ├── graph/       #     graph.builder.ts + supervisor.builder.ts
 │   │       │   └── tools/       #     工具系统
-│   │       │       ├── base/    #       tool.helper.ts（safeTool）
+│   │       │       ├── base/    #       tool.helper.ts（safeTool + RunnableConfig 透传）
 │   │       │       └── collections/ # 按域分组（search/communication/system/file-system）
 │   │       ├── memory/          #   记忆模块（PG + Milvus + Embedding）
 │   │       ├── model/           #   模型管理

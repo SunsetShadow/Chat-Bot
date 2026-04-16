@@ -8,6 +8,7 @@ import {
   SparklesOutline,
 } from "@vicons/ionicons5";
 import ThemeToggle from "./ThemeToggle.vue";
+import NotificationBell from "./NotificationBell.vue";
 
 const router = useRouter();
 const agentStore = useAgentStore();
@@ -46,6 +47,7 @@ function goToAgentConfig() {
       </span>
     </div>
     <div class="flex items-center gap-2">
+      <NotificationBell />
       <ThemeToggle />
       <NButton
         text

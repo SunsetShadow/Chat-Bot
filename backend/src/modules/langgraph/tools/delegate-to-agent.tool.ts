@@ -7,27 +7,24 @@ export function createDelegateToAgentTool(
   return new DynamicStructuredTool({
     name: 'delegate_to_agent',
     description:
-      '将当前任务委托给另一个更专业的 Agent 处理。仅在当前 Agent 无法很好处理用户请求时使用。使用前需确认目标 Agent 的 ID。',
+      '查询其他可用 Agent 的信息。当你认为自己不是处理当前请求的最佳人选时，调用此工具查看是否有更合适的 Agent。',
     schema: z.object({
       agent_id: z.string().describe('目标 Agent 的 ID'),
-      task: z.string().describe('需要委托的任务描述'),
-      context: z.string().optional().describe('传递给目标 Agent 的上下文信息'),
     }),
-    func: async ({ agent_id, task, context }) => {
+    func: async ({ agent_id }) => {
       try {
         const target = await agentLookup(agent_id);
         if (!target) {
-          return `错误：找不到 Agent "${agent_id}"。请检查 Agent ID 是否正确。`;
+          return `未找到 Agent "${agent_id}"。当前没有匹配的专业助手。`;
         }
-        return JSON.stringify({
-          __delegation__: true,
-          target_agent: agent_id,
-          target_name: target.name,
-          task,
-          context: context || '',
-        });
+        return (
+          `已识别专业助手：${target.name}\n` +
+          `能力描述：${target.capabilities}\n` +
+          `建议：请告知用户该任务更适合由「${target.name}」处理，` +
+          `用户下次提问时系统会自动路由到对应的专业助手。`
+        );
       } catch (e) {
-        return `错误：查找 Agent 时出错 - ${e instanceof Error ? e.message : String(e)}`;
+        return `查询 Agent 信息失败：${e instanceof Error ? e.message : String(e)}`;
       }
     },
   });

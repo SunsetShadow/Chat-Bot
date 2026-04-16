@@ -123,20 +123,54 @@ export class LangGraphService implements OnModuleInit {
 
   /**
    * 以指定 Agent 身份执行指令（供 CronJobService 调用）
+   * @param allowedTools 可选工具白名单，仅使用指定的工具子集
    */
-  async executeAsAgent(instruction: string, sessionId: string): Promise<string> {
-    if (!this.executorGraph) {
-      await this.rebuildExecutorGraph();
-    }
-    if (!this.executorGraph) return '[错误] 执行器 Agent 不可用';
+  async executeAsAgent(instruction: string, sessionId: string, allowedTools?: string[]): Promise<string> {
+    // 有白名单时按白名单动态构建执行图，否则用默认图
+    let graph = this.executorGraph;
 
-    const result = (await this.executorGraph.invoke(
+    if (allowedTools && allowedTools.length > 0) {
+      graph = await this.buildFilteredExecutorGraph(allowedTools);
+    } else {
+      if (!graph) {
+        await this.rebuildExecutorGraph();
+        graph = this.executorGraph;
+      }
+    }
+
+    if (!graph) return '[错误] 执行器 Agent 不可用';
+
+    const result = (await graph.invoke(
       { messages: [{ role: 'user', content: instruction }] },
       { configurable: { thread_id: sessionId } },
     )) as any;
 
     const lastMsg = result.messages[result.messages.length - 1];
     return lastMsg?.content || '';
+  }
+
+  /**
+   * 按白名单过滤工具，动态构建执行器图
+   */
+  private async buildFilteredExecutorGraph(allowedTools: string[]): Promise<CompiledStateGraph<any, any, any>> {
+    const agents = await this.agentService.findAll();
+    const executorDef = agents.find((a) => a.id === 'builtin-job-executor');
+    if (!executorDef) throw new Error('执行器 Agent 不存在');
+
+    const agentTools = allowedTools
+      .map((name) => this.toolRegistry.get(name))
+      .filter((t): t is DynamicStructuredTool => t !== undefined);
+
+    const { createReactAgent } = await import('@langchain/langgraph/prebuilt');
+
+    const agent = createReactAgent({
+      llm: this.model as any,
+      tools: agentTools as any,
+      prompt: executorDef.system_prompt,
+      name: executorDef.id,
+    });
+
+    return agent as any;
   }
 
   /**

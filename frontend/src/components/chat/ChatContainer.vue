@@ -8,6 +8,7 @@ import AgentSelector from "@/components/agent/AgentSelector.vue";
 import AgentIndicator from "@/components/chat/AgentIndicator.vue";
 import RuleEditor from "@/components/rules/RuleEditor.vue";
 import ThemeToggle from "@/components/common/ThemeToggle.vue";
+import NotificationBell from "@/components/common/NotificationBell.vue";
 import { useChatStore } from "@/stores/chat";
 import { useAgentStore } from "@/stores/agent";
 import { useAIChat } from "@/composables/useAIChat";
@@ -57,6 +58,7 @@ watch(
         <div class="flex items-center gap-4">
           <RuleEditor />
           <ThemeToggle />
+          <NotificationBell />
           <button
             class="flex items-center justify-center w-9 h-9 bg-transparent border border-[var(--border-color)] rounded-[var(--radius-sm)] text-[var(--text-muted)] cursor-pointer transition-all duration-150 hover:border-[var(--neon-purple)] hover:text-[var(--neon-purple)]"
             title="Agent 配置"

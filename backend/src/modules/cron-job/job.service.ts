@@ -15,7 +15,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { JobEntity } from '../../common/entities/job.entity';
 import { JobExecutionEntity } from '../../common/entities/job-execution.entity';
 import { JobExecutionService } from './job-execution.service';
+import { NotificationService } from './notification.service';
 import { LangGraphService } from '../langgraph/langgraph.service';
+import { SessionEntity } from '../../common/entities/session.entity';
+import { MessageEntity } from '../../common/entities/message.entity';
 
 @Injectable()
 export class JobService implements OnApplicationBootstrap, OnApplicationShutdown {
@@ -29,6 +32,7 @@ export class JobService implements OnApplicationBootstrap, OnApplicationShutdown
     @Inject(SchedulerRegistry)
     private schedulerRegistry: SchedulerRegistry,
     private execService: JobExecutionService,
+    private notifService: NotificationService,
     @Inject(forwardRef(() => LangGraphService))
     private langGraphService: LangGraphService,
   ) {}
@@ -114,6 +118,12 @@ export class JobService implements OnApplicationBootstrap, OnApplicationShutdown
         new CronJob(input.cron, () => {});
       } catch {
         throw new Error(`无效的 Cron 表达式: ${input.cron}`);
+      }
+    }
+
+    if (input.type === 'at') {
+      if (input.at.getTime() <= Date.now()) {
+        throw new Error('at 时间已过期，请提供未来的时间');
       }
     }
 
@@ -258,7 +268,7 @@ export class JobService implements OnApplicationBootstrap, OnApplicationShutdown
         const exec = await this.execService.create(job.id, attempt);
 
         try {
-          const result = await this.runWithTimeout(job.instruction, job.timeout_ms);
+          const result = await this.runWithTimeout(job.instruction, job.timeout_ms, job.allowed_tools);
           await this.execService.finish(exec.id, 'success', result, null, startedAt);
           await this.jobRepo.update(job.id, { consecutive_failures: 0 });
           lastError = null;
@@ -288,6 +298,11 @@ export class JobService implements OnApplicationBootstrap, OnApplicationShutdown
           }
         }
       }
+
+      // 双重通知：全局通知 + 会话消息
+      this.notifyJobResult(job, !lastError, lastExec?.result, lastError?.message).catch((e) => {
+        this.logger.warn(`通知发送失败: ${(e as Error).message}`);
+      });
     } finally {
       this.runningJobs.delete(job.id);
     }
@@ -298,10 +313,10 @@ export class JobService implements OnApplicationBootstrap, OnApplicationShutdown
   // ─────────────────────────────────────────────
   // 6. 辅助方法
   // ─────────────────────────────────────────────
-  private async runWithTimeout(instruction: string, timeoutMs: number): Promise<string> {
+  private async runWithTimeout(instruction: string, timeoutMs: number, allowedTools?: string[]): Promise<string> {
     const sessionId = `job-${Date.now()}`;
     const execute = async (): Promise<string> => {
-      return this.langGraphService.executeAsAgent(instruction, sessionId);
+      return this.langGraphService.executeAsAgent(instruction, sessionId, allowedTools);
     };
 
     if (timeoutMs <= 0) return execute();
@@ -321,5 +336,56 @@ export class JobService implements OnApplicationBootstrap, OnApplicationShutdown
 
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
+   * 任务执行后双重通知：
+   * 1. 全局通知（右上角铃铛）
+   * 2. 会话消息（注入到创建任务的会话）
+   */
+  private async notifyJobResult(
+    job: JobEntity,
+    success: boolean,
+    result?: string | null,
+    error?: string | null,
+  ): Promise<void> {
+    const status = success ? '成功' : '失败';
+    const summary = success
+      ? (result || '').substring(0, 200)
+      : (error || '未知错误').substring(0, 200);
+
+    const title = `定时任务${status}：${job.instruction.substring(0, 50)}`;
+    const content = `任务「${job.instruction}」执行${status}。\n${summary}`;
+
+    // 1. 全局通知
+    try {
+      await this.notifService.create({
+        type: 'cron_job',
+        title,
+        content,
+        job_id: job.id,
+        session_id: job.created_by_session ?? undefined,
+      });
+    } catch (e) {
+      this.logger.warn(`创建全局通知失败: ${(e as Error).message}`);
+    }
+
+    // 2. 会话消息注入
+    if (job.created_by_session) {
+      try {
+        const msgRepo = this.jobRepo.manager.getRepository(MessageEntity);
+        await msgRepo.save(msgRepo.create({
+          id: uuidv4(),
+          role: 'system',
+          content: `⏰ ${content}`,
+          session: { id: job.created_by_session } as any,
+        }));
+        // 刷新会话更新时间，使其排到列表顶部
+        const sessionRepo = this.jobRepo.manager.getRepository(SessionEntity);
+        await sessionRepo.update(job.created_by_session, { updated_at: new Date() });
+      } catch (e) {
+        this.logger.warn(`会话消息注入失败: ${(e as Error).message}`);
+      }
+    }
   }
 }
