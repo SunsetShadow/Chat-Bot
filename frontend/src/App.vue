@@ -126,13 +126,13 @@ const lightThemeOverrides: GlobalThemeOverrides = {
   },
 };
 
-// 暗色赛博朋克主题配置
+// 暗色简约主题配置
 const darkThemeOverrides: GlobalThemeOverrides = {
   common: {
-    primaryColor: "#00f0ff",
-    primaryColorHover: "#33f3ff",
-    primaryColorPressed: "#00c4cc",
-    primaryColorSuppl: "#00f0ff",
+    primaryColor: "#5b9cf6",
+    primaryColorHover: "#7db3f8",
+    primaryColorPressed: "#4a8ae0",
+    primaryColorSuppl: "#5b9cf6",
 
     fontFamily: "Sora, sans-serif",
     fontFamilyMono: "JetBrains Mono, monospace",
@@ -140,97 +140,97 @@ const darkThemeOverrides: GlobalThemeOverrides = {
     borderRadius: "10px",
     borderRadiusSmall: "6px",
 
-    textColorBase: "#e2e8f0",
-    textColor1: "#e2e8f0",
-    textColor2: "#94a3b8",
-    textColor3: "#64748b",
-    textColorDisabled: "#475569",
+    textColorBase: "#eef1f6",
+    textColor1: "#eef1f6",
+    textColor2: "#9ca8b8",
+    textColor3: "#6b7b8d",
+    textColorDisabled: "#4a5568",
 
-    placeholderColor: "#64748b",
-    placeholderColorDisabled: "#475569",
+    placeholderColor: "#6b7b8d",
+    placeholderColorDisabled: "#4a5568",
 
-    boxShadow1: "0 2px 4px rgba(0, 0, 0, 0.4)",
-    boxShadow2: "0 4px 8px rgba(0, 0, 0, 0.5)",
-    boxShadow3: "0 8px 16px rgba(0, 0, 0, 0.6)",
+    boxShadow1: "0 2px 4px rgba(0, 0, 0, 0.2)",
+    boxShadow2: "0 4px 8px rgba(0, 0, 0, 0.25)",
+    boxShadow3: "0 8px 16px rgba(0, 0, 0, 0.3)",
 
-    borderColor: "rgba(191, 90, 242, 0.2)",
-    dividerColor: "rgba(191, 90, 242, 0.15)",
+    borderColor: "rgba(148, 163, 184, 0.12)",
+    dividerColor: "rgba(148, 163, 184, 0.1)",
   },
   Card: {
-    color: "#12121a",
-    colorModal: "#12121a",
-    borderColor: "rgba(191, 90, 242, 0.2)",
-    titleTextColor: "#e2e8f0",
-    textColor: "#94a3b8",
+    color: "#1a1f2e",
+    colorModal: "#1a1f2e",
+    borderColor: "rgba(148, 163, 184, 0.12)",
+    titleTextColor: "#eef1f6",
+    textColor: "#9ca8b8",
     borderRadius: "16px",
   },
   Button: {
-    textColorPrimary: "#0a0a0f",
-    textColorHoverPrimary: "#0a0a0f",
-    textColorPressedPrimary: "#0a0a0f",
-    colorPrimary: "#00f0ff",
-    colorHoverPrimary: "#33f3ff",
-    colorPressedPrimary: "#00c4cc",
+    textColorPrimary: "#ffffff",
+    textColorHoverPrimary: "#ffffff",
+    textColorPressedPrimary: "#ffffff",
+    colorPrimary: "#5b9cf6",
+    colorHoverPrimary: "#7db3f8",
+    colorPressedPrimary: "#4a8ae0",
     borderRadiusMedium: "8px",
     fontWeight: "500",
   },
   Input: {
-    color: "#1a1a25",
-    colorFocus: "#1a1a25",
-    borderColor: "rgba(191, 90, 242, 0.2)",
-    borderColorHover: "rgba(191, 90, 242, 0.4)",
-    borderColorFocus: "#00f0ff",
-    boxShadowFocus: "0 0 0 3px rgba(0, 240, 255, 0.15)",
-    textColor: "#e2e8f0",
-    caretColor: "#00f0ff",
+    color: "#222836",
+    colorFocus: "#222836",
+    borderColor: "rgba(148, 163, 184, 0.12)",
+    borderColorHover: "rgba(148, 163, 184, 0.22)",
+    borderColorFocus: "#5b9cf6",
+    boxShadowFocus: "0 0 0 3px rgba(91, 156, 246, 0.15)",
+    textColor: "#eef1f6",
+    caretColor: "#5b9cf6",
     borderRadius: "10px",
   },
   Select: {
     peers: {
       InternalSelection: {
-        textColor: "#e2e8f0",
-        color: "#1a1a25",
-        colorActive: "#1a1a25",
-        border: "1px solid rgba(191, 90, 242, 0.2)",
-        borderHover: "1px solid rgba(191, 90, 242, 0.4)",
-        borderActive: "1px solid #00f0ff",
-        boxShadowActive: "0 0 0 3px rgba(0, 240, 255, 0.15)",
+        textColor: "#eef1f6",
+        color: "#222836",
+        colorActive: "#222836",
+        border: "1px solid rgba(148, 163, 184, 0.12)",
+        borderHover: "1px solid rgba(148, 163, 184, 0.22)",
+        borderActive: "1px solid #5b9cf6",
+        boxShadowActive: "0 0 0 3px rgba(91, 156, 246, 0.15)",
         borderRadius: "10px",
       },
       InternalSelectMenu: {
-        color: "#12121a",
-        optionTextColor: "#e2e8f0",
-        optionTextColorActive: "#00f0ff",
+        color: "#1a1f2e",
+        optionTextColor: "#eef1f6",
+        optionTextColorActive: "#5b9cf6",
         borderRadius: "10px",
       },
     },
   },
   Modal: {
-    color: "#12121a",
+    color: "#1a1f2e",
     borderRadius: "16px",
   },
   Tabs: {
-    tabTextColorLine: "#94a3b8",
-    tabTextColorActiveLine: "#00f0ff",
-    tabTextColorHoverLine: "#00f0ff",
-    barColor: "#00f0ff",
-    tabBorderColor: "rgba(191, 90, 242, 0.2)",
+    tabTextColorLine: "#9ca8b8",
+    tabTextColorActiveLine: "#5b9cf6",
+    tabTextColorHoverLine: "#5b9cf6",
+    barColor: "#5b9cf6",
+    tabBorderColor: "rgba(148, 163, 184, 0.12)",
   },
   Tag: {
     borderRadius: "6px",
   },
   Switch: {
-    railColorActive: "#00f0ff",
+    railColorActive: "#5b9cf6",
   },
   Scrollbar: {
-    color: "rgba(191, 90, 242, 0.3)",
+    color: "rgba(148, 163, 184, 0.2)",
   },
   Message: {
-    textColor: "#e2e8f0",
+    textColor: "#eef1f6",
   },
   Dialog: {
-    textColor: "#e2e8f0",
-    titleTextColor: "#e2e8f0",
+    textColor: "#eef1f6",
+    titleTextColor: "#eef1f6",
   },
 };
 
@@ -289,26 +289,26 @@ const currentThemeOverrides = computed(() =>
 
 /* Naive UI Overrides - Dark Theme */
 :root.dark .n-button--primary-type {
-  box-shadow: 0 2px 8px rgba(0, 240, 255, 0.25) !important;
+  box-shadow: 0 2px 6px rgba(91, 156, 246, 0.2) !important;
 }
 
 :root.dark .n-button--primary-type:hover {
-  box-shadow: 0 4px 16px rgba(0, 240, 255, 0.4) !important;
+  box-shadow: 0 4px 12px rgba(91, 156, 246, 0.3) !important;
 }
 
 :root.dark .n-input:focus-within {
-  box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.15) !important;
+  box-shadow: 0 0 0 3px rgba(91, 156, 246, 0.12) !important;
 }
 
 :root.dark .n-card {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
 }
 
 :root.dark .n-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 240, 255, 0.15) !important;
+  box-shadow: 0 4px 12px rgba(91, 156, 246, 0.1) !important;
 }
 
 :root.dark .n-modal {
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4) !important;
 }
 </style>
