@@ -156,8 +156,8 @@ Naive UI 组件库：[Naive UI](https://naiveui.com/zh-CN/os-theme/components/)
 
 | 路径 | 用途 |
 |------|------|
-| `modules/chat/chat.controller.ts` | 聊天 API 路由（含 SSE） |
-| `modules/chat/chat.service.ts` | 核心聊天逻辑 |
+| `modules/chat/chat.controller.ts` | 聊天 API 路由（含 SSE、会话 CRUD） |
+| `modules/chat/chat.service.ts` | 核心聊天逻辑（含联网搜索意图判断） |
 | `modules/langgraph/langgraph.service.ts` | LangGraph 工作流集成（Supervisor + 独立执行器 + 流式输出） |
 | `modules/langgraph/langgraph.module.ts` | 模块注册（工具 + Agent 回调 + 图初始化） |
 | `modules/langgraph/graph/graph.builder.ts` | 单 Agent 图构建（旧，仍在使用） |
@@ -169,7 +169,8 @@ Naive UI 组件库：[Naive UI](https://naiveui.com/zh-CN/os-theme/components/)
 | `modules/cron-job/job.service.ts` | 定时任务调度引擎（CRUD + 运行时 + 重试） |
 | `modules/cron-job/job-execution.service.ts` | 任务执行记录（CRUD + 查询） |
 | `modules/cron-job/cron-job.controller.ts` | 定时任务 API 路由 |
-| `modules/agent/` | Agent 模块（controller/service/dto + 内置同步） |
+| `modules/agent/` | Agent 模块（controller/service/dto + 内置同步 + is_system 权限分级） |
+| `modules/model/model.service.ts` | 模型列表管理（含 available 可用性标记） |
 | `modules/memory/memory.service.ts` | 记忆管理（PG + Milvus 双写） |
 | `modules/memory/milvus.service.ts` | Milvus 向量数据库客户端 |
 | `config/config.service.ts` | 应用配置服务（环境变量封装） |

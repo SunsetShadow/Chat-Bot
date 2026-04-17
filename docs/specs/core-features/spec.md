@@ -46,6 +46,7 @@
 | GET | `/api/v1/chat/sessions` | 获取会话列表（分页） |
 | GET | `/api/v1/chat/sessions/{id}` | 获取特定会话 |
 | GET | `/api/v1/chat/sessions/{id}/messages` | 获取会话消息历史 |
+| DELETE | `/api/v1/chat/sessions/{id}` | 删除会话及其消息 |
 | PUT | `/api/v1/chat/sessions/{id}/pin` | 切换会话置顶状态 |
 
 ### 约束
@@ -56,6 +57,24 @@
 4. Agent 和 Rule 在请求时通过 ChatTransport 的 extraBody 注入
 5. 会话和消息持久化存储在 PostgreSQL（TypeORM）
 6. 失败消息保留在数据库，支持手动重试（regenerate）
+
+### 联网搜索控制
+
+联网搜索默认开启，采用意图判断机制：
+
+| 状态 | 行为 |
+|------|------|
+| 开启（默认） | AI 判断用户意图：需要实时数据的请求（新闻、天气、最新信息）调用 `web_search`；普通对话、知识问答、代码编写等不调用 |
+| 关闭 | 在 system prompt 中明确指示不调用 `web_search`，直接用已有知识回答 |
+
+- 用户可通过输入框下方"联网"按钮切换
+- 切换状态在发送后保持，不会重置
+
+### 消息发送反馈
+
+- 用户消息气泡右下角显示"已发送"灰色小字
+- AI 空回复（无内容且非 streaming 且为最后一条）显示"暂无回复"+ 重试按钮
+- 消息发送失败时显示错误提示 + 重试按钮
 
 ---
 
@@ -109,7 +128,8 @@ interface Agent {
   max_turns?: number        // 最大轮次
   handoff_targets: string[] // 可委托目标 Agent 列表
   standalone: boolean       // true = 独立运行，不经过 Supervisor 编排
-  is_builtin: boolean       // 内置 Agent 不可删除/修改
+  is_builtin: boolean       // 内置 Agent 标记
+  is_system: boolean        // 系统核心 Agent（不可编辑/删除/复制创建）
   created_at: Date
   updated_at: Date
 }
@@ -119,13 +139,23 @@ interface Agent {
 
 ### 内置 Agent
 
-| ID | 名称 | standalone | 说明 |
-|----|------|-----------|------|
-| `builtin-general` | 超级助手 | false | 多 Agent 编排入口，日常对话、定时任务管理 |
-| `builtin-programmer` | 编程专家 | false | 代码编写与调试 |
-| `builtin-writer` | 写作助手 | false | 文案创作、文章润色 |
-| `builtin-job-executor` | 定时任务执行器 | false | 后台定时任务执行（隐藏，不参与 Supervisor 路由） |
+Agent 分为三种权限级别：
 
+| 类型 | is_builtin | is_system | 说明 |
+|------|-----------|-----------|------|
+| 系统内置 | true | true | 超级助手、定时任务执行器 — 不可编辑/删除/复制创建 |
+| 系统示例 | true | false | 编程专家、写作助手 — 可编辑/删除/复制创建 |
+| 用户自定义 | false | false | 用户创建 — 可编辑/删除 |
+
+| ID | 名称 | is_system | standalone | 说明 |
+|----|------|-----------|-----------|------|
+| `builtin-general` | 超级助手 | true | false | 多 Agent 编排入口，日常对话、定时任务管理 |
+| `builtin-programmer` | 编程专家 | false | false | 代码编写与调试 |
+| `builtin-writer` | 写作助手 | false | false | 文案创作、文章润色 |
+| `builtin-job-executor` | 定时任务执行器 | true | false | 后台定时任务执行（隐藏，不参与 Supervisor 路由） |
+
+- `is_system: true` 的 Agent 不可修改、删除、复制创建
+- `is_builtin && !is_system` 的系统示例 Agent 允许编辑行为配置、删除和复制创建
 - 内置 Agent `standalone: false`，参与 Supervisor 多 Agent 编排
 - 用户自定义 Agent 默认 `standalone: true`，选它时跳过 Supervisor 独立运行
 
@@ -145,6 +175,8 @@ interface Agent {
 2. system_prompt 不能为空
 3. 删除 Agent 不影响已有的聊天会话
 4. Agent 变更时触发 Supervisor 图重建 + standalone 图缓存清理
+5. `is_system: true` 的 Agent 拒绝 update/delete 操作
+6. `is_builtin && !is_system` 的系统示例 Agent 允许部分字段修改（system_prompt、description、tools 等）和删除
 
 ---
 

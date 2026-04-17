@@ -4,7 +4,7 @@
 
 ## 项目概述
 
-Vue 3 + NestJS 聊天应用，使用 AI SDK 驱动流式聊天，LangGraph Supervisor 模式编排多 Agent 工作流。支持多 Agent 协作编排（Supervisor 多步路由）、standalone 模式（自定义 Agent 独立运行）、工具权限分级、规则系统、AI 记忆提取与语义检索、定时任务系统（含全局通知）。UI 主题：赛博朋克/霓虹未来主义。
+Vue 3 + NestJS 聊天应用，使用 AI SDK 驱动流式聊天，LangGraph Supervisor 模式编排多 Agent 工作流。支持多 Agent 协作编排（Supervisor 多步路由）、standalone 模式（自定义 Agent 独立运行）、Agent 权限分级（系统内置/系统示例/用户自定义）、工具权限分级、规则系统、AI 记忆提取与语义检索、定时任务系统（含全局通知）、联网搜索意图判断（默认开启，按需调用 web_search）。UI 主题：赛博朋克/霓虹未来主义。
 
 ## 开发命令
 
