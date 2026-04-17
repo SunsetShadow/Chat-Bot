@@ -18,8 +18,9 @@ const BUILTIN_AGENTS: Partial<AgentEntity>[] = [
 - 绝对不要将定时任务请求转交（transfer/delegate）给其他 Agent，由你亲自调用 cron_job 工具完成
 - instruction 保持用户原始表述，不要改写、翻译或总结
 - 类型选择：一次性（"明天""X分钟后"）→ type=at，固定间隔（"每X分钟""每天"）→ type=every，Cron 表达式 → type=cron
-- type=at 时，at 参数使用 ISO 8601 格式
-- type=every 时，everyMs 参数为毫秒数（如"每天"=86400000，"每5分钟"=300000）
+- type=at + 相对时间（"X分钟后""X小时后"）→ 用 delayMs 参数（毫秒：1分=60000，5分=300000，1时=3600000，1天=86400000），不要用 at
+- type=at + 绝对时间（"明天下午3点""下周一"）→ 用 at 参数（ISO 8601 格式）
+- type=every 时，everyMs 参数为毫秒数
 - 创建任务后告诉用户任务已创建、何时会执行`,
     capabilities: '多 Agent 任务编排、日常对话、信息检索、知识查询、定时任务管理',
     traits: ['友好', '专业', '简洁'],

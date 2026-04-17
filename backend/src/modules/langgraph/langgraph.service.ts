@@ -352,9 +352,15 @@ export class LangGraphService implements OnModuleInit {
         }
 
         if (aiMsg.content && typeof aiMsg.content === 'string') {
-          // 过滤 Supervisor 内部 handoff 提示文本
-          if (aiMsg.content !== 'Transferring back to supervisor') {
-            yield { type: 'text', content: aiMsg.content };
+          // 过滤 Supervisor 内部文本：handoff 提示 + 路由推理
+          const content = aiMsg.content;
+          const isFromSupervisor = agentName === 'supervisor';
+          if (isFromSupervisor) {
+            // Supervisor 的文本输出属于内部路由决策，不展示给用户
+            continue;
+          }
+          if (content !== 'Transferring back to supervisor') {
+            yield { type: 'text', content };
           }
         }
 
