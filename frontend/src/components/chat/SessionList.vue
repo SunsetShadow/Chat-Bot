@@ -180,10 +180,10 @@ async function confirmDelete() {
       @negative-click="closeDeleteConfirm"
     >
       <p class="text-[var(--text-secondary)]">
-        热定要删除会话「{{
+        确定要删除会话「{{
           chatStore.sessions.find((s) => s.id === sessionToDelete)?.title || ""
         }}
-        吳？
+        」吗？
       </p>
       <p class="text-xs text-[var(--text-muted)]">此操作无法撤销。</p>
     </NModal>
