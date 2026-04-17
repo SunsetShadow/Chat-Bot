@@ -72,19 +72,7 @@ const showModal = ref(false);
 const editingAgentId = ref<string | null>(null);
 const saving = ref(false);
 
-// 表单
-const formValue = ref<AgentCreate>({
-  name: "",
-  description: "",
-  system_prompt: "",
-  traits: [],
-  tools: [],
-  skills: [],
-  model_name: "",
-  capabilities: "",
-  enabled: true,
-  temperature: undefined,
-});
+const formValue = ref<AgentCreate>(createEmptyForm());
 
 // 是否正在编辑内置 Agent
 const editingBuiltin = ref(false);
@@ -156,7 +144,6 @@ function duplicateAgent(agent: Agent) {
   showModal.value = true;
 }
 
-// 展开/折叠系统提示词
 const expandedAgents = ref<Set<string>>(new Set());
 
 const modalTitle = computed(() =>
@@ -457,7 +444,7 @@ function truncatePrompt(prompt: string, max = 120): string {
         </div>
       </div>
 
-      <!-- 系统内置 Agent（不可编辑/删除/复制） -->
+      <!-- 系统内置 Agent -->
       <div v-if="systemAgents.length > 0" class="agent-section">
         <div class="section-label">
           <NIcon :component="SparklesOutline" :size="16" />
@@ -489,49 +476,29 @@ function truncatePrompt(prompt: string, max = 120): string {
                   工具
                 </span>
                 <div class="info-value">
-                  <span
-                    v-for="tool in agent.tools"
-                    :key="tool"
-                    class="tool-tag"
-                  >
-                    {{ tool }}
-                  </span>
+                  <span v-for="tool in agent.tools" :key="tool" class="tool-tag">{{ tool }}</span>
                 </div>
               </div>
               <div class="info-row">
                 <span class="info-label">特征</span>
                 <div class="info-value">
-                  <span
-                    v-for="trait in agent.traits"
-                    :key="trait"
-                    class="trait-tag"
-                  >
-                    {{ trait }}
-                  </span>
+                  <span v-for="trait in agent.traits" :key="trait" class="trait-tag">{{ trait }}</span>
                 </div>
               </div>
               <div class="prompt-row">
                 <button class="prompt-toggle" @click="toggleExpand(agent.id)">
                   <span>系统提示词</span>
-                  <NIcon
-                    :component="ChevronDownOutline"
-                    :size="14"
-                    :class="{ rotated: expandedAgents.has(agent.id) }"
-                  />
+                  <NIcon :component="ChevronDownOutline" :size="14" :class="{ rotated: expandedAgents.has(agent.id) }" />
                 </button>
-                <div v-if="expandedAgents.has(agent.id)" class="prompt-content">
-                  {{ agent.system_prompt }}
-                </div>
-                <div v-else class="prompt-preview">
-                  {{ truncatePrompt(agent.system_prompt) }}
-                </div>
+                <div v-if="expandedAgents.has(agent.id)" class="prompt-content">{{ agent.system_prompt }}</div>
+                <div v-else class="prompt-preview">{{ truncatePrompt(agent.system_prompt) }}</div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 系统示例 Agent（可编辑/删除/复制创建） -->
+      <!-- 系统示例 Agent -->
       <div v-if="exampleAgents.length > 0" class="agent-section">
         <div class="section-label">
           <NIcon :component="SparklesOutline" :size="16" />
@@ -556,25 +523,13 @@ function truncatePrompt(prompt: string, max = 120): string {
                 <span class="agent-desc">{{ agent.description }}</span>
               </div>
               <div class="card-actions">
-                <button
-                  class="action-btn edit"
-                  title="编辑"
-                  @click="openEditModal(agent)"
-                >
+                <button class="action-btn edit" title="编辑" @click="openEditModal(agent)">
                   <NIcon :component="CreateOutline" :size="16" />
                 </button>
-                <button
-                  class="action-btn copy"
-                  title="复制"
-                  @click="duplicateAgent(agent)"
-                >
+                <button class="action-btn copy" title="复制" @click="duplicateAgent(agent)">
                   <NIcon :component="CopyOutline" :size="16" />
                 </button>
-                <button
-                  class="action-btn delete"
-                  title="删除"
-                  @click="handleDelete(agent.id)"
-                >
+                <button class="action-btn delete" title="删除" @click="handleDelete(agent.id)">
                   <NIcon :component="TrashOutline" :size="16" />
                 </button>
               </div>
@@ -586,42 +541,22 @@ function truncatePrompt(prompt: string, max = 120): string {
                   工具
                 </span>
                 <div class="info-value">
-                  <span
-                    v-for="tool in agent.tools"
-                    :key="tool"
-                    class="tool-tag"
-                  >
-                    {{ tool }}
-                  </span>
+                  <span v-for="tool in agent.tools" :key="tool" class="tool-tag">{{ tool }}</span>
                 </div>
               </div>
               <div class="info-row">
                 <span class="info-label">特征</span>
                 <div class="info-value">
-                  <span
-                    v-for="trait in agent.traits"
-                    :key="trait"
-                    class="trait-tag"
-                  >
-                    {{ trait }}
-                  </span>
+                  <span v-for="trait in agent.traits" :key="trait" class="trait-tag">{{ trait }}</span>
                 </div>
               </div>
               <div class="prompt-row">
                 <button class="prompt-toggle" @click="toggleExpand(agent.id)">
                   <span>系统提示词</span>
-                  <NIcon
-                    :component="ChevronDownOutline"
-                    :size="14"
-                    :class="{ rotated: expandedAgents.has(agent.id) }"
-                  />
+                  <NIcon :component="ChevronDownOutline" :size="14" :class="{ rotated: expandedAgents.has(agent.id) }" />
                 </button>
-                <div v-if="expandedAgents.has(agent.id)" class="prompt-content">
-                  {{ agent.system_prompt }}
-                </div>
-                <div v-else class="prompt-preview">
-                  {{ truncatePrompt(agent.system_prompt) }}
-                </div>
+                <div v-if="expandedAgents.has(agent.id)" class="prompt-content">{{ agent.system_prompt }}</div>
+                <div v-else class="prompt-preview">{{ truncatePrompt(agent.system_prompt) }}</div>
               </div>
             </div>
           </div>

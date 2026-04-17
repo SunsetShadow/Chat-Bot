@@ -13,6 +13,17 @@ export interface Model {
 
 const STORAGE_KEY = "default-model";
 
+const FALLBACK_MODELS: Model[] = [
+  { id: "qwen3.6-plus", name: "Qwen3.6 Plus", provider: "qwen", available: true, description: "通义千问最新模型" },
+  { id: "qwen3.5-plus", name: "Qwen3.5 Plus", provider: "qwen", available: true, description: "通义千问高性能模型" },
+  { id: "qwen3.5-flash", name: "Qwen3.5 Flash", provider: "qwen", available: true, description: "通义千问轻量快速模型" },
+  { id: "kimi-k2.5", name: "Kimi K2.5", provider: "moonshot", available: false, description: "Moonshot AI 大模型" },
+  { id: "deepseek-r1", name: "DeepSeek R1", provider: "deepseek", available: false, description: "深度求索推理模型" },
+  { id: "deepseek-v3", name: "DeepSeek V3", provider: "deepseek", available: false, description: "深度求索通用模型" },
+  { id: "gpt-4o", name: "GPT-4o", provider: "openai", available: false, description: "OpenAI 多模态模型" },
+  { id: "claude-sonnet-4", name: "Claude Sonnet 4", provider: "anthropic", available: false, description: "Anthropic 模型" },
+];
+
 export const useModelStore = defineStore("model", () => {
   // State
   const models = ref<Model[]>([]);
@@ -86,66 +97,8 @@ export const useModelStore = defineStore("model", () => {
     return defaultModel.value;
   }
 
-  // Fallback models if API is not available
   function getFallbackModels(): Model[] {
-    return [
-      {
-        id: "qwen3.6-plus",
-        name: "Qwen3.6 Plus",
-        provider: "qwen",
-        available: true,
-        description: "通义千问最新模型",
-      },
-      {
-        id: "qwen3.5-plus",
-        name: "Qwen3.5 Plus",
-        provider: "qwen",
-        available: true,
-        description: "通义千问高性能模型",
-      },
-      {
-        id: "qwen3.5-flash",
-        name: "Qwen3.5 Flash",
-        provider: "qwen",
-        available: true,
-        description: "通义千问轻量快速模型",
-      },
-      {
-        id: "kimi-k2.5",
-        name: "Kimi K2.5",
-        provider: "moonshot",
-        available: false,
-        description: "Moonshot AI 大模型",
-      },
-      {
-        id: "deepseek-r1",
-        name: "DeepSeek R1",
-        provider: "deepseek",
-        available: false,
-        description: "深度求索推理模型",
-      },
-      {
-        id: "deepseek-v3",
-        name: "DeepSeek V3",
-        provider: "deepseek",
-        available: false,
-        description: "深度求索通用模型",
-      },
-      {
-        id: "gpt-4o",
-        name: "GPT-4o",
-        provider: "openai",
-        available: false,
-        description: "OpenAI 多模态模型",
-      },
-      {
-        id: "claude-sonnet-4",
-        name: "Claude Sonnet 4",
-        provider: "anthropic",
-        available: false,
-        description: "Anthropic 模型",
-      },
-    ];
+    return FALLBACK_MODELS;
   }
 
   return {

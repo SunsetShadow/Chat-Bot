@@ -37,7 +37,6 @@ const hasToolParts = computed(() =>
   ),
 );
 
-// 缓存每个 text part 的 markdown 渲染结果，避免流式时反复解析
 const renderedParts = computed(() => {
   if (isUser.value) return {};
   const map: Record<number, string> = {};

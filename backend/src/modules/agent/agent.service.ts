@@ -72,6 +72,11 @@ const BUILTIN_AGENTS: Partial<AgentEntity>[] = [
   },
 ];
 
+const BUILTIN_EDITABLE_FIELDS = [
+  'system_prompt', 'description', 'tools', 'skills', 'traits',
+  'capabilities', 'temperature', 'avatar', 'category', 'max_turns', 'handoff_targets',
+];
+
 @Injectable()
 export class AgentService implements OnModuleInit {
   private rebuildCallback?: () => void;
@@ -177,10 +182,8 @@ export class AgentService implements OnModuleInit {
     }
 
     if (agent.is_builtin) {
-      // 系统示例 Agent：只允许修改行为配置
-      const allowed = ['system_prompt', 'description', 'tools', 'skills', 'traits', 'capabilities', 'temperature', 'avatar', 'category', 'max_turns', 'handoff_targets'];
       for (const key of Object.keys(dto)) {
-        if (allowed.includes(key)) {
+        if (BUILTIN_EDITABLE_FIELDS.includes(key)) {
           (agent as any)[key] = (dto as any)[key];
         }
       }
