@@ -16,9 +16,9 @@
 
 ## 安全处理
 
-- 所有 HTML 输出经过 `sanitizeHtml()` 过滤（DOMPurify 风格的白名单机制）
+- 所有 HTML 输出经过 `sanitizeHtml()` 过滤（黑名单机制，移除 script/iframe/embed/object 等危险标签 + on* 事件属性 + javascript:/data: 协议）
 - 外部链接添加 `rel="noopener noreferrer"` 和 `target="_blank"`
-- 禁止 `javascript:` 和 `data:` 协议
+- 工具输出为字符串时同样经过 markdown 渲染 + XSS 过滤
 
 ## 关键文件
 
@@ -26,7 +26,8 @@
 |------|------|
 | `frontend/src/utils/markdown.ts` | Markdown 渲染配置 + XSS 过滤 + 自定义 renderer |
 | `frontend/src/components/chat/MessageItem.vue` | 消息渲染组件（含流式打字光标） |
-| `frontend/src/components/chat/ToolCallBlock.vue` | 工具调用展示组件 |
+| `frontend/src/components/chat/ToolCallBlock.vue` | 工具调用展示组件（输出支持 markdown 渲染） |
+| `frontend/src/assets/main.css` | `.markdown-body` 全局共享样式（table/ul/ol/li） |
 
 ## 约束
 
