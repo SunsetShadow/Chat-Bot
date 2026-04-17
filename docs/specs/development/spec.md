@@ -51,7 +51,7 @@ Chat-Bot/
 │   │   ├── components/          # Vue 组件
 │   │   │   ├── agent/           #   Agent 相关组件
 │   │   │   ├── chat/            #   聊天相关组件
-│   │   │   ├── common/          #   通用组件（AppHeader、NotificationBell、ThemeToggle）
+│   │   │   ├── common/          #   通用组件（AppHeader、NotificationBell、NotificationToast、ThemeToggle）
 │   │   │   ├── cron-job/        #   定时任务组件（JobForm、ExecutionHistory）
 │   │   │   └── rules/           #   规则相关组件
 │   │   ├── composables/         # Vue Composables

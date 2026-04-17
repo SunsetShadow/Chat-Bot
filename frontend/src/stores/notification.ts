@@ -7,13 +7,28 @@ export const useNotificationStore = defineStore("notification", () => {
   const notifications = ref<Notification[]>([]);
   const unreadCount = ref(0);
   const showPanel = ref(false);
+  const toastQueue = ref<Notification[]>([]);
+  let prevUnreadCount: number | null = null;
 
   let timer: ReturnType<typeof setInterval> | null = null;
 
   async function fetchUnreadCount() {
     try {
       const res = await api.getUnreadCount();
-      unreadCount.value = (res as any).data?.count ?? res.data?.count ?? 0;
+      const newCount = (res as any).data?.count ?? 0;
+
+      // 首次加载只记录基线，不弹 toast
+      if (prevUnreadCount !== null && newCount > prevUnreadCount) {
+        const diff = newCount - prevUnreadCount;
+        try {
+          const notifRes = await api.getNotifications(1, diff);
+          const items: Notification[] = (notifRes as any).data?.data ?? (notifRes as any).data ?? [];
+          toastQueue.value.push(...items.filter((n) => !n.is_read));
+        } catch { /* ignore */ }
+      }
+
+      unreadCount.value = newCount;
+      prevUnreadCount = newCount;
     } catch { /* ignore */ }
   }
 
@@ -53,9 +68,15 @@ export const useNotificationStore = defineStore("notification", () => {
     if (timer) { clearInterval(timer); timer = null; }
   }
 
+  function consumeToasts(): Notification[] {
+    const items = [...toastQueue.value];
+    toastQueue.value = [];
+    return items;
+  }
+
   return {
-    notifications, unreadCount, showPanel,
+    notifications, unreadCount, showPanel, toastQueue,
     fetchUnreadCount, fetchNotifications, markAsRead, markAllRead,
-    togglePanel, startPolling, stopPolling,
+    togglePanel, startPolling, stopPolling, consumeToasts,
   };
 });

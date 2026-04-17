@@ -31,6 +31,7 @@ declare module 'vue' {
     NInput: typeof import('naive-ui')['NInput']
     NModal: typeof import('naive-ui')['NModal']
     NotificationBell: typeof import('./components/common/NotificationBell.vue')['default']
+    NotificationToast: typeof import('./components/common/NotificationToast.vue')['default']
     NPopover: typeof import('naive-ui')['NPopover']
     NRadio: typeof import('naive-ui')['NRadio']
     NRadioGroup: typeof import('naive-ui')['NRadioGroup']

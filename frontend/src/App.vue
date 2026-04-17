@@ -11,6 +11,7 @@ import {
 } from "naive-ui";
 import { computed, onMounted } from "vue";
 import { useThemeStore } from "@/stores/theme";
+import NotificationToast from "@/components/common/NotificationToast.vue";
 
 const themeStore = useThemeStore();
 
@@ -254,6 +255,7 @@ const currentThemeOverrides = computed(() =>
       <NDialogProvider>
         <NNotificationProvider>
           <div class="app-background" />
+          <NotificationToast />
           <RouterView />
         </NNotificationProvider>
       </NDialogProvider>

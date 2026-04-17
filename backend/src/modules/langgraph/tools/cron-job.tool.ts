@@ -5,20 +5,34 @@ import { JobService } from '../../cron-job/job.service';
 export function createCronJobTool(jobService: JobService) {
   return safeTool(
     'cron_job',
-    `管理定时任务。
+    `管理定时任务。每次调用必须指定 action 参数。
 
-操作说明：
-- action=list: 查看当前所有定时任务列表
-- action=add: 新增一个定时任务
-- action=toggle: 启用或停用指定任务
-- action=delete: 删除指定任务
+## 调用示例
 
-类型选择规则：
-- 一次性任务（"X分钟后""明天""下周一"）→ type=at, 提供 at 参数（ISO 8601）
-- 固定间隔循环（"每X分钟""每小时""每天"）→ type=every, 提供 everyMs 参数（毫秒）
-- Cron 表达式（"0 9 * * *"）→ type=cron, 提供 cron 参数
+查看列表：
+{"action":"list"}
 
-instruction 规则：
+新增 cron 定时任务：
+{"action":"add","type":"cron","cron":"0 9 * * 1-5","instruction":"工作日每天早上9点提醒我站会"}
+
+新增一次性定时任务：
+{"action":"add","type":"at","at":"2026-04-17T18:30:00+08:00","instruction":"提醒我喝水"}
+
+新增循环定时任务：
+{"action":"add","type":"every","everyMs":3600000,"instruction":"每小时提醒我休息"}
+
+切换任务状态：
+{"action":"toggle","id":"任务ID","enabled":false}
+
+删除任务：
+{"action":"delete","id":"任务ID"}
+
+## 类型选择规则
+- 一次性任务（"X分钟后""明天""下周一"）→ type=at，提供 at（ISO 8601，必须是未来时间）
+- 固定间隔（"每X分钟""每小时""每天"）→ type=every，提供 everyMs（毫秒）
+- Cron 表达式（"0 9 * * *"）→ type=cron，提供 cron
+
+## instruction 规则
 - 保持用户原始表述，不要改写、翻译或总结
 - 必须是自然语言描述，不能写成工具调用脚本`,
     z.object({

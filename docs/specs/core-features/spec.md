@@ -468,7 +468,7 @@ interface JobExecution {
 4. 调度参数结构化存储，任务指令保持自然语言（用户原始表述）
 5. 任务执行有超时保护，默认 60 秒
 6. 前端管理页面位于 `/cron-jobs`，赛博朋克主题风格
-7. `cron_job` 工具支持 `add/list/toggle/delete` 四种操作
+7. `cron_job` 工具支持 `add/list/toggle/delete` 四种操作，prompt 包含每个 action 的 JSON 调用示例以防止参数遗漏
 8. `at` 类型任务校验时间不能是过去的时间，过期时间会被拒绝
 9. 任务执行时按 `allowed_tools` 白名单过滤工具（未设置则使用执行器完整工具集）
 10. 任务执行完成后触发双重通知：全局通知（右上角铃铛）+ 会话内 system 消息
@@ -515,14 +515,23 @@ interface Notification {
 ### 前端组件
 
 - `NotificationBell.vue`：全局铃铛组件，含未读数 badge + 下拉通知面板
-- 挂载位置：`ChatContainer.vue` 工具栏 + `AppHeader.vue`（管理页面）
-- `stores/notification.ts`：Pinia Store，30s 轮询 `unread-count`
+- `NotificationToast.vue`：实时 toast 通知组件，检测到新通知时通过 Naive UI `useNotification()` 弹出
+- 挂载位置：`NotificationBell` 在 `ChatContainer.vue` 工具栏 + `AppHeader.vue`；`NotificationToast` 在 `App.vue`（全局生效）
+- `stores/notification.ts`：Pinia Store，30s 轮询 `unread-count`，检测增量时推送 `toastQueue`
+
+### Toast 通知机制
+
+1. Store 轮询 `fetchUnreadCount` 时，检测到未读数增加（排除首次加载）
+2. 拉取新增通知，过滤未读项推入 `toastQueue`
+3. `NotificationToast` 组件 watch `toastQueue.length`，消费队列调用 `naiveNotification.info()` 弹出 toast
+4. Toast 5 秒自动关闭，hover 时保持显示
 
 ### 约束
 
 1. 通知为全局单用户模式，无多用户区分
 2. 前端轮询间隔 30 秒，可通过 store 配置
 3. 点击通知可跳转到关联会话
+4. Toast 仅在未读数增量时触发，首次加载不弹窗
 
 ---
 
