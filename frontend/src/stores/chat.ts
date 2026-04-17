@@ -8,6 +8,7 @@ import {
   deleteSession as apiDeleteSession,
   pinSession as apiPinSession,
 } from "@/api/chat";
+import { useAgentStore } from "./agent";
 
 export const useChatStore = defineStore("chat", () => {
   // 状态
@@ -61,6 +62,16 @@ export const useChatStore = defineStore("chat", () => {
       const session = await apiGetSession(sessionId);
       messages.value = session.messages;
       currentSession.value = session;
+
+      // 恢复该会话使用的 agent
+      const agentStore = useAgentStore();
+      if (session.agent_id) {
+        const exists = agentStore.agents.some((a) => a.id === session.agent_id);
+        agentStore.setCurrentAgent(exists ? session.agent_id : "builtin-general");
+      } else {
+        agentStore.setCurrentAgent("builtin-general");
+      }
+
       return session;
     } catch (e) {
       error.value = e instanceof Error ? e.message : "获取会话详情失败";

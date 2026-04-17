@@ -448,7 +448,7 @@ function truncatePrompt(prompt: string, max = 120): string {
       <div v-if="systemAgents.length > 0" class="agent-section">
         <div class="section-label">
           <NIcon :component="SparklesOutline" :size="16" />
-          <span>系统内置</span>
+          <span>系统Agent</span>
           <span class="section-count">{{ systemAgents.length }}</span>
         </div>
         <div class="agent-cards">
@@ -502,7 +502,7 @@ function truncatePrompt(prompt: string, max = 120): string {
       <div v-if="exampleAgents.length > 0" class="agent-section">
         <div class="section-label">
           <NIcon :component="SparklesOutline" :size="16" />
-          <span>系统示例</span>
+          <span>自定义Agent</span>
           <span class="section-count">{{ exampleAgents.length }}</span>
         </div>
         <div class="agent-cards">

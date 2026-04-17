@@ -64,13 +64,13 @@ async function handleSubmit() {
     <NPopover trigger="click" placement="bottom-end" :width="380">
       <template #trigger>
         <button
-          class="flex items-center gap-2 px-4 py-2.5 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-[var(--radius-sm)] text-[var(--text-secondary)] font-mono text-[13px] cursor-pointer transition-all duration-150 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+          class="flex items-center gap-1.5 px-3 py-2 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-[var(--radius-sm)] text-[var(--text-secondary)] font-mono text-[12px] cursor-pointer transition-all duration-150 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
         >
-          <NIcon :component="SettingsOutline" :size="18" />
+          <NIcon :component="SettingsOutline" :size="16" />
           <span>规则</span>
           <span
             v-if="enabledCount > 0"
-            class="px-1.5 py-0.5 bg-[var(--color-primary)] rounded-[10px] text-white text-[11px] font-semibold"
+            class="min-w-[18px] text-center px-1 py-0.5 bg-[var(--color-primary)] rounded-full text-white text-[10px] font-semibold leading-none"
           >
             {{ enabledCount }}
           </span>

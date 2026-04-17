@@ -58,9 +58,8 @@ watch(
         <div class="flex items-center gap-4">
           <RuleEditor />
           <ThemeToggle />
-          <NotificationBell />
           <button
-            class="flex items-center justify-center w-9 h-9 bg-transparent border border-[var(--border-color)] rounded-[var(--radius-sm)] text-[var(--text-muted)] cursor-pointer transition-all duration-150 hover:border-[var(--neon-purple)] hover:text-[var(--neon-purple)]"
+            class="flex items-center justify-center w-9 h-9 bg-transparent border border-[var(--border-color)] rounded-[var(--radius-sm)] text-[var(--text-muted)] cursor-pointer transition-all duration-150 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
             title="Agent 配置"
             @click="router.push('/agentconfig')"
           >
@@ -73,15 +72,8 @@ watch(
           >
             <NIcon :component="SettingsOutline" :size="18" />
           </button>
-          <div class="flex items-center gap-2">
-            <div
-              class="w-2 h-2 bg-[var(--color-secondary)] rounded-full animate-pulse"
-            ></div>
-            <span
-              class="font-mono text-[11px] tracking-wider uppercase text-[var(--text-muted)]"
-              >在线</span
-            >
-          </div>
+          <div class="w-px h-6 bg-[var(--border-color)]"></div>
+          <NotificationBell />
         </div>
       </header>
 

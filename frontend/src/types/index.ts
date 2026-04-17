@@ -31,6 +31,7 @@ export interface SessionResponse {
   id: string;
   title: string;
   is_pinned: boolean;
+  agent_id: string | null;
   created_at: string;
   updated_at: string;
   message_count: number;

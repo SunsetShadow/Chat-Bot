@@ -36,6 +36,12 @@ export class ChatService {
       ? await this.getSession(session_id)
       : await this.createSession({ title: 'New Chat' });
 
+    // 保存当前使用的 agent_id 到 session
+    if (agent_id && session.agent_id !== agent_id) {
+      session.agent_id = agent_id;
+      await this.sessionRepo.save(session);
+    }
+
     const userMessage = this.messageRepo.create({
       id: uuidv4(),
       role: 'user' as MessageRole,
