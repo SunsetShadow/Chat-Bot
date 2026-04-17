@@ -49,6 +49,15 @@ const renderedParts = computed(() => {
   return map;
 });
 
+const toolInfoMap = computed(() => {
+  const map: Record<number, NonNullable<ReturnType<typeof getToolInfo>>> = {};
+  props.message.parts?.forEach((part, idx) => {
+    const info = getToolInfo(part);
+    if (info) map[idx] = info;
+  });
+  return map;
+});
+
 function getToolInfo(part: { type: string }) {
   if (!part.type.startsWith("tool-")) return null;
   const typed = part as {
@@ -163,11 +172,13 @@ function getHostname(url: string): string {
               </p>
             </div>
 
-            <!--  #with 绕过 v-else-if 双调用：先算好 toolInfo -->
-            <template v-else-if="part.type.startsWith('tool-')">
+            <template v-else-if="toolInfoMap[idx]">
               <ToolCallBlock
-                v-if="getToolInfo(part)"
-                v-bind="getToolInfo(part)!"
+                :toolName="toolInfoMap[idx].toolName"
+                :state="toolInfoMap[idx].state"
+                :input="toolInfoMap[idx].input"
+                :output="toolInfoMap[idx].output"
+                :errorText="toolInfoMap[idx].errorText"
                 class="my-2"
               />
             </template>

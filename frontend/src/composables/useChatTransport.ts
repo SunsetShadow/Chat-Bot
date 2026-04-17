@@ -199,9 +199,10 @@ function convertEventToChunks(
   switch (event) {
     case "message_start": {
       const msgId = (data.message_id as string) || currentMessageId;
+      textPartId = crypto.randomUUID();
       return [
         { type: "start", messageId: msgId },
-        { type: "text-start", id: textPartId || id },
+        { type: "text-start", id: textPartId },
       ];
     }
 

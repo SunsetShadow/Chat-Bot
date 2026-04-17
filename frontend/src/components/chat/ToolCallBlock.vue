@@ -8,6 +8,7 @@ import {
   ChevronDownOutline,
   ChevronUpOutline,
 } from "@vicons/ionicons5";
+import { renderMarkdownSafe } from "@/utils/markdown";
 
 type ToolState =
   | "input-streaming"
@@ -54,6 +55,11 @@ const hasDetails = computed(
     (props.state === "input-available" || props.state === "output-available") &&
     (props.input || props.output),
 );
+
+const renderedOutput = computed(() => {
+  if (typeof props.output !== "string") return "";
+  return renderMarkdownSafe(props.output);
+});
 </script>
 
 <template>
@@ -140,13 +146,15 @@ const hasDetails = computed(
           执行结果
         </div>
         <pre
+          v-if="typeof output !== 'string'"
           class="text-[12px] text-[var(--text-secondary)] whitespace-pre-wrap break-all font-mono leading-relaxed"
-          >{{
-            typeof output === "string"
-              ? output
-              : JSON.stringify(output, null, 2)
-          }}</pre
+          >{{ JSON.stringify(output, null, 2) }}</pre
         >
+        <div
+          v-else-if="renderedOutput"
+          class="text-[13px] text-[var(--text-secondary)] leading-relaxed break-words markdown-body"
+          v-html="renderedOutput"
+        ></div>
       </div>
 
       <!-- Error -->

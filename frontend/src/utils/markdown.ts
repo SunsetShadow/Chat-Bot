@@ -73,14 +73,23 @@ function escapeHtml(text: string): string {
  * XSS 过滤 - 移除危险标签和属性
  */
 export function sanitizeHtml(html: string): string {
-  // 移除 script 标签
-  html = html.replace(
-    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
-    "",
-  );
-  // 移除危险属性
-  html = html.replace(/\s*on\w+\s*=\s*["'][^"']*["']/gi, "");
-  html = html.replace(/javascript:/gi, "");
+  // 移除危险标签及其内容
+  const dangerousTags = [
+    "script", "iframe", "embed", "object", "applet",
+    "form", "meta", "link", "style", "base",
+  ];
+  for (const tag of dangerousTags) {
+    html = html.replace(
+      new RegExp(`<${tag}\\b[^<]*(?:(?!<\\/${tag}>)<[^<]*)*<\\/${tag}>`, "gi"),
+      "",
+    );
+  }
+  // 移除自闭合危险标签
+  html = html.replace(/<(?:script|iframe|embed|object|applet|meta|base)\b[^>]*\/?>/gi, "");
+  // 移除事件属性（on*="..."）
+  html = html.replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, "");
+  // 移除 javascript: / vbscript: / data: 协议
+  html = html.replace(/\b(?:javascript|vbscript|data)\s*:/gi, "blocked:");
   return html;
 }
 
