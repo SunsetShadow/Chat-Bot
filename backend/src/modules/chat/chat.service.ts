@@ -210,6 +210,12 @@ export class ChatService {
     return session.messages;
   }
 
+  async deleteSession(id: string): Promise<void> {
+    const session = await this.getSession(id);
+    await this.messageRepo.delete({ session: { id: session.id } } as any);
+    await this.sessionRepo.delete(session.id);
+  }
+
   private async buildSystemPrompt(agentId?: string, ruleIds?: string[], webSearch?: boolean): Promise<string> {
     const parts: string[] = [];
 

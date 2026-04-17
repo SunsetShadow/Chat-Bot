@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   Get,
   Post,
   Put,
@@ -122,5 +123,11 @@ export class ChatController {
   @Get('sessions/:id/messages')
   async getMessages(@Param('id') id: string) {
     return this.chatService.getMessages(id);
+  }
+
+  @Delete('sessions/:id')
+  async deleteSession(@Param('id') id: string) {
+    await this.chatService.deleteSession(id);
+    return { success: true };
   }
 }
