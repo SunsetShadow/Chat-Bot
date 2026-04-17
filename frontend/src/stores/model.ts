@@ -33,7 +33,9 @@ export const useModelStore = defineStore("model", () => {
 
     try {
       const response = await get<{ models: Model[] }>("/models");
-      models.value = response.models;
+      // 后端返回 {success, data: [...]}，models 在 data 中
+      const modelArray = (response as any).models || (response as any);
+      models.value = Array.isArray(modelArray) ? modelArray : [];
 
       // Load saved preferences
       const savedDefault = localStorage.getItem(STORAGE_KEY);
@@ -88,60 +90,60 @@ export const useModelStore = defineStore("model", () => {
   function getFallbackModels(): Model[] {
     return [
       {
+        id: "qwen3.6-plus",
+        name: "Qwen3.6 Plus",
+        provider: "qwen",
+        available: true,
+        description: "通义千问最新模型",
+      },
+      {
+        id: "qwen3.5-plus",
+        name: "Qwen3.5 Plus",
+        provider: "qwen",
+        available: true,
+        description: "通义千问高性能模型",
+      },
+      {
+        id: "qwen3.5-flash",
+        name: "Qwen3.5 Flash",
+        provider: "qwen",
+        available: true,
+        description: "通义千问轻量快速模型",
+      },
+      {
+        id: "kimi-k2.5",
+        name: "Kimi K2.5",
+        provider: "moonshot",
+        available: false,
+        description: "Moonshot AI 大模型",
+      },
+      {
+        id: "deepseek-r1",
+        name: "DeepSeek R1",
+        provider: "deepseek",
+        available: false,
+        description: "深度求索推理模型",
+      },
+      {
+        id: "deepseek-v3",
+        name: "DeepSeek V3",
+        provider: "deepseek",
+        available: false,
+        description: "深度求索通用模型",
+      },
+      {
         id: "gpt-4o",
         name: "GPT-4o",
         provider: "openai",
-        available: true,
-        context_length: 128000,
-        description: "最新多模态模型，速度快且智能",
+        available: false,
+        description: "OpenAI 多模态模型",
       },
       {
-        id: "gpt-4o-mini",
-        name: "GPT-4o Mini",
-        provider: "openai",
-        available: true,
-        context_length: 128000,
-        description: "轻量级模型，适合日常对话",
-      },
-      {
-        id: "gpt-4-turbo",
-        name: "GPT-4 Turbo",
-        provider: "openai",
-        available: true,
-        context_length: 128000,
-        description: "高性能推理模型",
-      },
-      {
-        id: "gpt-3.5-turbo",
-        name: "GPT-3.5 Turbo",
-        provider: "openai",
-        available: true,
-        context_length: 16385,
-        description: "经济高效的选择",
-      },
-      {
-        id: "claude-3-5-sonnet",
-        name: "Claude 3.5 Sonnet",
+        id: "claude-sonnet-4",
+        name: "Claude Sonnet 4",
         provider: "anthropic",
-        available: true,
-        context_length: 200000,
-        description: "Anthropic 最新模型",
-      },
-      {
-        id: "claude-3-opus",
-        name: "Claude 3 Opus",
-        provider: "anthropic",
-        available: true,
-        context_length: 200000,
-        description: "最强推理能力",
-      },
-      {
-        id: "gemini-1.5-pro",
-        name: "Gemini 1.5 Pro",
-        provider: "google",
-        available: true,
-        context_length: 1000000,
-        description: "Google 超长上下文模型",
+        available: false,
+        description: "Anthropic 模型",
       },
     ];
   }

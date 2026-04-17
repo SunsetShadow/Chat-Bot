@@ -79,7 +79,7 @@ function renderOptionLabel(option: {
     [
       h(NIcon, { component: icon, size: 14, class: "option-icon" }),
       h("div", { class: "option-content" }, [
-        h("span", { class: "option-name" }, m.name),
+        h("span", { class: "option-name" }, m.name + (m.available ? "" : " (暂不可用)")),
         h("span", { class: "option-provider" }, m.provider.toUpperCase()),
       ]),
       m.context_length &&

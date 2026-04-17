@@ -167,8 +167,12 @@ const customAgents = computed(() =>
   agentStore.agents.filter((a) => !a.is_builtin),
 );
 
-const builtinAgents = computed(() =>
-  agentStore.agents.filter((a) => a.is_builtin),
+const systemAgents = computed(() =>
+  agentStore.agents.filter((a) => a.is_system),
+);
+
+const exampleAgents = computed(() =>
+  agentStore.agents.filter((a) => a.is_builtin && !a.is_system),
 );
 
 // 工具选项
@@ -453,16 +457,16 @@ function truncatePrompt(prompt: string, max = 120): string {
         </div>
       </div>
 
-      <!-- 内置 Agent -->
-      <div v-if="builtinAgents.length > 0" class="agent-section">
+      <!-- 系统内置 Agent（不可编辑/删除/复制） -->
+      <div v-if="systemAgents.length > 0" class="agent-section">
         <div class="section-label">
           <NIcon :component="SparklesOutline" :size="16" />
-          <span>内置 Agent</span>
-          <span class="section-count">{{ builtinAgents.length }}</span>
+          <span>系统内置</span>
+          <span class="section-count">{{ systemAgents.length }}</span>
         </div>
         <div class="agent-cards">
           <div
-            v-for="agent in builtinAgents"
+            v-for="agent in systemAgents"
             :key="agent.id"
             class="agent-card glass-card builtin"
           >
@@ -473,13 +477,86 @@ function truncatePrompt(prompt: string, max = 120): string {
               <div class="agent-meta">
                 <h4>
                   {{ agent.name }}
-                  <span class="builtin-badge">内置</span>
+                  <span class="builtin-badge">系统</span>
+                </h4>
+                <span class="agent-desc">{{ agent.description }}</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="info-row">
+                <span class="info-label">
+                  <NIcon :component="BuildOutline" :size="14" />
+                  工具
+                </span>
+                <div class="info-value">
+                  <span
+                    v-for="tool in agent.tools"
+                    :key="tool"
+                    class="tool-tag"
+                  >
+                    {{ tool }}
+                  </span>
+                </div>
+              </div>
+              <div class="info-row">
+                <span class="info-label">特征</span>
+                <div class="info-value">
+                  <span
+                    v-for="trait in agent.traits"
+                    :key="trait"
+                    class="trait-tag"
+                  >
+                    {{ trait }}
+                  </span>
+                </div>
+              </div>
+              <div class="prompt-row">
+                <button class="prompt-toggle" @click="toggleExpand(agent.id)">
+                  <span>系统提示词</span>
+                  <NIcon
+                    :component="ChevronDownOutline"
+                    :size="14"
+                    :class="{ rotated: expandedAgents.has(agent.id) }"
+                  />
+                </button>
+                <div v-if="expandedAgents.has(agent.id)" class="prompt-content">
+                  {{ agent.system_prompt }}
+                </div>
+                <div v-else class="prompt-preview">
+                  {{ truncatePrompt(agent.system_prompt) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 系统示例 Agent（可编辑/删除/复制创建） -->
+      <div v-if="exampleAgents.length > 0" class="agent-section">
+        <div class="section-label">
+          <NIcon :component="SparklesOutline" :size="16" />
+          <span>系统示例</span>
+          <span class="section-count">{{ exampleAgents.length }}</span>
+        </div>
+        <div class="agent-cards">
+          <div
+            v-for="agent in exampleAgents"
+            :key="agent.id"
+            class="agent-card glass-card builtin"
+          >
+            <div class="card-header">
+              <div class="agent-avatar builtin-avatar">
+                <NIcon :component="SparklesOutline" :size="22" />
+              </div>
+              <div class="agent-meta">
+                <h4>
+                  {{ agent.name }}
+                  <span class="builtin-badge">示例</span>
                 </h4>
                 <span class="agent-desc">{{ agent.description }}</span>
               </div>
               <div class="card-actions">
                 <button
-                  v-if="agent.id !== 'builtin-job-executor'"
                   class="action-btn edit"
                   title="编辑"
                   @click="openEditModal(agent)"
@@ -493,9 +570,15 @@ function truncatePrompt(prompt: string, max = 120): string {
                 >
                   <NIcon :component="CopyOutline" :size="16" />
                 </button>
+                <button
+                  class="action-btn delete"
+                  title="删除"
+                  @click="handleDelete(agent.id)"
+                >
+                  <NIcon :component="TrashOutline" :size="16" />
+                </button>
               </div>
             </div>
-
             <div class="card-body">
               <div class="info-row">
                 <span class="info-label">

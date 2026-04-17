@@ -54,6 +54,10 @@ export class AgentEntity {
   @Column({ default: false })
   is_builtin: boolean;
 
+  /** true = 系统核心 Agent（超级助手、定时任务执行器），不可编辑/删除/复制 */
+  @Column({ default: false })
+  is_system: boolean;
+
   @CreateDateColumn()
   created_at: Date;
 

@@ -4,21 +4,18 @@ export interface ModelInfo {
   id: string;
   name: string;
   provider: string;
+  available: boolean;
 }
 
 const AVAILABLE_MODELS: ModelInfo[] = [
-  { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai' },
-  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai' },
-  { id: 'gpt-4-turbo', name: 'GPT-4 Turbo', provider: 'openai' },
-  { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', provider: 'openai' },
-  { id: 'o1-preview', name: 'O1 Preview', provider: 'openai' },
-  { id: 'o1-mini', name: 'O1 Mini', provider: 'openai' },
-  { id: 'claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'anthropic' },
-  { id: 'claude-3-opus', name: 'Claude 3 Opus', provider: 'anthropic' },
-  { id: 'claude-3-sonnet', name: 'Claude 3 Sonnet', provider: 'anthropic' },
-  { id: 'claude-3-haiku', name: 'Claude 3 Haiku', provider: 'anthropic' },
-  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'google' },
-  { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: 'google' },
+  { id: 'qwen3.6-plus', name: 'Qwen3.6 Plus', provider: 'qwen', available: true },
+  { id: 'qwen3.5-plus', name: 'Qwen3.5 Plus', provider: 'qwen', available: true },
+  { id: 'qwen3.5-flash', name: 'Qwen3.5 Flash', provider: 'qwen', available: true },
+  { id: 'kimi-k2.5', name: 'Kimi K2.5', provider: 'moonshot', available: false },
+  { id: 'deepseek-r1', name: 'DeepSeek R1', provider: 'deepseek', available: false },
+  { id: 'deepseek-v3', name: 'DeepSeek V3', provider: 'deepseek', available: false },
+  { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai', available: false },
+  { id: 'claude-sonnet-4', name: 'Claude Sonnet 4', provider: 'anthropic', available: false },
 ];
 
 @Injectable()

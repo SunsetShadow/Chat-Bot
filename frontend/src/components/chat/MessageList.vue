@@ -4,7 +4,7 @@ import { useAIChat } from "@/composables/useAIChat";
 import MessageItem from "./MessageItem.vue";
 import { ChatbubbleEllipsesOutline } from "@vicons/ionicons5";
 
-const { messages, isLoading } = useAIChat();
+const { messages, isLoading, regenerate } = useAIChat();
 
 const listContainer = ref<HTMLElement | null>(null);
 
@@ -138,6 +138,8 @@ onUnmounted(() => {
             index === messages.length - 1 &&
             message.role === 'assistant'
           "
+          :is-last="index === messages.length - 1"
+          :on-retry="index === messages.length - 1 ? regenerate : undefined"
           :style="{ animationDelay: `${index * 0.05}s` }"
         />
       </template>

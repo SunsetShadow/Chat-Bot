@@ -10,12 +10,14 @@ import type {
   StepStartUIPart,
 } from "ai";
 import { renderMarkdownSafe } from "@/utils/markdown";
-import { PersonOutline, SparklesOutline } from "@vicons/ionicons5";
+import { PersonOutline, SparklesOutline, RefreshOutline } from "@vicons/ionicons5";
 import ToolCallBlock from "./ToolCallBlock.vue";
 
 const props = defineProps<{
   message: UIMessage;
   isStreaming?: boolean;
+  isLast?: boolean;
+  onRetry?: () => void;
 }>();
 
 const isUser = computed(() => props.message.role === "user");
@@ -235,6 +237,21 @@ function getHostname(url: string): string {
               </div>
 
               <div
+                v-else-if="!isStreaming && !textContent && !hasToolParts && isLast"
+                class="flex items-center gap-3"
+              >
+                <span class="text-[13px] text-[var(--color-error)]">暂无回复</span>
+                <button
+                  v-if="onRetry"
+                  class="flex items-center gap-1 text-[12px] text-[var(--color-primary)] hover:underline cursor-pointer"
+                  @click="onRetry"
+                >
+                  <NIcon :component="RefreshOutline" :size="12" />
+                  重试
+                </button>
+              </div>
+
+              <div
                 v-else-if="renderedParts[idx]"
                 class="message-text text-[15px] leading-relaxed break-words markdown-body"
                 v-html="renderedParts[idx]"
@@ -251,6 +268,9 @@ function getHostname(url: string): string {
         <template v-else>
           <div class="message-text text-[15px] leading-relaxed break-words">
             {{ textContent }}
+          </div>
+          <div class="text-[10px] text-white/40 mt-1.5 text-right font-mono">
+            已发送
           </div>
         </template>
       </div>

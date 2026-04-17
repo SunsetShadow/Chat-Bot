@@ -25,6 +25,7 @@ const BUILTIN_AGENTS: Partial<AgentEntity>[] = [
     traits: ['友好', '专业', '简洁'],
     tools: ['extract_memory', 'web_search', 'knowledge_query', 'cron_job'],
     is_builtin: true,
+    is_system: true,
     standalone: false,
   },
   {
@@ -36,6 +37,7 @@ const BUILTIN_AGENTS: Partial<AgentEntity>[] = [
     traits: ['专业', '代码规范', '最佳实践'],
     tools: ['extract_memory', 'web_search'],
     is_builtin: true,
+    is_system: false,
     standalone: false,
   },
   {
@@ -47,6 +49,7 @@ const BUILTIN_AGENTS: Partial<AgentEntity>[] = [
     traits: ['文采', '创意', '结构清晰'],
     tools: ['extract_memory', 'knowledge_query'],
     is_builtin: true,
+    is_system: false,
     standalone: false,
   },
   {
@@ -64,6 +67,7 @@ const BUILTIN_AGENTS: Partial<AgentEntity>[] = [
     traits: ['直接', '高效', '简洁'],
     tools: ['send_mail', 'web_search', 'execute_command', 'time_now'],
     is_builtin: true,
+    is_system: true,
     standalone: false,
   },
 ];
@@ -116,6 +120,10 @@ export class AgentService implements OnModuleInit {
             agent.standalone = def.standalone;
             changed = true;
           }
+          if (def.is_system !== undefined && agent.is_system !== def.is_system) {
+            agent.is_system = def.is_system;
+            changed = true;
+          }
           if (changed) {
             await this.agentRepo.save(agent);
           }
@@ -164,12 +172,12 @@ export class AgentService implements OnModuleInit {
   async update(id: string, dto: UpdateAgentDto): Promise<AgentEntity> {
     const agent = await this.findOne(id);
 
-    if (agent.is_builtin && id === 'builtin-job-executor') {
-      throw new BadRequestException('Cannot modify built-in job executor agent');
+    if (agent.is_system) {
+      throw new BadRequestException('系统内置 Agent 不可修改');
     }
 
     if (agent.is_builtin) {
-      // 内置 Agent：只允许修改行为配置，不允许结构性变更
+      // 系统示例 Agent：只允许修改行为配置
       const allowed = ['system_prompt', 'description', 'tools', 'skills', 'traits', 'capabilities', 'temperature', 'avatar', 'category', 'max_turns', 'handoff_targets'];
       for (const key of Object.keys(dto)) {
         if (allowed.includes(key)) {
@@ -187,8 +195,8 @@ export class AgentService implements OnModuleInit {
 
   async remove(id: string): Promise<void> {
     const agent = await this.findOne(id);
-    if (agent.is_builtin) {
-      throw new BadRequestException('Cannot delete built-in agents');
+    if (agent.is_system) {
+      throw new BadRequestException('系统内置 Agent 不可删除');
     }
     await this.agentRepo.delete(id);
     this.rebuildCallback?.();

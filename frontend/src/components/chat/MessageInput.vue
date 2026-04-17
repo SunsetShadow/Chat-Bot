@@ -26,7 +26,7 @@ const inputValue = ref("");
 const isFocused = ref(false);
 
 // 功能开关状态
-const webSearchEnabled = ref(false);
+const webSearchEnabled = ref(true);
 const thinkingEnabled = ref(false);
 
 const canSend = computed(
@@ -70,7 +70,6 @@ async function handleSend() {
     });
     emit("send", message);
     clear();
-    webSearchEnabled.value = false;
     thinkingEnabled.value = false;
   } catch (error) {
     console.error("发送消息失败:", error);

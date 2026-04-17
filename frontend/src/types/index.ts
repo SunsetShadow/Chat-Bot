@@ -58,11 +58,13 @@ export interface Agent {
   max_turns?: number;
   handoff_targets?: string[];
   is_builtin: boolean;
+  is_system: boolean;
+  standalone: boolean;
   created_at: string;
   updated_at: string;
 }
 
-export type AgentCreate = Omit<Agent, 'id' | 'is_builtin' | 'created_at' | 'updated_at'>;
+export type AgentCreate = Omit<Agent, 'id' | 'is_builtin' | 'is_system' | 'standalone' | 'created_at' | 'updated_at'>;
 export type AgentUpdate = Partial<AgentCreate>;
 
 // 工具信息
