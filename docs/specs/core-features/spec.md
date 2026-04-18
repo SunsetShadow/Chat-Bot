@@ -155,6 +155,7 @@ Agent 分为三种权限级别：
 | `builtin-job-executor` | 定时任务执行器 | true | false | 后台定时任务执行（隐藏，不参与 Supervisor 路由） |
 
 - `is_system: true` 的 Agent 不可修改、删除、复制创建
+- `builtin-general`（超级助手）和 `builtin-job-executor`（定时任务执行器）永久拥有所有工具和所有子 Agent 的调用权限，不受 tools 字段限制
 - `is_builtin && !is_system` 的系统示例 Agent 允许编辑行为配置、删除和复制创建
 - 内置 Agent `standalone: false`，参与 Supervisor 多 Agent 编排
 - 用户自定义 Agent 默认 `standalone: true`，选它时跳过 Supervisor 独立运行

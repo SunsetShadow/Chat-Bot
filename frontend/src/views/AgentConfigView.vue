@@ -62,21 +62,16 @@ function agentToFormValues(agent: Agent | AgentTemplate, overrides?: Partial<Age
   };
 }
 
-// 工具列表
 const availableTools = ref<ToolInfo[]>([]);
-const toolsLoaded = ref(false);
 
-// 模态框状态
 const showModal = ref(false);
 const editingAgentId = ref<string | null>(null);
 const saving = ref(false);
 
 const formValue = ref<AgentCreate>(createEmptyForm());
 
-// 是否正在编辑内置 Agent
 const editingBuiltin = ref(false);
 
-// 模板相关
 const showTemplateModal = ref(false);
 
 const AGENT_TEMPLATES: AgentTemplate[] = [
@@ -159,7 +154,6 @@ const systemAgents = computed(() =>
   agentStore.agents.filter((a) => a.is_system),
 );
 
-// 工具选项
 const toolOptions = computed(() =>
   availableTools.value.map((t) => ({
     label: t.description ? `${t.name}（${t.description}）` : t.name,
@@ -199,7 +193,6 @@ onMounted(async () => {
   }
   try {
     availableTools.value = await getTools();
-    toolsLoaded.value = true;
   } catch {
     console.warn("获取工具列表失败");
   }
@@ -551,7 +544,7 @@ function truncatePrompt(prompt: string, max = 120): string {
             :options="toolOptions"
             multiple
             placeholder="选择可用工具"
-            :disabled="!toolsLoaded"
+            :disabled="!availableTools.length"
           />
         </NFormItem>
         <NFormItem label="特征标签">
@@ -770,32 +763,6 @@ function truncatePrompt(prompt: string, max = 120): string {
   display: flex;
   flex-direction: column;
   gap: 20px;
-}
-
-.agent-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.section-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  padding-left: 4px;
-}
-
-.section-count {
-  padding: 1px 8px;
-  background: var(--color-primary-light);
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  border-radius: 10px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--color-primary);
 }
 
 .agent-cards {
