@@ -2,6 +2,7 @@ import type {
   Agent,
   AgentCreate,
   AgentUpdate,
+  BrowseResult,
   ChatCompletionRequest,
   ChatCompletionResponse,
   DataResponse,
@@ -14,6 +15,7 @@ import type {
   RuleUpdate,
   SessionDetailResponse,
   SessionResponse,
+  Setting,
   ToolInfo,
 } from "@/types";
 import { API_BASE_URL, del, get, post, put } from "./request";
@@ -241,4 +243,26 @@ export async function createChatStream(
   }
 
   return response;
+}
+
+// ============ 系统设置 API ============
+
+export async function getSettings(): Promise<Setting[]> {
+  const res = await get<DataResponse<Setting[]>>("/api/v1/settings");
+  return res.data;
+}
+
+export async function updateSetting(
+  key: string,
+  value: string,
+): Promise<Setting> {
+  const res = await put<DataResponse<Setting>>(`/api/v1/settings/${key}`, { value });
+  return res.data;
+}
+
+export async function browseDirectory(
+  dirPath: string,
+): Promise<BrowseResult> {
+  const res = await get<DataResponse<BrowseResult>>("/api/v1/settings/browse", { path: dirPath });
+  return res.data;
 }

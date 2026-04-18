@@ -223,3 +223,18 @@ export interface AgentTemplate {
   temperature: number;
   icon: string;
 }
+
+// 系统设置相关类型
+export interface Setting {
+  key: string;
+  value: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BrowseResult {
+  currentPath: string;
+  directories: string[];
+  parentPath: string | null;
+}

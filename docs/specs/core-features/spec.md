@@ -190,11 +190,13 @@ Agent 分为三种权限级别：
 ToolRegistryService（注册中心）
   ├── tool.loader.ts         ← 统一加载器，批量注册工具集合
   ├── base/tool.helper.ts    ← safeTool 错误包装，透传 RunnableConfig（含 session_id）
+  ├── base/path-sandbox.ts   ← 路径沙箱，校验工具可访问的目录范围
   ├── collections/           ← 按能力域分组的工具
   │   ├── search.tools.ts         — web_search (Bocha)
   │   ├── communication.tools.ts  — send_mail (SMTP)
   │   ├── system.tools.ts         — time_now, execute_command
-  │   └── file-system.tools.ts    — read_file, write_file, list_directory
+  │   ├── file-system.tools.ts    — read_file, write_file, list_directory
+  │   └── search-files.tool.ts    — search_files（按文件名/内容搜索）
   ├── memory-extract.tool.ts      — 从对话提取记忆
   ├── knowledge-query.tool.ts     — 语义查询记忆
   └── cron-job.tool.ts            — 定时任务管理（add/list/toggle/delete）
@@ -213,10 +215,11 @@ ToolRegistryService（注册中心）
 | `web_search` | search | read | Bocha 联网搜索 | `BOCHA_API_KEY` |
 | `send_mail` | communication | write | SMTP 发送邮件 | `MAIL_HOST/USER/PASS` |
 | `time_now` | system | read | 获取服务器时间 | 无 |
-| `execute_command` | system | write | 执行系统命令 | OS shell（需白名单限制） |
-| `read_file` | file | read | 读取文件（限 50KB） | 无 |
-| `write_file` | file | write | 写入文件 | 无 |
-| `list_directory` | file | read | 列出目录内容 | 无 |
+| `execute_command` | system | write | 执行系统命令（cwd 受路径沙箱限制） | OS shell |
+| `read_file` | file | read | 读取文件（限 50KB，受路径沙箱限制） | 无 |
+| `write_file` | file | write | 写入文件（受路径沙箱限制） | 无 |
+| `list_directory` | file | read | 列出目录内容（受路径沙箱限制） | 无 |
+| `search_files` | file | read | 按文件名 glob / 内容 regex 搜索（受路径沙箱限制） | 无 |
 | `extract_memory` | memory | write | 提取对话记忆 | MemoryService |
 | `knowledge_query` | memory | read | 语义查询记忆 | MemoryService |
 | `cron_job` | orchestration | write | 定时任务管理（创建/查看/启停/删除） | JobService |
@@ -224,11 +227,12 @@ ToolRegistryService（注册中心）
 ### 注册流程
 
 1. `LangGraphModule.onModuleInit()` 触发注册
-2. `registerAllTools()` 批量注册通用工具集合（collections/）
-3. 逐一注册业务工具（memory-extract、knowledge-query、cron-job）
-4. 所有工具注册完成后，调用 `LangGraphService.initGraph()` 构建 Supervisor 图和执行器图
-5. 每个 Agent 通过 `tools` 字段绑定所需的工具名列表
-6. `safeTool()` 透传 `RunnableConfig`，工具可通过 `config.configurable.thread_id` 获取当前会话 ID
+2. 从 `SettingsService` 读取 `sandbox_allowed_dirs` 配置，创建 `PathSandbox` 实例
+3. `registerAllTools()` 批量注册通用工具集合（collections/），传入 sandbox 实例
+4. 逐一注册业务工具（memory-extract、knowledge-query、cron-job）
+5. 所有工具注册完成后，调用 `LangGraphService.initGraph()` 构建 Supervisor 图和执行器图
+6. 每个 Agent 通过 `tools` 字段绑定所需的工具名列表
+7. `safeTool()` 透传 `RunnableConfig`，工具可通过 `config.configurable.thread_id` 获取当前会话 ID
 
 ### API 端点
 
@@ -242,8 +246,32 @@ ToolRegistryService（注册中心）
 2. `safeTool()` handler 签名 `(input, config?)` 可访问 `config.configurable.thread_id`（会话 ID）
 3. 工具通过 `ToolRegistryService` 集中管理，按名查找
 4. 新增工具只需在 `collections/` 中创建文件并在 `tool.loader.ts` 中注册
-5. `execute_command` 和 `write_file` 具有安全风险，生产环境需加白名单限制
-6. Agent 间路由由 Supervisor 原生 `transfer_to_<agent_name>` handoff 工具处理，无需自定义委托工具
+5. `execute_command`、`write_file`、`read_file`、`list_directory`、`search_files` 受路径沙箱限制，仅允许访问配置的白名单目录
+6. 路径沙箱配置通过设置中心 UI 管理（`/settings` → 系统设置），存储在数据库 `settings` 表
+7. 路径沙箱自动屏蔽系统目录（`/etc`、`/usr`、`/System` 等）和敏感文件（`.env`、`*.pem`、`id_rsa` 等）
+8. Agent 间路由由 Supervisor 原生 `transfer_to_<agent_name>` handoff 工具处理，无需自定义委托工具
+
+### 路径沙箱
+
+`PathSandbox`（`base/path-sandbox.ts`）为文件和命令工具提供路径安全边界：
+
+- **黑名单前缀**：`/etc`、`/usr`、`/bin`、`/sbin`、`/boot`、`/proc`、`/sys`、`/dev`、`/System`、`/Library`
+- **黑名单文件名**：`.env`、`id_rsa`、`id_ed25519`、`*.pem`、`*.key`、`credentials`、`secret` 等
+- **白名单**：通过 `settings` 表 `sandbox_allowed_dirs` 配置（逗号分隔目录列表），默认为 `process.cwd()`
+- **校验时机**：每次工具执行时校验（非启动时），`validate()` 返回安全路径或抛错，错误由 `safeTool` 捕获
+- **目录浏览 API**：`GET /api/v1/settings/browse?path=xxx` 返回子目录列表，供前端目录选择器使用
+
+### 系统设置
+
+通过 `settings` 模块（KV 模式）管理运行时配置：
+
+| API | 描述 |
+|-----|------|
+| GET `/api/v1/settings` | 获取所有设置 |
+| PUT `/api/v1/settings/:key` | 更新设置值 |
+| GET `/api/v1/settings/browse?path=` | 浏览目录（返回子目录列表） |
+
+前端入口：`/settings` → 系统设置标签页 → 路径沙箱配置（手动输入 + 目录浏览器）
 
 ---
 

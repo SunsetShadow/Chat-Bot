@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { spawn } from 'node:child_process';
 import { safeTool } from '../base/tool.helper';
+import { PathSandbox } from '../base/path-sandbox';
 
 /**
  * 创建获取当前时间工具 — 零依赖，返回服务器时间
@@ -25,7 +26,7 @@ export function createTimeNowTool() {
 /**
  * 创建执行命令工具 — 在服务器上执行系统命令
  */
-export function createExecuteCommandTool() {
+export function createExecuteCommandTool(sandbox: PathSandbox) {
   return safeTool(
     'execute_command',
     `在服务器上执行系统命令。
@@ -44,7 +45,7 @@ export function createExecuteCommandTool() {
       workingDirectory: z.string().optional().describe('工作目录，默认为当前目录'),
     }),
     async ({ command, workingDirectory }) => {
-      const cwd = workingDirectory || process.cwd();
+      const cwd = sandbox.validate(workingDirectory || process.cwd());
 
       return new Promise<string>((resolve) => {
         const child = spawn(command, [], { cwd, shell: true, timeout: 30000 });

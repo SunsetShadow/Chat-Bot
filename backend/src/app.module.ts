@@ -12,6 +12,7 @@ import { MemoryModule } from './modules/memory/memory.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { ModelModule } from './modules/model/model.module';
 import { CronJobModule } from './modules/cron-job/cron-job.module';
+import { SettingsModule } from './modules/settings/settings.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { CronJobModule } from './modules/cron-job/cron-job.module';
     UploadModule,
     ModelModule,
     CronJobModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [ModelService],

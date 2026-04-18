@@ -53,6 +53,7 @@ Chat-Bot/
 │   │   │   ├── chat/            #   聊天相关组件
 │   │   │   ├── common/          #   通用组件（AppHeader、NotificationBell、NotificationToast、ThemeToggle）
 │   │   │   ├── cron-job/        #   定时任务组件（JobForm、ExecutionHistory）
+│   │   │   └── settings/        #   系统设置组件（SystemSettingsPane、DirectoryBrowser）
 │   │   │   └── rules/           #   规则相关组件
 │   │   ├── composables/         # Vue Composables
 │   │   ├── stores/              # Pinia 状态管理
@@ -76,9 +77,10 @@ Chat-Bot/
 │   │       ├── langgraph/       #   LangGraph 工作流
 │   │       │   ├── graph/       #     graph.builder.ts + supervisor.builder.ts
 │   │       │   └── tools/       #     工具系统
-│   │       │       ├── base/    #       tool.helper.ts（safeTool + RunnableConfig 透传）
-│   │       │       └── collections/ # 按域分组（search/communication/system/file-system）
+│   │       │       ├── base/    #       tool.helper.ts（safeTool）+ path-sandbox.ts（路径沙箱）
+│   │       │       └── collections/ # 按域分组（search/communication/system/file-system/search-files）
 │   │       ├── memory/          #   记忆模块（PG + Milvus + Embedding）
+│   │       ├── settings/        #   系统设置模块（KV 配置 + 路径沙箱管理）
 │   │       ├── model/           #   模型管理
 │   │       ├── rule/            #   规则 CRUD
 │   │       └── upload/          #   文件上传
@@ -148,6 +150,8 @@ Naive UI 组件库：[Naive UI](https://naiveui.com/zh-CN/os-theme/components/)
 | `api/chat.ts` | REST API 调用（会话 CRUD、消息历史） |
 | `components/chat/ToolCallBlock.vue` | 工具调用实时显示组件 |
 | `api/cron-job.ts` | 定时任务 API 调用层 |
+| `components/settings/SystemSettingsPane.vue` | 系统设置面板（路径沙箱配置） |
+| `components/settings/DirectoryBrowser.vue` | 目录浏览器（NDrawer 懒加载） |
 | `stores/cron-job.ts` | 定时任务 Pinia store |
 | `assets/main.css` | CSS 变量和全局样式 |
 | `types/index.ts` | TypeScript 接口定义 |
@@ -165,11 +169,14 @@ Naive UI 组件库：[Naive UI](https://naiveui.com/zh-CN/os-theme/components/)
 | `modules/langgraph/tools/tool-registry.service.ts` | 工具注册中心（权限 + 分类） |
 | `modules/langgraph/tools/tool.loader.ts` | 工具统一加载器 |
 | `modules/langgraph/tools/base/tool.helper.ts` | safeTool 错误包装 |
+| `modules/langgraph/tools/base/path-sandbox.ts` | 路径沙箱（黑名单 + 白名单校验） |
+| `modules/langgraph/tools/collections/search-files.tool.ts` | 文件搜索工具（文件名 glob + 内容 regex） |
 | `modules/langgraph/tools/cron-job.tool.ts` | 定时任务工具（add/list/toggle） |
 | `modules/cron-job/job.service.ts` | 定时任务调度引擎（CRUD + 运行时 + 重试） |
 | `modules/cron-job/job-execution.service.ts` | 任务执行记录（CRUD + 查询） |
 | `modules/cron-job/cron-job.controller.ts` | 定时任务 API 路由 |
 | `modules/agent/` | Agent 模块（controller/service/dto + 内置同步 + is_system 权限分级） |
+| `modules/settings/` | 系统设置模块（KV 配置 + 目录浏览 API） |
 | `modules/model/model.service.ts` | 模型列表管理（含 available 可用性标记） |
 | `modules/memory/memory.service.ts` | 记忆管理（PG + Milvus 双写） |
 | `modules/memory/milvus.service.ts` | Milvus 向量数据库客户端 |

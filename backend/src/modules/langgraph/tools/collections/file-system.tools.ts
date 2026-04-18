@@ -3,10 +3,11 @@ import { stat, readFile, mkdir, writeFile, readdir } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import path from 'node:path';
 import { safeTool } from '../base/tool.helper';
+import { PathSandbox } from '../base/path-sandbox';
 
 const MAX_FILE_SIZE = 50000;
 
-export function createReadFileTool() {
+export function createReadFileTool(sandbox: PathSandbox) {
   return safeTool(
     'read_file',
     `读取指定路径的文件内容。
@@ -23,12 +24,13 @@ export function createReadFileTool() {
       filePath: z.string().describe('文件路径，可以是相对路径或绝对路径'),
     }),
     async ({ filePath }) => {
-      const fileStat = await stat(filePath);
+      const safePath = sandbox.validate(filePath);
+      const fileStat = await stat(safePath);
       if (fileStat.size > MAX_FILE_SIZE) {
-        const content = await readFirstChars(filePath, MAX_FILE_SIZE);
+        const content = await readFirstChars(safePath, MAX_FILE_SIZE);
         return `文件过大（${fileStat.size} 字节），仅显示前 ${MAX_FILE_SIZE} 字符:\n\n${content}\n\n... (已截断)`;
       }
-      return await readFile(filePath, 'utf-8');
+      return await readFile(safePath, 'utf-8');
     },
   );
 }
@@ -49,7 +51,7 @@ function readFirstChars(filePath: string, maxChars: number): Promise<string> {
   });
 }
 
-export function createWriteFileTool() {
+export function createWriteFileTool(sandbox: PathSandbox) {
   return safeTool(
     'write_file',
     `将内容写入指定路径的文件。
@@ -68,14 +70,15 @@ export function createWriteFileTool() {
       content: z.string().describe('要写入的内容'),
     }),
     async ({ filePath, content }) => {
-      await mkdir(path.dirname(filePath), { recursive: true });
-      await writeFile(filePath, content, 'utf-8');
-      return `文件已写入: ${filePath}（${content.length} 字符）`;
+      const safePath = sandbox.validate(filePath);
+      await mkdir(path.dirname(safePath), { recursive: true });
+      await writeFile(safePath, content, 'utf-8');
+      return `文件已写入: ${safePath}（${content.length} 字符）`;
     },
   );
 }
 
-export function createListDirectoryTool() {
+export function createListDirectoryTool(sandbox: PathSandbox) {
   return safeTool(
     'list_directory',
     `列出指定目录下的文件和子目录。
@@ -91,7 +94,7 @@ export function createListDirectoryTool() {
       dirPath: z.string().describe('目录路径，默认当前目录'),
     }),
     async ({ dirPath }) => {
-      const targetPath = dirPath || process.cwd();
+      const targetPath = sandbox.validate(dirPath || process.cwd());
       const entries = await readdir(targetPath, { withFileTypes: true });
 
       if (entries.length === 0) return `目录 ${targetPath} 为空。`;

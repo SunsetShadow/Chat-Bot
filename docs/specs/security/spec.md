@@ -24,6 +24,16 @@
 
 - 全局异常过滤器，错误信息不暴露内部实现细节
 
+### 路径沙箱
+
+通过 `PathSandbox`（`base/path-sandbox.ts`）限制工具可访问的目录范围：
+
+- 文件工具（`read_file`、`write_file`、`list_directory`、`search_files`）和命令工具（`execute_command`）的路径参数均受沙箱校验
+- 黑名单前缀：`/etc`、`/usr`、`/bin`、`/sbin`、`/boot`、`/proc`、`/sys`、`/dev`、`/System`、`/Library`
+- 黑名单文件名：`.env`、`id_rsa`、`id_ed25519`、`*.pem`、`*.key`、`credentials`、`secret` 等
+- 白名单通过设置中心 UI 配置，存储在数据库 `settings` 表 `sandbox_allowed_dirs` 键
+- 每次工具执行时校验（非启动时缓存），校验失败抛出友好错误信息
+
 ## 已定义但未应用
 
 以下中间件已编写但未注册到路由：
@@ -72,3 +82,4 @@
 3. 敏感信息不得存储到记忆系统（待实现）
 4. API 必须配置速率限制（中间件已定义，待注册）
 5. Prompt 注入检测必须启用（待实现）
+6. 文件和命令工具必须通过路径沙箱校验（已实现）

@@ -5,10 +5,13 @@ import { LangGraphService } from './langgraph.service';
 import { MemoryModule } from '../memory/memory.module';
 import { AgentModule } from '../agent/agent.module';
 import { CronJobModule } from '../cron-job/cron-job.module';
+import { SettingsModule } from '../settings/settings.module';
+import { SettingsService } from '../settings/settings.service';
 import { AgentService } from '../agent/agent.service';
 import { AppConfigService } from '../../config/config.service';
 import { ToolRegistryService } from './tools/tool-registry.service';
 import { ToolController } from './tools/tool.controller';
+import { PathSandbox } from './tools/base/path-sandbox';
 import { registerAllTools } from './tools/tool.loader';
 import { createMemoryExtractTool } from './tools/memory-extract.tool';
 import { createKnowledgeQueryTool } from './tools/knowledge-query.tool';
@@ -17,7 +20,7 @@ import { MemoryService } from '../memory/memory.service';
 import { JobService } from '../cron-job/job.service';
 
 @Module({
-  imports: [ConfigModule, MemoryModule, AgentModule, forwardRef(() => CronJobModule)],
+  imports: [ConfigModule, MemoryModule, AgentModule, forwardRef(() => CronJobModule), SettingsModule],
   controllers: [ToolController],
   providers: [LangGraphService, AppConfigService, ToolRegistryService],
   exports: [LangGraphService],
@@ -30,11 +33,15 @@ export class LangGraphModule implements OnModuleInit {
     private langGraphService: LangGraphService,
     private agentService: AgentService,
     private configService: AppConfigService,
+    private settingsService: SettingsService,
   ) {}
 
   async onModuleInit() {
+    const allowedDirs = await this.settingsService.getAllowedDirs();
+    const sandbox = new PathSandbox(allowedDirs);
+
     // 注册通用工具集合（搜索、邮件、系统、文件系统）
-    registerAllTools(this.toolRegistry, this.configService);
+    registerAllTools(this.toolRegistry, this.configService, sandbox);
 
     // 注册业务工具（记忆、知识、Agent 委托）
     this.toolRegistry.register(createMemoryExtractTool(this.memoryService), {

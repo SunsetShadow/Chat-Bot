@@ -18,7 +18,9 @@ import {
   AddOutline,
   OptionsOutline,
   BookmarkOutline,
+  ConstructOutline,
 } from "@vicons/ionicons5";
+import SystemSettingsPane from "@/components/settings/SystemSettingsPane.vue";
 
 const router = useRouter();
 const memoryStore = useMemoryStore();
@@ -373,6 +375,13 @@ async function handleToggleRule(id: string) {
                   </NRadioGroup>
                 </div>
               </div>
+            </div>
+          </NTabPane>
+
+          <!-- 系统设置 -->
+          <NTabPane name="system" tab="系统设置">
+            <div class="tab-content">
+              <SystemSettingsPane />
             </div>
           </NTabPane>
         </NTabs>
