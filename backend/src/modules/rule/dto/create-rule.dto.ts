@@ -1,7 +1,7 @@
 import { IsString, IsOptional, IsNotEmpty, IsEnum } from 'class-validator';
-import { RuleCategory, ConflictStrategy } from '../../../common/entities/rule.entity';
+import { RuleCategory, RuleScope } from '../../../common/entities/rule.entity';
 
-export { RuleCategory, ConflictStrategy };
+export { RuleCategory, RuleScope };
 
 export class CreateRuleDto {
   @IsString()
@@ -15,4 +15,8 @@ export class CreateRuleDto {
   @IsEnum(RuleCategory)
   @IsOptional()
   category?: RuleCategory;
+
+  @IsEnum(RuleScope)
+  @IsOptional()
+  scope?: RuleScope;
 }

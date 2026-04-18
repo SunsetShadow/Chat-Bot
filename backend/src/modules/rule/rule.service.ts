@@ -1,7 +1,8 @@
 import { Injectable, OnModuleInit, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { RuleEntity, RuleCategory, ConflictStrategy } from '../../common/entities/rule.entity';
+import { randomUUID } from 'crypto';
+import { RuleEntity, RuleCategory, ConflictStrategy, RuleScope } from '../../common/entities/rule.entity';
 import { CreateRuleDto } from './dto/create-rule.dto';
 import { UpdateRuleDto } from './dto/update-rule.dto';
 
@@ -15,6 +16,7 @@ const BUILTIN_RULES: Partial<RuleEntity>[] = [
     priority: 5,
     conflict_strategy: ConflictStrategy.MERGE,
     is_builtin: true,
+    scope: RuleScope.GENERAL,
   },
   {
     id: 'builtin-detailed',
@@ -25,6 +27,7 @@ const BUILTIN_RULES: Partial<RuleEntity>[] = [
     priority: 5,
     conflict_strategy: ConflictStrategy.MERGE,
     is_builtin: true,
+    scope: RuleScope.GENERAL,
   },
   {
     id: 'builtin-polite',
@@ -35,6 +38,7 @@ const BUILTIN_RULES: Partial<RuleEntity>[] = [
     priority: 6,
     conflict_strategy: ConflictStrategy.MERGE,
     is_builtin: true,
+    scope: RuleScope.GENERAL,
   },
   {
     id: 'builtin-no-emoji',
@@ -45,6 +49,7 @@ const BUILTIN_RULES: Partial<RuleEntity>[] = [
     priority: 7,
     conflict_strategy: ConflictStrategy.OVERRIDE,
     is_builtin: true,
+    scope: RuleScope.GENERAL,
   },
   {
     id: 'builtin-code-highlight',
@@ -55,6 +60,7 @@ const BUILTIN_RULES: Partial<RuleEntity>[] = [
     priority: 5,
     conflict_strategy: ConflictStrategy.MERGE,
     is_builtin: true,
+    scope: RuleScope.GLOBAL,
   },
 ];
 
@@ -70,6 +76,12 @@ export class RuleService implements OnModuleInit {
       const exists = await this.ruleRepo.existsBy({ id: rule.id });
       if (!exists) {
         await this.ruleRepo.save(this.ruleRepo.create(rule));
+      } else {
+        const existing = await this.ruleRepo.findOneBy({ id: rule.id });
+        if (existing && rule.scope && existing.scope !== rule.scope) {
+          existing.scope = rule.scope;
+          await this.ruleRepo.save(existing);
+        }
       }
     }
   }
@@ -91,6 +103,7 @@ export class RuleService implements OnModuleInit {
 
   async create(dto: CreateRuleDto): Promise<RuleEntity> {
     const rule = this.ruleRepo.create({
+      id: randomUUID(),
       name: dto.name,
       content: dto.content,
       enabled: true,
@@ -98,6 +111,7 @@ export class RuleService implements OnModuleInit {
       priority: 5,
       conflict_strategy: ConflictStrategy.MERGE,
       is_builtin: false,
+      scope: dto.scope || RuleScope.GENERAL,
     });
     return this.ruleRepo.save(rule);
   }
@@ -119,5 +133,18 @@ export class RuleService implements OnModuleInit {
   async getEnabledRules(): Promise<RuleEntity[]> {
     const rules = await this.findAll(true);
     return rules.sort((a, b) => b.priority - a.priority);
+  }
+
+  async getGlobalRules(): Promise<RuleEntity[]> {
+    return this.ruleRepo.find({
+      where: { enabled: true, scope: RuleScope.GLOBAL },
+    });
+  }
+
+  async getRulesByIds(ids: string[]): Promise<RuleEntity[]> {
+    if (!ids || ids.length === 0) return [];
+    return this.ruleRepo.find({
+      where: ids.map((id) => ({ id })),
+    });
   }
 }

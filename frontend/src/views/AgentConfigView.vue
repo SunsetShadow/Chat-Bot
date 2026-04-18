@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAgentStore } from "@/stores/agent";
 import { getTools } from "@/api/chat";
@@ -21,10 +21,6 @@ import {
   CopyOutline,
   FlashOutline,
 } from "@vicons/ionicons5";
-
-const props = withDefaults(defineProps<{ embedded?: boolean }>(), {
-  embedded: false,
-});
 
 const router = useRouter();
 const agentStore = useAgentStore();
@@ -78,8 +74,20 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
   {
     name: "客服助手",
     description: "专业的客户服务，处理用户咨询和问题",
-    system_prompt:
-      "你是一个专业的客户服务代表。请耐心倾听用户问题，提供准确、友好的解答。遇到无法解决的问题，请建议用户联系人工客服。",
+    system_prompt: `# 角色
+你是一个专业的客户服务代表。
+
+# 核心原则
+- 耐心倾听用户问题，提供准确、友好的解答
+- 优先解决用户问题，不推诿
+
+# 输出规范
+- 语气亲切专业，避免机械套话
+- 无法解决时主动引导到人工客服，给出联系方式
+
+# 工具使用
+- extract_memory：记住用户的历史问题和偏好，提供个性化服务
+- knowledge_query：查询常见问题库和产品知识`,
     traits: ["耐心", "专业", "友好"],
     tools: ["extract_memory", "knowledge_query"],
     capabilities: "处理用户咨询、问题排查、服务引导",
@@ -89,8 +97,21 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
   {
     name: "数据分析师",
     description: "数据分析专家，擅长数据解读和可视化建议",
-    system_prompt:
-      "你是一个数据分析师。请用数据驱动的方式回答问题，提供清晰的图表建议和洞察分析。注重数据的准确性和可操作性。",
+    system_prompt: `# 角色
+你是一个数据分析师。
+
+# 核心原则
+- 用数据驱动的方式回答问题，结论有据可查
+- 注重数据的准确性和可操作性
+
+# 输出规范
+- 提供清晰的图表建议（图表类型、维度、交互方式）
+- 洞察分析分点呈现，先结论后论据
+
+# 工具使用
+- extract_memory：记住用户的数据源、业务指标和分析偏好
+- web_search：获取行业基准数据和最新统计信息
+- knowledge_query：查询历史分析报告`,
     traits: ["严谨", "数据驱动", "洞察力"],
     tools: ["extract_memory", "web_search", "knowledge_query"],
     capabilities: "数据分析、趋势解读、可视化建议、统计推断",
@@ -100,8 +121,20 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
   {
     name: "翻译专家",
     description: "多语言翻译，支持中英日韩等语言",
-    system_prompt:
-      "你是一个专业的翻译专家。请提供准确、自然的翻译，保持原文的语气和风格。如有多种译法，请说明差异。",
+    system_prompt: `# 角色
+你是一个专业的翻译专家，精通中英日韩等多种语言。
+
+# 核心原则
+- 翻译准确、自然，保持原文语气和风格
+- 尊重文化差异，必要时加注释说明
+
+# 输出规范
+- 如有多种译法，说明各自适用场景
+- 专业术语首次出现时标注原文
+- 长文本分段落翻译，保持格式
+
+# 工具使用
+- extract_memory：记住用户偏好的术语翻译和行业词汇表`,
     traits: ["准确", "自然", "多语言"],
     tools: ["extract_memory"],
     capabilities: "多语言翻译、本地化、术语管理",
@@ -111,8 +144,20 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
   {
     name: "创意策划",
     description: "创意策划与头脑风暴，激发灵感",
-    system_prompt:
-      "你是一个创意策划师。请用发散思维帮助用户头脑风暴，提供新颖独特的创意方案。不设限，鼓励大胆想象。",
+    system_prompt: `# 角色
+你是一个创意策划师，擅长头脑风暴和创新方案设计。
+
+# 核心原则
+- 用发散思维探索多种可能性，不设限
+- 先发散后收敛，最终给出可执行的方案
+
+# 输出规范
+- 方案结构化呈现：核心创意 + 执行路径 + 预期效果
+- 创意点用编号列出，方便讨论和取舍
+
+# 工具使用
+- web_search：调研竞品案例、行业趋势、热门话题
+- extract_memory：记住用户品牌调性、过往偏好和已否决的方案`,
     traits: ["创意", "发散思维", "有趣"],
     tools: ["extract_memory", "web_search"],
     capabilities: "创意策划、头脑风暴、方案设计、灵感激发",
@@ -130,6 +175,15 @@ function applyTemplate(template: AgentTemplate) {
   showTemplateModal.value = false;
   showModal.value = true;
 }
+
+const toolHintsPreview = computed(() => getToolHints(formValue.value.tools || []));
+
+const toolHintsLines = computed(() =>
+  toolHintsPreview.value
+    .trim()
+    .split("\n")
+    .filter((l) => l.trim()),
+);
 
 function duplicateAgent(agent: Agent) {
   formValue.value = agentToFormValues(agent, { name: `${agent.name} (副本)` });
@@ -161,29 +215,12 @@ const toolOptions = computed(() =>
   })),
 );
 
-const TOOL_PROMPT_MARKER = "\n\n【可用工具】\n";
-
-function getToolPromptSection(tools: string[]): string {
+function getToolHints(tools: string[]): string {
   const selected = availableTools.value.filter((t) => tools.includes(t.name));
   if (selected.length === 0) return "";
   const lines = selected.map((t, i) => `${i + 1}. ${t.name}: ${t.description}`);
-  return TOOL_PROMPT_MARKER + lines.join("\n");
+  return "\n\n可用工具：\n" + lines.join("\n");
 }
-
-watch(
-  () => formValue.value.tools,
-  (newTools) => {
-    const prompt = formValue.value.system_prompt;
-    const markerIdx = prompt.lastIndexOf(TOOL_PROMPT_MARKER);
-    if (markerIdx !== -1) {
-      formValue.value.system_prompt = prompt.slice(0, markerIdx);
-    }
-    const section = getToolPromptSection(newTools);
-    if (section) {
-      formValue.value.system_prompt = formValue.value.system_prompt.trimEnd() + section;
-    }
-  },
-);
 
 onMounted(async () => {
   try {
@@ -235,14 +272,15 @@ async function handleSubmit() {
   }
   saving.value = true;
   try {
+    const payload = { ...formValue.value };
     if (editingAgentId.value) {
       await agentStore.updateAgent(
         editingAgentId.value,
-        formValue.value as AgentUpdate,
+        payload as AgentUpdate,
       );
       message.success("Agent 更新成功");
     } else {
-      await agentStore.createAgent(formValue.value);
+      await agentStore.createAgent(payload);
       message.success("Agent 创建成功");
     }
     showModal.value = false;
@@ -285,19 +323,6 @@ function truncatePrompt(prompt: string, max = 120): string {
   <div class="agent-config-view" :class="{ embedded }">
     <!-- Page Header (standalone only) -->
     <header v-if="!embedded" class="page-header glass-card">
-      <button class="text-back-btn" @click="goBack">
-        <NIcon :component="ChevronBackOutline" :size="18" />
-        <span>返回</span>
-      </button>
-      <div class="page-title-group">
-        <div class="title-icon-wrap">
-          <NIcon :component="SparklesOutline" :size="22" />
-        </div>
-        <div>
-          <span class="title-mono">AGENT CONFIG</span>
-          <h1 class="page-title">Agent 配置中心</h1>
-        </div>
-      </div>
     </header>
 
     <!-- Tabs -->
@@ -527,7 +552,7 @@ function truncatePrompt(prompt: string, max = 120): string {
             v-model:value="formValue.system_prompt"
             type="textarea"
             :rows="5"
-            placeholder="定义 Agent 的角色、能力和行为规则"
+            placeholder="# 角色&#10;描述这个 Agent 的身份和能力&#10;&#10;# 核心原则&#10;关键行为准则&#10;&#10;# 输出规范&#10;格式、语言风格、长度要求"
           />
         </NFormItem>
         <NFormItem label="能力描述">
@@ -570,6 +595,16 @@ function truncatePrompt(prompt: string, max = 120): string {
           <NSwitch v-model:value="formValue.enabled" />
         </NFormItem>
       </NForm>
+      <!-- 工具提示预览：默认折叠，用户无需关注 -->
+      <div v-if="toolHintsPreview" class="tool-hints-bar">
+        <NCollapse :default-expanded="false" :arrow-placement="'right'">
+          <NCollapseItem title="工具提示" name="tool-hints">
+            <div class="tool-hints-tags">
+              <span v-for="line in toolHintsLines" :key="line" class="tool-hints-tag">{{ line }}</span>
+            </div>
+          </NCollapseItem>
+        </NCollapse>
+      </div>
       <template #footer>
         <div class="flex justify-end gap-3">
           <button class="modal-btn cancel" @click="showModal = false">
@@ -1189,5 +1224,30 @@ function truncatePrompt(prompt: string, max = 120): string {
   color: #0891b2;
   border-color: rgba(6, 182, 212, 0.25);
   background: rgba(6, 182, 212, 0.06);
+}
+
+.tool-hints-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--border-color);
+  margin-top: 4px;
+}
+
+.tool-hints-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tool-hints-tag {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  background: var(--bg-tertiary);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
 }
 </style>

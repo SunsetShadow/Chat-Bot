@@ -60,13 +60,6 @@ watch(
           <ThemeToggle />
           <button
             class="flex items-center justify-center w-9 h-9 bg-transparent border border-[var(--border-color)] rounded-[var(--radius-sm)] text-[var(--text-muted)] cursor-pointer transition-all duration-150 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
-            title="Agent 配置"
-            @click="router.push('/agentconfig')"
-          >
-            <NIcon :component="SparklesOutline" :size="18" />
-          </button>
-          <button
-            class="flex items-center justify-center w-9 h-9 bg-transparent border border-[var(--border-color)] rounded-[var(--radius-sm)] text-[var(--text-muted)] cursor-pointer transition-all duration-150 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
             title="设置"
             @click="router.push('/settings')"
           >

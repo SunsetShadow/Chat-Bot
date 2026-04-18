@@ -3,6 +3,7 @@ import type { Rule } from "@/types";
 
 defineProps<{
   rule: Rule;
+  readonly?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -20,6 +21,12 @@ const emit = defineEmits<{
         <span class="text-sm font-medium text-[var(--text-primary)]">{{
           rule.name
         }}</span>
+        <span
+          v-if="rule.scope === 'global'"
+          class="px-1.5 py-0.5 bg-[rgba(16,185,129,0.1)] border border-[rgba(16,185,129,0.3)] rounded font-mono text-[9px] text-emerald-500 tracking-wide uppercase"
+        >
+          全局
+        </span>
         <span
           v-if="rule.is_builtin"
           class="px-1.5 py-0.5 bg-[rgba(139,92,246,0.1)] border border-[rgba(139,92,246,0.3)] rounded font-mono text-[9px] text-purple-500 tracking-wide uppercase"
@@ -42,10 +49,14 @@ const emit = defineEmits<{
     </div>
     <div class="ml-3">
       <NSwitch
+        v-if="!readonly"
         :value="rule.enabled"
         size="small"
         @update:value="emit('toggle', rule.id)"
       />
+      <div v-else class="w-8 h-5 flex items-center justify-center">
+        <span class="text-[10px] text-[var(--text-muted)] font-mono">ON</span>
+      </div>
     </div>
   </div>
 </template>

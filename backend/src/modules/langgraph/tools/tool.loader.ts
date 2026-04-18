@@ -21,7 +21,7 @@ export function loadToolCollections(config: AppConfigService, sandbox: PathSandb
   return [
     {
       tool: createWebSearchTool({ bochaApiKey: config.bochaApiKey, bochaApiUrl: config.bochaApiUrl }),
-      meta: { permission_level: 'read', category: 'search' },
+      meta: { permission_level: 'read', category: 'search', description: '搜索互联网获取最新信息' },
     },
     {
       tool: createSendMailTool({
@@ -32,31 +32,31 @@ export function loadToolCollections(config: AppConfigService, sandbox: PathSandb
         mailPass: config.mailPass,
         mailFrom: config.mailFrom,
       }),
-      meta: { permission_level: 'write', category: 'communication' },
+      meta: { permission_level: 'write', category: 'communication', description: '发送邮件' },
     },
     {
       tool: createTimeNowTool(),
-      meta: { permission_level: 'read', category: 'system' },
+      meta: { permission_level: 'read', category: 'system', description: '获取当前日期和时间' },
     },
     {
       tool: createExecuteCommandTool(sandbox),
-      meta: { permission_level: 'write', category: 'system' },
+      meta: { permission_level: 'write', category: 'system', description: '执行终端命令' },
     },
     {
       tool: createReadFileTool(sandbox),
-      meta: { permission_level: 'read', category: 'file' },
+      meta: { permission_level: 'read', category: 'file', description: '读取文件内容' },
     },
     {
       tool: createWriteFileTool(sandbox),
-      meta: { permission_level: 'write', category: 'file' },
+      meta: { permission_level: 'write', category: 'file', description: '写入文件内容' },
     },
     {
       tool: createListDirectoryTool(sandbox),
-      meta: { permission_level: 'read', category: 'file' },
+      meta: { permission_level: 'read', category: 'file', description: '列出目录内容' },
     },
     {
       tool: createSearchFilesTool(sandbox),
-      meta: { permission_level: 'read', category: 'file' },
+      meta: { permission_level: 'read', category: 'file', description: '按文件名或内容搜索文件' },
     },
   ];
 }

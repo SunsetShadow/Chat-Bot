@@ -9,29 +9,38 @@ import {
 } from "@/api/chat";
 
 export const useRulesStore = defineStore("rules", () => {
-  // 状态
   const rules = ref<Rule[]>([]);
   const enabledRuleIds = ref<Set<string>>(new Set());
   const isLoading = ref(false);
   const error = ref<string | null>(null);
 
-  // 计算属性
   const enabledRules = computed(() =>
     rules.value.filter((r) => enabledRuleIds.value.has(r.id)),
+  );
+  const globalRules = computed(() =>
+    rules.value.filter((r) => r.scope === "global"),
+  );
+  const generalRules = computed(() =>
+    rules.value.filter((r) => r.scope === "general"),
   );
   const builtinRules = computed(() => rules.value.filter((r) => r.is_builtin));
   const customRules = computed(() => rules.value.filter((r) => !r.is_builtin));
 
-  // 方法
   async function fetchRules() {
     isLoading.value = true;
     error.value = null;
     try {
       rules.value = await apiGetRules();
-      // 初始化启用的规则（从规则自身的 enabled 状态）
-      enabledRuleIds.value = new Set(
-        rules.value.filter((r) => r.enabled).map((r) => r.id),
-      );
+      const enabled = new Set<string>();
+      // global 规则强制启用
+      for (const r of rules.value) {
+        if (r.scope === "global" && r.enabled) enabled.add(r.id);
+      }
+      // general 规则按自身 enabled 状态
+      for (const r of rules.value) {
+        if (r.scope === "general" && r.enabled) enabled.add(r.id);
+      }
+      enabledRuleIds.value = enabled;
     } catch (e) {
       error.value = e instanceof Error ? e.message : "获取规则列表失败";
       throw e;
@@ -46,6 +55,9 @@ export const useRulesStore = defineStore("rules", () => {
     try {
       const rule = await apiCreateRule(data);
       rules.value.push(rule);
+      if (rule.scope === "global") {
+        enabledRuleIds.value.add(rule.id);
+      }
       return rule;
     } catch (e) {
       error.value = e instanceof Error ? e.message : "创建规则失败";
@@ -90,7 +102,7 @@ export const useRulesStore = defineStore("rules", () => {
 
   async function toggleRule(id: string) {
     const rule = rules.value.find((r) => r.id === id);
-    if (!rule) return;
+    if (!rule || rule.scope === "global") return;
 
     const newEnabled = !enabledRuleIds.value.has(id);
     await updateRule(id, { enabled: newEnabled });
@@ -102,14 +114,27 @@ export const useRulesStore = defineStore("rules", () => {
     }
   }
 
-  function enableRule(id: string) {
-    if (rules.value.find((r) => r.id === id)) {
-      enabledRuleIds.value.add(id);
+  /** 切换 Agent 时调用：设置 general 规则的启用状态 */
+  function setAgentRules(ruleIds: string[] = []) {
+    const newEnabled = new Set<string>();
+    // global 规则始终启用
+    for (const r of rules.value) {
+      if (r.scope === "global" && r.enabled) newEnabled.add(r.id);
     }
+    // 设置该 Agent 启用的 general 规则
+    for (const id of ruleIds) {
+      if (rules.value.some((r) => r.id === id && r.scope === "general")) {
+        newEnabled.add(id);
+      }
+    }
+    enabledRuleIds.value = newEnabled;
   }
 
-  function disableRule(id: string) {
-    enabledRuleIds.value.delete(id);
+  /** 获取当前 Agent 启用的 general 规则 ID 列表（用于保存到 Agent） */
+  function getCurrentGeneralRuleIds(): string[] {
+    return generalRules.value
+      .filter((r) => enabledRuleIds.value.has(r.id))
+      .map((r) => r.id);
   }
 
   function clearError() {
@@ -117,23 +142,22 @@ export const useRulesStore = defineStore("rules", () => {
   }
 
   return {
-    // 状态
     rules,
     enabledRuleIds,
     isLoading,
     error,
-    // 计算属性
     enabledRules,
+    globalRules,
+    generalRules,
     builtinRules,
     customRules,
-    // 方法
     fetchRules,
     createRule,
     updateRule,
     deleteRule,
     toggleRule,
-    enableRule,
-    disableRule,
+    setAgentRules,
+    getCurrentGeneralRuleIds,
     clearError,
   };
 });

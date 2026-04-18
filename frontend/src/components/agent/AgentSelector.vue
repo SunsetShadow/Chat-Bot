@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { onMounted, computed } from "vue";
+import { onMounted, computed, watch } from "vue";
 import { useAgentStore } from "@/stores/agent";
+import { useRulesStore } from "@/stores/rules";
 import {
   InformationCircleOutline,
   ChevronDownOutline,
 } from "@vicons/ionicons5";
 
 const agentStore = useAgentStore();
+const rulesStore = useRulesStore();
 
 onMounted(() => {
   agentStore.fetchAgents();
@@ -14,16 +16,32 @@ onMounted(() => {
 
 const agentOptions = computed(() =>
   agentStore.agents
-    .filter((agent) => agent.id !== 'builtin-job-executor')
+    .filter((agent) => agent.id !== "builtin-job-executor")
     .map((agent) => ({
       label: agent.name,
       value: agent.id,
     })),
 );
 
-function handleChange(agentId: string) {
+async function handleChange(agentId: string) {
+  // 先保存当前规则到当前 Agent
+  await agentStore.saveCurrentRulesToAgent();
+  // 再切换
   agentStore.setCurrentAgent(agentId);
 }
+
+// 规则变化时 debounce 保存到当前 Agent
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+watch(
+  () => rulesStore.enabledRuleIds,
+  () => {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      agentStore.saveCurrentRulesToAgent();
+    }, 1000);
+  },
+  { deep: true },
+);
 </script>
 
 <template>

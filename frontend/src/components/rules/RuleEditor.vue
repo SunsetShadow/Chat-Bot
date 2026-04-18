@@ -25,7 +25,9 @@ const categoryOptions = [
   { label: "约束", value: "constraint" },
 ];
 
-const enabledCount = computed(() => rulesStore.enabledRules.length);
+const enabledCount = computed(() =>
+  rulesStore.generalRules.filter((r) => rulesStore.enabledRuleIds.has(r.id)).length,
+);
 
 onMounted(() => {
   rulesStore.fetchRules();
@@ -100,14 +102,34 @@ async function handleSubmit() {
 
         <NSpin :show="rulesStore.isLoading">
           <div class="flex flex-col gap-2 max-h-[320px] overflow-y-auto">
+            <!-- 全局规则（只读） -->
+            <template v-if="rulesStore.globalRules.length > 0">
+              <div class="text-[10px] font-mono tracking-wider uppercase text-[var(--text-muted)] px-1 pb-1">
+                全局生效
+              </div>
+              <div
+                v-for="rule in rulesStore.globalRules"
+                :key="rule.id"
+                class="opacity-70"
+              >
+                <RuleItem :rule="rule" :readonly="true" @toggle="() => {}" />
+              </div>
+              <div class="h-1" />
+            </template>
+
+            <!-- 通用规则（可切换） -->
+            <div v-if="rulesStore.generalRules.length > 0" class="text-[10px] font-mono tracking-wider uppercase text-[var(--text-muted)] px-1 pb-1">
+              通用规则
+            </div>
             <div
-              v-for="(rule, index) in rulesStore.rules"
+              v-for="(rule, index) in rulesStore.generalRules"
               :key="rule.id"
               class="opacity-0 animate-[fadeInUp_0.3s_ease-out_forwards]"
               :style="{ animationDelay: `${index * 0.05}s` }"
             >
               <RuleItem :rule="rule" @toggle="handleToggle" />
             </div>
+
             <div v-if="rulesStore.rules.length === 0" class="py-8 text-center">
               <span class="text-sm text-[var(--text-muted)]">暂无规则</span>
             </div>

@@ -83,7 +83,7 @@ export class LangGraphService implements OnModuleInit {
       .map((a) => ({
         id: a.id,
         name: a.name,
-        system_prompt: a.system_prompt,
+        system_prompt: this.buildPromptWithToolHints(a.system_prompt, a.tools),
         capabilities: a.capabilities || a.description,
         tools: a.tools || [],
         model_name: a.model_name || undefined,
@@ -115,7 +115,7 @@ export class LangGraphService implements OnModuleInit {
     const agent = createReactAgent({
       llm: this.model as any,
       tools: agentTools as any,
-      prompt: executorDef.system_prompt,
+      prompt: this.buildPromptWithToolHints(executorDef.system_prompt, executorDef.tools),
       name: executorDef.id,
     });
 
@@ -170,6 +170,34 @@ export class LangGraphService implements OnModuleInit {
     });
 
     return agent as any;
+  }
+
+  /** 前端旧版本会在 system_prompt 末尾拼接工具提示词（【可用工具】marker），这里自动剥离 */
+  private static readonly TOOL_PROMPT_MARKER = '\n\n【可用工具】\n';
+
+  private stripLegacyToolHints(prompt: string): string {
+    const idx = prompt.lastIndexOf(LangGraphService.TOOL_PROMPT_MARKER);
+    return idx !== -1 ? prompt.slice(0, idx) : prompt;
+  }
+
+  /**
+   * 根据 tools 列表动态生成工具提示词，追加到 system_prompt 末尾。
+   * 同时清理可能存在的旧版前端拼接的工具提示词。
+   */
+  private buildPromptWithToolHints(systemPrompt: string, tools?: string[]): string {
+    const prompt = this.stripLegacyToolHints(systemPrompt || '');
+    if (!tools || tools.length === 0) return prompt;
+
+    const hints = tools
+      .map((name) => {
+        const meta = this.toolRegistry.getMetadata(name);
+        return meta ? `${name}: ${meta.description}` : null;
+      })
+      .filter(Boolean);
+
+    if (hints.length === 0) return prompt;
+
+    return prompt + '\n\n可用工具：\n' + hints.map((h, i) => `${i + 1}. ${h}`).join('\n');
   }
 
   /**
@@ -247,7 +275,7 @@ export class LangGraphService implements OnModuleInit {
     const graph = createReactAgent({
       llm: agentModel,
       tools: agentTools,
-      prompt: agent.system_prompt,
+      prompt: this.buildPromptWithToolHints(agent.system_prompt, agent.tools),
       name: agent.id,
       checkpointer: new MemorySaver(),
     }) as unknown as CompiledStateGraph<any, any, any>;

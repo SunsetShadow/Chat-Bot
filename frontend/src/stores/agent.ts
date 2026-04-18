@@ -7,15 +7,14 @@ import {
   updateAgent as apiUpdateAgent,
   deleteAgent as apiDeleteAgent,
 } from "@/api/chat";
+import { useRulesStore } from "./rules";
 
 export const useAgentStore = defineStore("agent", () => {
-  // 状态
   const agents = ref<Agent[]>([]);
   const currentAgentId = ref<string | null>("builtin-general");
   const isLoading = ref(false);
   const error = ref<string | null>(null);
 
-  // 计算属性
   const currentAgent = computed(() =>
     agents.value.find((a) => a.id === currentAgentId.value),
   );
@@ -26,7 +25,6 @@ export const useAgentStore = defineStore("agent", () => {
     agents.value.filter((a) => !a.is_builtin),
   );
 
-  // 方法
   async function fetchAgents() {
     isLoading.value = true;
     error.value = null;
@@ -90,8 +88,38 @@ export const useAgentStore = defineStore("agent", () => {
     }
   }
 
+  /** 保存当前 general 规则到指定 Agent */
+  async function saveCurrentRulesToAgent(agentId?: string) {
+    const targetId = agentId || currentAgentId.value;
+    if (!targetId) return;
+
+    const rulesStore = useRulesStore();
+    const ruleIds = rulesStore.getCurrentGeneralRuleIds();
+    const agent = agents.value.find((a) => a.id === targetId);
+    if (!agent) return;
+
+    const prevIds = JSON.stringify(agent.rule_ids || []);
+    const nextIds = JSON.stringify(ruleIds);
+    if (prevIds === nextIds) return;
+
+    try {
+      const updated = await apiUpdateAgent(targetId, { rule_ids: ruleIds } as AgentUpdate);
+      const index = agents.value.findIndex((a) => a.id === targetId);
+      if (index !== -1) agents.value[index] = updated;
+    } catch (e) {
+      console.warn(`[AgentStore] 保存规则到 Agent ${targetId} 失败:`, e);
+    }
+  }
+
   function setCurrentAgent(agentId: string) {
     currentAgentId.value = agentId;
+
+    // 恢复该 Agent 的规则配置
+    const rulesStore = useRulesStore();
+    const agent = agents.value.find((a) => a.id === agentId);
+    if (agent) {
+      rulesStore.setAgentRules(agent.rule_ids || []);
+    }
   }
 
   function clearError() {
@@ -99,20 +127,18 @@ export const useAgentStore = defineStore("agent", () => {
   }
 
   return {
-    // 状态
     agents,
     currentAgentId,
     isLoading,
     error,
-    // 计算属性
     currentAgent,
     builtinAgents,
     customAgents,
-    // 方法
     fetchAgents,
     createAgent,
     updateAgent,
     deleteAgent,
+    saveCurrentRulesToAgent,
     setCurrentAgent,
     clearError,
   };

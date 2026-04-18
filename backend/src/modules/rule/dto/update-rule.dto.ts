@@ -1,5 +1,5 @@
 import { IsString, IsOptional, IsBoolean, IsEnum } from 'class-validator';
-import { RuleCategory } from './create-rule.dto';
+import { RuleCategory, RuleScope } from './create-rule.dto';
 
 export class UpdateRuleDto {
   @IsString()
@@ -17,4 +17,8 @@ export class UpdateRuleDto {
   @IsEnum(RuleCategory)
   @IsOptional()
   category?: RuleCategory;
+
+  @IsEnum(RuleScope)
+  @IsOptional()
+  scope?: RuleScope;
 }

@@ -44,6 +44,10 @@ export class ToolRegistryService {
     return Array.from(this.tools.keys());
   }
 
+  getMetadata(name: string): ToolMetadata | undefined {
+    return this.metadata.get(name);
+  }
+
   getAllMetadata(): ToolMetadata[] {
     return Array.from(this.metadata.values());
   }

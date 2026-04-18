@@ -278,7 +278,7 @@ ToolRegistryService（注册中心）
 
 ## 规则系统
 
-允许用户为 AI 添加行为约束、格式要求和输出规则。
+允许用户为 AI 添加行为约束、格式要求和输出规则。规则分为两种作用域：**全局规则**（所有 Agent 强制生效）和**通用规则**（按需启用，可按 Agent 分别配置）。
 
 ### 数据模型
 
@@ -293,10 +293,28 @@ interface Rule {
   priority: number
   conflict_strategy: 'override' | 'merge' | 'reject'
   is_builtin: boolean
+  scope: 'global' | 'general' // 作用域：global=全局强制，general=通用按需
+}
+
+// Agent 实体新增字段
+interface Agent {
+  // ...其他字段
+  rule_ids: string[]          // 该 Agent 启用的 general 规则 ID 列表
 }
 ```
 
 持久化：PostgreSQL（TypeORM），启动时自动 seed 5 个内置 Rule。
+
+### 规则作用域
+
+| 作用域 | 值 | 描述 |
+|--------|------|------|
+| 全局生效 | `global` | 所有 Agent 强制注入，前端不可关闭，系统提示词中始终包含 |
+| 通用规则 | `general` | 用户按需启用/禁用，可按 Agent 分别配置 |
+
+内置规则作用域分配：
+- `global`：代码高亮（所有 Agent 必须遵循）
+- `general`：简洁回复、详细解释、礼貌用语、不用表情（按需启用）
 
 ### 规则类别
 
@@ -312,16 +330,36 @@ interface Rule {
 |------|------|------|
 | GET | `/api/v1/rules` | 获取所有规则 |
 | GET | `/api/v1/rules/{id}` | 获取特定规则 |
-| POST | `/api/v1/rules` | 创建新规则 |
-| PUT | `/api/v1/rules/{id}` | 更新规则 |
-| DELETE | `/api/v1/rules/{id}` | 删除规则 |
+| POST | `/api/v1/rules` | 创建新规则（支持 `scope` 字段，默认 `general`） |
+| PUT | `/api/v1/rules/{id}` | 更新规则（含 scope） |
+| DELETE | `/api/v1/rules/{id}` | 删除规则（内置规则不可删除） |
+
+Agent 端点支持 `rule_ids` 字段：
+| 方法 | 端点 | 描述 |
+|------|------|------|
+| PUT | `/api/v1/agents/{id}` | 更新 Agent（含 `rule_ids`） |
+
+### 规则注入逻辑
+
+`buildSystemPrompt` 中的规则注入分两层：
+1. **全局规则**：所有 `scope=global && enabled=true` 的规则，强制注入
+2. **Agent 规则**：优先使用前端传的 `rule_ids`，否则使用 Agent 实体的 `rule_ids`
+3. 合并去重后注入系统提示词
+
+### 前端交互
+
+- **设置中心**（SettingsView）：规则管理 tab 使用 NTabs segment 分「全局生效」「通用规则」两个分区
+- **对话页**（RuleEditor）：Popover 内部分区展示，全局规则只读（显示 ON），通用规则可切换
+- **Agent 切换**（AgentSelector）：切换 Agent 时自动恢复该 Agent 的规则配置，规则变化时 debounce 1s 自动保存到 Agent
+- Badge 数量仅计算启用的 general 规则数
 
 ### 约束
 
 1. 规则内容需要有明确的格式要求
 2. 规则应该简洁明了，避免过长
-3. 默认规则不可删除，但可以禁用
+3. 内置规则不可删除，全局规则不可关闭
 4. 规则优先级默认为 5
+5. 系统 Agent（is_system）仅允许更新 `rule_ids`，其他字段不可修改
 
 ---
 

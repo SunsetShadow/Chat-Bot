@@ -61,6 +61,7 @@ export interface Agent {
   is_builtin: boolean;
   is_system: boolean;
   standalone: boolean;
+  rule_ids: string[];
   created_at: string;
   updated_at: string;
 }
@@ -81,6 +82,7 @@ export interface ToolInfo {
 // 规则相关类型
 export type RuleCategory = "behavior" | "format" | "constraint";
 export type ConflictStrategy = "override" | "merge" | "reject";
+export type RuleScope = "global" | "general";
 
 export interface Rule {
   id: string;
@@ -91,6 +93,7 @@ export interface Rule {
   priority: number;
   conflict_strategy: ConflictStrategy;
   is_builtin: boolean;
+  scope: RuleScope;
   created_at: string;
   updated_at: string;
 }
@@ -101,6 +104,7 @@ export interface RuleCreate {
   category?: RuleCategory;
   priority?: number;
   conflict_strategy?: ConflictStrategy;
+  scope?: RuleScope;
 }
 
 export interface RuleUpdate {
@@ -110,6 +114,7 @@ export interface RuleUpdate {
   category?: RuleCategory;
   priority?: number;
   conflict_strategy?: ConflictStrategy;
+  scope?: RuleScope;
 }
 
 // 记忆相关类型

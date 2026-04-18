@@ -60,4 +60,9 @@ export class UpdateAgentDto {
 
   @IsOptional()
   standalone?: boolean;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  rule_ids?: string[];
 }

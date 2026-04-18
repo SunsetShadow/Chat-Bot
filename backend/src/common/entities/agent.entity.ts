@@ -51,6 +51,10 @@ export class AgentEntity {
   @Column({ default: false })
   standalone: boolean;
 
+  /** 该 Agent 启用的 general 规则 ID 列表 */
+  @Column('simple-array', { default: '' })
+  rule_ids: string[];
+
   @Column({ default: false })
   is_builtin: boolean;
 

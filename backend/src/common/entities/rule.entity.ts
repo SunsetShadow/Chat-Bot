@@ -12,6 +12,11 @@ export enum ConflictStrategy {
   REJECT = 'reject',
 }
 
+export enum RuleScope {
+  GLOBAL = 'global',
+  GENERAL = 'general',
+}
+
 @Entity('rules')
 export class RuleEntity {
   @PrimaryColumn('varchar')
@@ -37,4 +42,7 @@ export class RuleEntity {
 
   @Column({ default: false })
   is_builtin: boolean;
+
+  @Column({ type: 'enum', enum: RuleScope, default: RuleScope.GENERAL })
+  scope: RuleScope;
 }

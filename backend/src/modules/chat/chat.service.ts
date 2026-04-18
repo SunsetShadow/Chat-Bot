@@ -248,12 +248,30 @@ export class ChatService {
       );
     }
 
-    const enabledRules = await this.ruleService.getEnabledRules();
-    const targetRules = ruleIds
-      ? enabledRules.filter((r) => ruleIds.includes(r.id))
-      : enabledRules;
-    if (targetRules.length > 0) {
-      parts.push(...targetRules.map((r) => r.content));
+    // 1. 全局规则：强制注入
+    const globalRules = await this.ruleService.getGlobalRules();
+
+    // 2. Agent 级 general 规则：优先用前端传的 rule_ids，否则用 Agent 实体的 rule_ids
+    let agentRuleIds = ruleIds;
+    if (!agentRuleIds || agentRuleIds.length === 0) {
+      try {
+        const agent = await this.agentService.findOne(resolvedAgentId);
+        agentRuleIds = agent.rule_ids || [];
+      } catch {
+        agentRuleIds = [];
+      }
+    }
+    const agentRules = await this.ruleService.getRulesByIds(agentRuleIds);
+
+    // 合并去重（global 优先级高）
+    const allRules = [...globalRules];
+    const globalIds = new Set(globalRules.map((r) => r.id));
+    for (const r of agentRules) {
+      if (!globalIds.has(r.id)) allRules.push(r);
+    }
+
+    if (allRules.length > 0) {
+      parts.push(...allRules.map((r) => r.content));
     }
 
     const memoryContext = await this.memoryService.buildMemoryContext();

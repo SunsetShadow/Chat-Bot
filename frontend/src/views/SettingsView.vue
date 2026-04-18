@@ -18,7 +18,6 @@ import {
   AddOutline,
   OptionsOutline,
   BookmarkOutline,
-  ConstructOutline,
 } from "@vicons/ionicons5";
 import SystemSettingsPane from "@/components/settings/SystemSettingsPane.vue";
 
@@ -29,6 +28,7 @@ const themeStore = useThemeStore();
 
 const activeTab = ref("agents");
 const memoryTab = ref<MemoryType>("preference");
+const ruleTab = ref("global");
 
 // 规则 CRUD
 const showRuleModal = ref(false);
@@ -37,12 +37,18 @@ const ruleForm = ref<RuleCreate>({
   name: "",
   content: "",
   category: "format",
+  scope: "general",
 });
 
 const categoryOptions = [
   { label: "行为", value: "behavior" },
   { label: "格式", value: "format" },
   { label: "约束", value: "constraint" },
+];
+
+const scopeOptions = [
+  { label: "通用规则", value: "general" },
+  { label: "全局生效", value: "global" },
 ];
 
 const categoryMap: Record<string, { label: string; color: string }> = {
@@ -89,7 +95,7 @@ function goBack() {
 // Rules
 function openCreateRuleModal() {
   editingRule.value = null;
-  ruleForm.value = { name: "", content: "", category: "format" };
+  ruleForm.value = { name: "", content: "", category: "format", scope: "general" };
   showRuleModal.value = true;
 }
 
@@ -99,6 +105,7 @@ function openEditRuleModal(rule: Rule) {
     name: rule.name,
     content: rule.content,
     category: rule.category,
+    scope: rule.scope,
   };
   showRuleModal.value = true;
 }
@@ -175,78 +182,152 @@ async function handleToggleRule(id: string) {
               </div>
 
               <NSpin :show="rulesStore.isLoading">
-                <div class="rules-table">
-                  <!-- Table Header -->
-                  <div class="table-header">
-                    <div class="col-toggle">状态</div>
-                    <div class="col-name">名称</div>
-                    <div class="col-content">内容</div>
-                    <div class="col-category">类别</div>
-                    <div class="col-actions">操作</div>
-                  </div>
+                <NTabs
+                  v-model:value="ruleTab"
+                  type="segment"
+                  size="small"
+                  class="rule-scope-tabs"
+                >
+                  <NTabPane name="global" tab="全局生效">
+                    <div class="rule-scope-desc">
+                      <span>所有 Agent 强制生效，不可关闭</span>
+                    </div>
+                    <div class="rules-table">
+                      <div class="table-header">
+                        <div class="col-name">名称</div>
+                        <div class="col-content">内容</div>
+                        <div class="col-category">类别</div>
+                        <div class="col-actions">操作</div>
+                      </div>
+                      <div
+                        v-for="(rule, index) in rulesStore.globalRules"
+                        :key="rule.id"
+                        class="table-row global-row"
+                        :style="{ animationDelay: `${index * 0.04}s` }"
+                      >
+                        <div class="col-name">
+                          <span class="rule-name">{{ rule.name }}</span>
+                          <span class="global-tag">全局</span>
+                          <span v-if="rule.is_builtin" class="builtin-tag">内置</span>
+                        </div>
+                        <div class="col-content" :title="rule.content">
+                          {{ rule.content }}
+                        </div>
+                        <div class="col-category">
+                          <span
+                            class="category-tag"
+                            :style="{
+                              color: categoryMap[rule.category]?.color,
+                              borderColor: categoryMap[rule.category]?.color + '40',
+                              background: categoryMap[rule.category]?.color + '15',
+                            }"
+                          >
+                            {{ categoryMap[rule.category]?.label || rule.category }}
+                          </span>
+                        </div>
+                        <div class="col-actions">
+                          <button
+                            class="row-action-btn"
+                            title="编辑"
+                            @click="openEditRuleModal(rule)"
+                          >
+                            <NIcon :component="CreateOutline" :size="14" />
+                          </button>
+                          <button
+                            v-if="!rule.is_builtin"
+                            class="row-action-btn delete"
+                            title="删除"
+                            @click="handleDeleteRule(rule.id)"
+                          >
+                            <NIcon :component="TrashOutline" :size="14" />
+                          </button>
+                        </div>
+                      </div>
+                      <div
+                        v-if="rulesStore.globalRules.length === 0"
+                        class="table-empty"
+                      >
+                        <NIcon :component="OptionsOutline" :size="40" />
+                        <p>暂无全局规则</p>
+                        <span>创建规则时选择「全局生效」作用域</span>
+                      </div>
+                    </div>
+                  </NTabPane>
 
-                  <!-- Table Body -->
-                  <div
-                    v-for="(rule, index) in rulesStore.rules"
-                    :key="rule.id"
-                    class="table-row"
-                    :class="{ disabled: !rule.enabled }"
-                    :style="{ animationDelay: `${index * 0.04}s` }"
-                  >
-                    <div class="col-toggle">
-                      <NSwitch
-                        :value="rule.enabled"
-                        size="small"
-                        @update:value="handleToggleRule(rule.id)"
-                      />
+                  <NTabPane name="general" tab="通用规则">
+                    <div class="rule-scope-desc">
+                      <span>按需启用，可按 Agent 分别配置</span>
                     </div>
-                    <div class="col-name">
-                      <span class="rule-name">{{ rule.name }}</span>
-                      <span v-if="rule.is_builtin" class="builtin-tag">内置</span>
-                    </div>
-                    <div class="col-content" :title="rule.content">
-                      {{ rule.content }}
-                    </div>
-                    <div class="col-category">
-                      <span
-                        class="category-tag"
-                        :style="{
-                          color: categoryMap[rule.category]?.color,
-                          borderColor: categoryMap[rule.category]?.color + '40',
-                          background: categoryMap[rule.category]?.color + '15',
-                        }"
+                    <div class="rules-table">
+                      <div class="table-header">
+                        <div class="col-toggle">状态</div>
+                        <div class="col-name">名称</div>
+                        <div class="col-content">内容</div>
+                        <div class="col-category">类别</div>
+                        <div class="col-actions">操作</div>
+                      </div>
+                      <div
+                        v-for="(rule, index) in rulesStore.generalRules"
+                        :key="rule.id"
+                        class="table-row"
+                        :class="{ disabled: !rule.enabled }"
+                        :style="{ animationDelay: `${index * 0.04}s` }"
                       >
-                        {{ categoryMap[rule.category]?.label || rule.category }}
-                      </span>
-                    </div>
-                    <div class="col-actions">
-                      <button
-                        class="row-action-btn"
-                        title="编辑"
-                        @click="openEditRuleModal(rule)"
+                        <div class="col-toggle">
+                          <NSwitch
+                            :value="rule.enabled"
+                            size="small"
+                            @update:value="handleToggleRule(rule.id)"
+                          />
+                        </div>
+                        <div class="col-name">
+                          <span class="rule-name">{{ rule.name }}</span>
+                          <span v-if="rule.is_builtin" class="builtin-tag">内置</span>
+                        </div>
+                        <div class="col-content" :title="rule.content">
+                          {{ rule.content }}
+                        </div>
+                        <div class="col-category">
+                          <span
+                            class="category-tag"
+                            :style="{
+                              color: categoryMap[rule.category]?.color,
+                              borderColor: categoryMap[rule.category]?.color + '40',
+                              background: categoryMap[rule.category]?.color + '15',
+                            }"
+                          >
+                            {{ categoryMap[rule.category]?.label || rule.category }}
+                          </span>
+                        </div>
+                        <div class="col-actions">
+                          <button
+                            class="row-action-btn"
+                            title="编辑"
+                            @click="openEditRuleModal(rule)"
+                          >
+                            <NIcon :component="CreateOutline" :size="14" />
+                          </button>
+                          <button
+                            v-if="!rule.is_builtin"
+                            class="row-action-btn delete"
+                            title="删除"
+                            @click="handleDeleteRule(rule.id)"
+                          >
+                            <NIcon :component="TrashOutline" :size="14" />
+                          </button>
+                        </div>
+                      </div>
+                      <div
+                        v-if="rulesStore.generalRules.length === 0"
+                        class="table-empty"
                       >
-                        <NIcon :component="CreateOutline" :size="14" />
-                      </button>
-                      <button
-                        v-if="!rule.is_builtin"
-                        class="row-action-btn delete"
-                        title="删除"
-                        @click="handleDeleteRule(rule.id)"
-                      >
-                        <NIcon :component="TrashOutline" :size="14" />
-                      </button>
+                        <NIcon :component="OptionsOutline" :size="40" />
+                        <p>暂无通用规则</p>
+                        <span>点击「创建规则」添加第一条规则</span>
+                      </div>
                     </div>
-                  </div>
-
-                  <div
-                    v-if="rulesStore.rules.length === 0"
-                    class="table-empty"
-                  >
-                    <NIcon :component="OptionsOutline" :size="40" />
-                    <p>暂无规则</p>
-                    <span>点击「创建规则」添加第一条规则</span>
-                  </div>
-                </div>
+                  </NTabPane>
+                </NTabs>
               </NSpin>
             </div>
           </NTabPane>
@@ -411,6 +492,12 @@ async function handleToggleRule(id: string) {
           <NSelect
             v-model:value="ruleForm.category"
             :options="categoryOptions"
+          />
+        </NFormItem>
+        <NFormItem label="作用域">
+          <NSelect
+            v-model:value="ruleForm.scope"
+            :options="scopeOptions"
           />
         </NFormItem>
       </NForm>
@@ -597,6 +684,33 @@ async function handleToggleRule(id: string) {
 .btn-sm {
   padding: 7px 14px;
   font-size: 12px;
+}
+
+/* === Rules Scope Tabs === */
+.rule-scope-tabs {
+  margin-bottom: 4px;
+}
+
+.rule-scope-desc {
+  padding: 8px 0 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.global-tag {
+  padding: 1px 6px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--neon-green);
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.global-row {
+  opacity: 0.85;
 }
 
 /* === Rules Table === */

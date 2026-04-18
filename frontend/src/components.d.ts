@@ -25,6 +25,8 @@ declare module 'vue' {
     MessageItem: typeof import('./components/chat/MessageItem.vue')['default']
     MessageList: typeof import('./components/chat/MessageList.vue')['default']
     ModelSelector: typeof import('./components/chat/ModelSelector.vue')['default']
+    NCollapse: typeof import('naive-ui')['NCollapse']
+    NCollapseItem: typeof import('naive-ui')['NCollapseItem']
     NDrawer: typeof import('naive-ui')['NDrawer']
     NDrawerContent: typeof import('naive-ui')['NDrawerContent']
     NDynamicTags: typeof import('naive-ui')['NDynamicTags']
