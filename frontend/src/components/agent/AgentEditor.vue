@@ -40,7 +40,7 @@ const modalTitle = computed(() =>
 
 const toolOptions = computed(() =>
   availableTools.value.map((t) => ({
-    label: t.name,
+    label: t.description ? `${t.name}（${t.description}）` : t.name,
     value: t.name,
   })),
 );

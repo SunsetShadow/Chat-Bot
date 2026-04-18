@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useAgentStore } from "@/stores/agent";
 import { getTools } from "@/api/chat";
@@ -16,7 +16,6 @@ import {
   CreateOutline,
   TrashOutline,
   SparklesOutline,
-  GitMergeOutline,
   BuildOutline,
   ChevronDownOutline,
   CopyOutline,
@@ -144,6 +143,8 @@ function duplicateAgent(agent: Agent) {
   showModal.value = true;
 }
 
+const activeTab = ref("custom");
+
 const expandedAgents = ref<Set<string>>(new Set());
 
 const modalTitle = computed(() =>
@@ -151,31 +152,44 @@ const modalTitle = computed(() =>
 );
 
 const customAgents = computed(() =>
-  agentStore.agents.filter((a) => !a.is_builtin),
+  agentStore.agents.filter((a) => !a.is_system),
 );
 
 const systemAgents = computed(() =>
   agentStore.agents.filter((a) => a.is_system),
 );
 
-const exampleAgents = computed(() =>
-  agentStore.agents.filter((a) => a.is_builtin && !a.is_system),
-);
-
 // 工具选项
 const toolOptions = computed(() =>
   availableTools.value.map((t) => ({
-    label: t.name,
+    label: t.description ? `${t.name}（${t.description}）` : t.name,
     value: t.name,
   })),
 );
 
-// 多 Agent 合作提示
-const cooperationHint = computed(() => {
-  const total = agentStore.agents.length;
-  if (total < 2) return "至少需要 2 个 Agent 才能启用多 Agent 协作";
-  return `当前 ${total} 个 Agent，Supervisor 将自动路由请求到最合适的 Agent`;
-});
+const TOOL_PROMPT_MARKER = "\n\n【可用工具】\n";
+
+function getToolPromptSection(tools: string[]): string {
+  const selected = availableTools.value.filter((t) => tools.includes(t.name));
+  if (selected.length === 0) return "";
+  const lines = selected.map((t, i) => `${i + 1}. ${t.name}: ${t.description}`);
+  return TOOL_PROMPT_MARKER + lines.join("\n");
+}
+
+watch(
+  () => formValue.value.tools,
+  (newTools) => {
+    const prompt = formValue.value.system_prompt;
+    const markerIdx = prompt.lastIndexOf(TOOL_PROMPT_MARKER);
+    if (markerIdx !== -1) {
+      formValue.value.system_prompt = prompt.slice(0, markerIdx);
+    }
+    const section = getToolPromptSection(newTools);
+    if (section) {
+      formValue.value.system_prompt = formValue.value.system_prompt.trimEnd() + section;
+    }
+  },
+);
 
 onMounted(async () => {
   try {
@@ -291,59 +305,30 @@ function truncatePrompt(prompt: string, max = 120): string {
           <h1 class="page-title">Agent 配置中心</h1>
         </div>
       </div>
-      <div class="header-actions">
-        <button class="btn-outline" @click="openTemplateModal">
-          <NIcon :component="FlashOutline" :size="16" />
+    </header>
+
+    <!-- Tabs -->
+    <div class="agent-tab-bar">
+      <NTabs v-model:value="activeTab" type="segment" size="small">
+        <NTabPane name="custom" tab="自定义 Agent" />
+        <NTabPane name="system" tab="系统 Agent" />
+      </NTabs>
+    </div>
+
+    <!-- 自定义 Agent -->
+    <div v-show="activeTab === 'custom'" class="agent-list-content">
+      <div class="tab-actions">
+        <button class="btn-outline btn-sm" @click="openTemplateModal">
+          <NIcon :component="FlashOutline" :size="14" />
           <span>模板创建</span>
         </button>
-        <button class="btn-primary" @click="openCreateModal">
-          <NIcon :component="AddOutline" :size="16" />
+        <button class="btn-primary btn-sm" @click="openCreateModal">
+          <NIcon :component="AddOutline" :size="14" />
           <span>空白创建</span>
         </button>
       </div>
-    </header>
-
-    <!-- Embedded Mode Toolbar -->
-    <div v-if="embedded" class="embedded-toolbar">
-      <button class="btn-outline btn-sm" @click="openTemplateModal">
-        <NIcon :component="FlashOutline" :size="14" />
-        <span>模板创建</span>
-      </button>
-      <button class="btn-primary btn-sm" @click="openCreateModal">
-        <NIcon :component="AddOutline" :size="14" />
-        <span>空白创建</span>
-      </button>
-    </div>
-
-    <!-- Multi-Agent Cooperation Bar -->
-    <div class="cooperation-bar glass-card">
-      <div class="coop-icon">
-        <NIcon :component="GitMergeOutline" :size="20" />
-      </div>
-      <div class="coop-info">
-        <span class="coop-label">多 Agent 协作</span>
-        <span class="coop-hint">{{ cooperationHint }}</span>
-      </div>
-      <NSwitch
-        :value="agentStore.agents.length >= 2"
-        size="small"
-        disabled
-      >
-        <template #checked>已启用</template>
-        <template #unchecked>未启用</template>
-      </NSwitch>
-    </div>
-
-    <!-- Agent 列表 -->
-    <div class="agent-list-content">
-      <!-- 自定义 Agent -->
-      <div v-if="customAgents.length > 0" class="agent-section">
-        <div class="section-label">
-          <NIcon :component="SparklesOutline" :size="16" />
-          <span>自定义 Agent</span>
-          <span class="section-count">{{ customAgents.length }}</span>
-        </div>
-        <div class="agent-cards">
+      <NSpin :show="agentStore.isLoading">
+        <div v-if="customAgents.length > 0" class="agent-cards">
           <div
             v-for="agent in customAgents"
             :key="agent.id"
@@ -354,7 +339,11 @@ function truncatePrompt(prompt: string, max = 120): string {
                 <NIcon :component="SparklesOutline" :size="22" />
               </div>
               <div class="agent-meta">
-                <h4>{{ agent.name }}</h4>
+                <h4>
+                  {{ agent.name }}
+                  <span v-if="agent.is_builtin" class="builtin-badge">示例</span>
+                  <span class="role-badge sub-agent-badge">子Agent</span>
+                </h4>
                 <span class="agent-desc">{{ agent.description }}</span>
               </div>
               <div class="card-actions">
@@ -382,9 +371,7 @@ function truncatePrompt(prompt: string, max = 120): string {
               </div>
             </div>
 
-            <!-- 详细信息 -->
             <div class="card-body">
-              <!-- 工具 -->
               <div class="info-row">
                 <span class="info-label">
                   <NIcon :component="BuildOutline" :size="14" />
@@ -402,7 +389,6 @@ function truncatePrompt(prompt: string, max = 120): string {
                 </div>
               </div>
 
-              <!-- 特征 -->
               <div class="info-row">
                 <span class="info-label">特征</span>
                 <div class="info-value">
@@ -416,7 +402,6 @@ function truncatePrompt(prompt: string, max = 120): string {
                 </div>
               </div>
 
-              <!-- 系统提示词（可展开） -->
               <div class="prompt-row">
                 <button class="prompt-toggle" @click="toggleExpand(agent.id)">
                   <span>系统提示词</span>
@@ -434,7 +419,6 @@ function truncatePrompt(prompt: string, max = 120): string {
                 </div>
               </div>
 
-              <!-- 模型 -->
               <div v-if="agent.model_name" class="info-row">
                 <span class="info-label">模型</span>
                 <span class="model-tag">{{ agent.model_name }}</span>
@@ -442,16 +426,24 @@ function truncatePrompt(prompt: string, max = 120): string {
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- 系统内置 Agent -->
-      <div v-if="systemAgents.length > 0" class="agent-section">
-        <div class="section-label">
-          <NIcon :component="SparklesOutline" :size="16" />
-          <span>系统Agent</span>
-          <span class="section-count">{{ systemAgents.length }}</span>
+        <div
+          v-else-if="!agentStore.isLoading"
+          class="empty-state"
+        >
+          <div class="empty-icon">
+            <NIcon :component="SparklesOutline" :size="48" />
+          </div>
+          <p class="empty-title">暂无自定义 Agent</p>
+          <p class="empty-hint">点击上方按钮创建</p>
         </div>
-        <div class="agent-cards">
+      </NSpin>
+    </div>
+
+    <!-- 系统 Agent -->
+    <div v-show="activeTab === 'system'" class="agent-list-content">
+      <NSpin :show="agentStore.isLoading">
+        <div v-if="systemAgents.length > 0" class="agent-cards">
           <div
             v-for="agent in systemAgents"
             :key="agent.id"
@@ -465,18 +457,26 @@ function truncatePrompt(prompt: string, max = 120): string {
                 <h4>
                   {{ agent.name }}
                   <span class="builtin-badge">系统</span>
+                  <span v-if="agent.id === 'builtin-general'" class="role-badge supervisor-badge">Supervisor</span>
+                  <span v-else class="role-badge sub-agent-badge">子Agent</span>
                 </h4>
                 <span class="agent-desc">{{ agent.description }}</span>
               </div>
             </div>
             <div class="card-body">
+              <div
+                v-if="agent.id === 'builtin-general' || agent.id === 'builtin-job-executor'"
+                class="system-note"
+              >
+                永久拥有所有工具和所有子 Agent 的调用权限，不可修改。
+              </div>
               <div class="info-row">
                 <span class="info-label">
                   <NIcon :component="BuildOutline" :size="14" />
                   工具
                 </span>
                 <div class="info-value">
-                  <span v-for="tool in agent.tools" :key="tool" class="tool-tag">{{ tool }}</span>
+                  <span class="tool-tag">全部工具</span>
                 </div>
               </div>
               <div class="info-row">
@@ -496,84 +496,7 @@ function truncatePrompt(prompt: string, max = 120): string {
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- 系统示例 Agent -->
-      <div v-if="exampleAgents.length > 0" class="agent-section">
-        <div class="section-label">
-          <NIcon :component="SparklesOutline" :size="16" />
-          <span>自定义Agent</span>
-          <span class="section-count">{{ exampleAgents.length }}</span>
-        </div>
-        <div class="agent-cards">
-          <div
-            v-for="agent in exampleAgents"
-            :key="agent.id"
-            class="agent-card glass-card builtin"
-          >
-            <div class="card-header">
-              <div class="agent-avatar builtin-avatar">
-                <NIcon :component="SparklesOutline" :size="22" />
-              </div>
-              <div class="agent-meta">
-                <h4>
-                  {{ agent.name }}
-                  <span class="builtin-badge">示例</span>
-                </h4>
-                <span class="agent-desc">{{ agent.description }}</span>
-              </div>
-              <div class="card-actions">
-                <button class="action-btn edit" title="编辑" @click="openEditModal(agent)">
-                  <NIcon :component="CreateOutline" :size="16" />
-                </button>
-                <button class="action-btn copy" title="复制" @click="duplicateAgent(agent)">
-                  <NIcon :component="CopyOutline" :size="16" />
-                </button>
-                <button class="action-btn delete" title="删除" @click="handleDelete(agent.id)">
-                  <NIcon :component="TrashOutline" :size="16" />
-                </button>
-              </div>
-            </div>
-            <div class="card-body">
-              <div class="info-row">
-                <span class="info-label">
-                  <NIcon :component="BuildOutline" :size="14" />
-                  工具
-                </span>
-                <div class="info-value">
-                  <span v-for="tool in agent.tools" :key="tool" class="tool-tag">{{ tool }}</span>
-                </div>
-              </div>
-              <div class="info-row">
-                <span class="info-label">特征</span>
-                <div class="info-value">
-                  <span v-for="trait in agent.traits" :key="trait" class="trait-tag">{{ trait }}</span>
-                </div>
-              </div>
-              <div class="prompt-row">
-                <button class="prompt-toggle" @click="toggleExpand(agent.id)">
-                  <span>系统提示词</span>
-                  <NIcon :component="ChevronDownOutline" :size="14" :class="{ rotated: expandedAgents.has(agent.id) }" />
-                </button>
-                <div v-if="expandedAgents.has(agent.id)" class="prompt-content">{{ agent.system_prompt }}</div>
-                <div v-else class="prompt-preview">{{ truncatePrompt(agent.system_prompt) }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 空状态 -->
-      <div
-        v-if="agentStore.agents.length === 0 && !agentStore.isLoading"
-        class="empty-state"
-      >
-        <div class="empty-icon">
-          <NIcon :component="SparklesOutline" :size="48" />
-        </div>
-        <p class="empty-title">暂无 Agent</p>
-        <p class="empty-hint">点击「创建 Agent」开始配置</p>
-      </div>
+      </NSpin>
     </div>
 
     <!-- 创建/编辑 Modal -->
@@ -840,51 +763,6 @@ function truncatePrompt(prompt: string, max = 120): string {
   padding: 0 0 8px 0;
 }
 
-/* === Cooperation Bar === */
-.cooperation-bar {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 20px;
-}
-
-.coop-icon {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, rgba(0, 245, 212, 0.15), rgba(0, 245, 212, 0.05));
-  border: 1px solid rgba(0, 245, 212, 0.2);
-  border-radius: var(--radius-sm);
-  color: var(--neon-cyan);
-  flex-shrink: 0;
-}
-
-:root:not(.dark) .coop-icon {
-  background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(6, 182, 212, 0.03));
-  border-color: rgba(6, 182, 212, 0.2);
-  color: #0891b2;
-}
-
-.coop-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.coop-label {
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--text-primary);
-}
-
-.coop-hint {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
 /* === Agent 列表 === */
 .agent-list-content {
   flex: 1;
@@ -988,6 +866,31 @@ function truncatePrompt(prompt: string, max = 120): string {
   font-size: 10px;
   color: var(--neon-purple);
   letter-spacing: 0.5px;
+}
+
+.role-badge {
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+}
+
+.supervisor-badge {
+  background: rgba(0, 245, 212, 0.1);
+  border: 1px solid rgba(0, 245, 212, 0.3);
+  color: var(--neon-cyan);
+}
+
+:root:not(.dark) .supervisor-badge {
+  color: #0891b2;
+  border-color: rgba(6, 182, 212, 0.3);
+}
+
+.sub-agent-badge {
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: var(--color-primary);
 }
 
 .agent-desc {
@@ -1287,5 +1190,37 @@ function truncatePrompt(prompt: string, max = 120): string {
 .template-desc {
   font-size: 12px;
   color: var(--text-muted);
+}
+
+/* === Tab Bar === */
+.agent-tab-bar {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.tab-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 4px 12px 0;
+}
+
+/* 系统权限提示 */
+.system-note {
+  padding: 8px 14px;
+  background: rgba(0, 245, 212, 0.06);
+  border: 1px solid rgba(0, 245, 212, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--neon-cyan);
+  line-height: 1.5;
+}
+
+:root:not(.dark) .system-note {
+  color: #0891b2;
+  border-color: rgba(6, 182, 212, 0.25);
+  background: rgba(6, 182, 212, 0.06);
 }
 </style>
