@@ -87,6 +87,7 @@ export function useAIChat() {
       }>;
       webSearch?: boolean;
       thinking?: boolean;
+      ttsSessionId?: string | null;
     },
   ) {
     error.value = null;
@@ -98,6 +99,7 @@ export function useAIChat() {
           body: {
             web_search: options?.webSearch,
             thinking: options?.thinking,
+            ...(options?.ttsSessionId ? { tts_session_id: options.ttsSessionId } : {}),
           },
         },
       );

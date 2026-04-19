@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { ChatOpenAI } from '@langchain/openai';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SessionEntity } from '../../common/entities/session.entity';
 import { MessageEntity, MessageRole } from '../../common/entities/message.entity';
 import { AgentService } from '../agent/agent.service';
@@ -14,6 +15,7 @@ import { AppConfigService } from '../../config/config.service';
 import { CreateCompletionDto } from './dto/create-completion.dto';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
+import { AI_TTS_STREAM_EVENT } from '../../common/stream-events';
 
 @Injectable()
 export class ChatService {
@@ -27,6 +29,7 @@ export class ChatService {
     private memoryService: MemoryService,
     private langGraphService: LangGraphService,
     private configService: AppConfigService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async createCompletion(dto: CreateCompletionDto) {
@@ -90,6 +93,7 @@ export class ChatService {
     sessionId: string,
     messageId: string,
     preferredAgent?: string,
+    ttsSessionId?: string,
   ): AsyncGenerator<{ event: string; data: any }> {
     yield {
       event: 'message_start',
@@ -99,6 +103,16 @@ export class ChatService {
     let fullContent = '';
     let hasError = false;
 
+    // TTS start
+    if (ttsSessionId) {
+      const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
+      this.eventEmitter.emit(AI_TTS_STREAM_EVENT, {
+        type: 'start',
+        sessionId: ttsSessionId,
+        query: lastUserMsg?.content || '',
+      });
+    }
+
     try {
       for await (const event of this.langGraphService.chatStream(messages, systemPrompt, sessionId, preferredAgent)) {
         const base = { session_id: sessionId, message_id: messageId };
@@ -107,6 +121,13 @@ export class ChatService {
           case 'text':
             fullContent += event.content;
             yield { event: 'content_delta', data: { ...base, content: event.content } };
+            if (ttsSessionId) {
+              this.eventEmitter.emit(AI_TTS_STREAM_EVENT, {
+                type: 'chunk',
+                sessionId: ttsSessionId,
+                chunk: event.content,
+              });
+            }
             break;
 
           case 'tool_start':
@@ -143,6 +164,13 @@ export class ChatService {
       }
     } catch (error) {
       hasError = true;
+      if (ttsSessionId) {
+        this.eventEmitter.emit(AI_TTS_STREAM_EVENT, {
+          type: 'error',
+          sessionId: ttsSessionId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
       yield {
         event: 'error',
         data: { session_id: sessionId, error: error instanceof Error ? error.message : String(error), code: 'LLM_ERROR' },
@@ -165,6 +193,12 @@ export class ChatService {
     }
 
     if (!hasError) {
+      if (ttsSessionId) {
+        this.eventEmitter.emit(AI_TTS_STREAM_EVENT, {
+          type: 'end',
+          sessionId: ttsSessionId,
+        });
+      }
       yield { event: 'done', data: {} };
     }
   }

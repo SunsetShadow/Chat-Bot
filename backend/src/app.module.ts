@@ -2,6 +2,7 @@ import { Module, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { SecurityMiddleware } from './middleware/security.middleware';
 import { AppController } from './app.controller';
 import { ModelService } from './modules/model/model.service';
@@ -13,10 +14,12 @@ import { UploadModule } from './modules/upload/upload.module';
 import { ModelModule } from './modules/model/model.module';
 import { CronJobModule } from './modules/cron-job/cron-job.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { SpeechModule } from './modules/speech/speech.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
+    EventEmitterModule.forRoot({ maxListeners: 200 }),
     TypeOrmModule.forRootAsync({
       useFactory: (configService: ConfigService) => ({
         type: 'postgres' as const,
@@ -39,6 +42,7 @@ import { SettingsModule } from './modules/settings/settings.module';
     ModelModule,
     CronJobModule,
     SettingsModule,
+    SpeechModule,
   ],
   controllers: [AppController],
   providers: [ModelService],

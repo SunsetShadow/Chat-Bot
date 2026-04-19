@@ -38,6 +38,8 @@
 | 邮件 | nodemailer | ^8.x |
 | 验证 | class-validator + class-transformer | ^0.14 / ^0.5 |
 | 环境变量 | @nestjs/config | ^4.x |
+| 语音识别 | tencentcloud-sdk-nodejs | ^4.1 |
+| WebSocket | ws | ^8.x |
 | 代码检查 | ESLint + typescript-eslint | ^9.x / ^8.x |
 
 ## 目录结构
@@ -72,7 +74,8 @@ Chat-Bot/
 │   │   ├── middleware/          # 中间件
 │   │   └── modules/             # 业务模块
 │   │       ├── agent/           #   Agent CRUD + 内置定义
-│   │       ├── chat/            #   聊天模块（SSE）
+│   │       ├── chat/            #   聊天模块（SSE + TTS 事件广播）
+│   │       ├── speech/          #   语音模块（ASR + TTS 中继）
 │   │       ├── cron-job/        #   定时任务模块（调度 + 执行 + 通知）
 │   │       ├── langgraph/       #   LangGraph 工作流
 │   │       │   ├── graph/       #     graph.builder.ts + supervisor.builder.ts

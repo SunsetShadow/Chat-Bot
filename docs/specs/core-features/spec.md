@@ -602,6 +602,98 @@ interface Notification {
 
 ---
 
+## 语音系统
+
+基于腾讯云 ASR（语音识别）+ TTS（文本朗读），支持浏览器端录音识别和 AI 回复朗读。
+
+### 架构
+
+双通道设计：SSE 负责文本流，独立 WebSocket 负责音频流。
+
+```
+ASR（语音识别）:
+  MediaRecorder（浏览器）→ ogg/opus Blob → POST /api/v1/speech/asr
+  → SpeechService → 腾讯云 SentenceRecognition API → 识别文本
+
+TTS（文本朗读）:
+  浏览器 WebSocket（/api/v1/speech/tts/ws）↔ NestJS TtsRelayService ↔ 腾讯云 TTS WebSocket v2
+  ChatService.streamCompletion() → EventEmitter(AI_TTS_STREAM_EVENT)
+  → TtsRelayService.handleAiStreamEvent() → ACTION_SYNTHESIS 指令 → 腾讯云 TTS
+  → 二进制 mp3 帧 → 浏览器 MediaSource + SourceBuffer 流式播放
+```
+
+### API 端点
+
+| 方法 | 端点 | 描述 |
+|------|------|------|
+| POST | `/api/v1/speech/asr` | 上传音频文件，返回识别文本（FormData, field: `audio`） |
+| WS | `/api/v1/speech/tts/ws` | TTS 双向 WebSocket，支持 `?sessionId=` 自定义会话 ID |
+
+### TTS WebSocket 协议
+
+**服务器 → 客户端（控制消息）：**
+
+| type | 描述 |
+|------|------|
+| `session` | 连接建立，下发 sessionId |
+| `tts_started` | 开始合成（AI 回复开始时触发） |
+| `tts_final` | 合成完成 |
+| `tts_error` | 错误（凭证缺失、鉴权失败等） |
+| `tts_closed` | 连接关闭 |
+
+**服务器 → 客户端（二进制帧）：** mp3 音频数据，由 `MediaSource API` 流式播放。
+
+### 前端 Composable
+
+`useVoice()` 提供 ASR 录音 + TTS 连接/播放：
+
+```typescript
+// 返回值
+{
+  isRecording, isRecognizing,    // ASR 状态
+  startRecording, stopRecording,  // ASR 控制
+  ttsStatus, ttsSessionId,      // TTS 状态 ('idle' | 'connecting' | 'ready' | 'speaking' | 'error')
+  connectTts, disconnectTts,     // TTS 控制
+  setOnRecognized(cb),           // ASR 识别回调
+  dispose,                       // 清理所有资源
+}
+```
+
+### Chat + TTS 联动
+
+发送消息时传入 `tts_session_id`，ChatService 在流式生成过程中通过 `EventEmitter2` 广播 `AI_TTS_STREAM_EVENT` 事件（start/chunk/end/error），TtsRelayService 监听事件并转发到腾讯云 TTS WebSocket。
+
+### 环境变量
+
+| 变量 | 描述 |
+|------|------|
+| `TENCENT_SECRET_ID` | 腾讯云 API 密钥 ID |
+| `TENCENT_SECRET_KEY` | 腾讯云 API 密钥 Key |
+| `TENCENT_APP_ID` | 腾讯云应用 ID |
+| `TTS_VOICE_TYPE` | TTS 音色 ID（默认 502006） |
+
+### 关键文件
+
+| 文件 | 职责 |
+|------|------|
+| `backend/src/modules/speech/speech.service.ts` | ASR 识别（腾讯云 SentenceRecognition） |
+| `backend/src/modules/speech/tts-relay.service.ts` | TTS 中继（WebSocket 代理 + 签名 + 会话管理） |
+| `backend/src/modules/speech/speech.controller.ts` | ASR HTTP 端点 |
+| `backend/src/modules/speech/speech.module.ts` | 语音模块（ASR Client 工厂注入） |
+| `backend/src/common/stream-events.ts` | TTS 事件类型定义 |
+| `frontend/src/composables/useVoice.ts` | ASR 录音 + TTS 播放 composable |
+| `frontend/src/api/speech.ts` | ASR API 调用 |
+
+### 约束
+
+1. ASR 支持音频格式：ogg/opus、webm/opus、wav、mp3、mp4，最大 10MB
+2. TTS 音频格式固定为 mp3，采样率 16kHz
+3. 凭证未配置时 ASR 返回 503、TTS 发送 `tts_error` 控制消息，前端优雅降级
+4. TTS WebSocket 会话在客户端断开时自动清理
+5. 同一 tts_session_id 仅对应一个活跃 TTS 连接
+
+---
+
 ## 上下文管理
 
 当前实现为简单拼接，无 Token 计算和消息截断逻辑。

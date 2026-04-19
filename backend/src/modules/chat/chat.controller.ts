@@ -28,7 +28,7 @@ export class ChatController {
     const result = await this.chatService.createCompletion(dto);
 
     if (result.stream) {
-      this.handleSseStream(result, res, result.agent_id);
+      this.handleSseStream(result, res, result.agent_id, dto.tts_session_id);
       return;
     }
 
@@ -46,6 +46,7 @@ export class ChatController {
     result: { session: any; messages: any[]; systemPrompt: string; agent_id?: string },
     res: Response,
     preferredAgent?: string,
+    ttsSessionId?: string,
   ) {
     const messageId = uuidv4();
     const { session, messages, systemPrompt } = result;
@@ -69,6 +70,7 @@ export class ChatController {
       session.id,
       messageId,
       preferredAgent,
+      ttsSessionId,
     );
 
     const process = async () => {

@@ -29,6 +29,7 @@ export function createChatTransport(
   getExtraBody?: () => Record<string, unknown>,
   onSessionCreated?: (sessionId: string) => void,
   onAgentSwitched?: (from: string, to: string) => void,
+  getTtsSessionId?: () => string | null,
 ): ChatTransport<UIMessage> {
   return {
     async sendMessages({
@@ -53,6 +54,7 @@ export function createChatTransport(
 
       const extraBody = getExtraBody?.() || {};
       // session_id 只从 extraBody 获取，chatId 是 AI SDK 内部 ID 不传给后端
+      const ttsSessionId = getTtsSessionId?.();
       const response = await fetch(`${API_BASE_URL}/api/v1/chat/completions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -61,6 +63,7 @@ export function createChatTransport(
           stream: true,
           ...extraBody,
           ...(body as Record<string, unknown>),
+          ...(ttsSessionId ? { tts_session_id: ttsSessionId } : {}),
         }),
         signal: abortSignal,
       });

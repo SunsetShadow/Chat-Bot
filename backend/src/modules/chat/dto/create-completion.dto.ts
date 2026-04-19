@@ -38,4 +38,8 @@ export class CreateCompletionDto {
   @IsBoolean()
   @IsOptional()
   thinking?: boolean;
+
+  @IsString()
+  @IsOptional()
+  tts_session_id?: string;
 }

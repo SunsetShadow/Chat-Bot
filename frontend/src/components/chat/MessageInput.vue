@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onUnmounted } from "vue";
 import { useAIChat } from "@/composables/useAIChat";
 import { useFileUpload } from "@/composables/useFileUpload";
+import { useVoice } from "@/composables/useVoice";
 import { useChatStore } from "@/stores/chat";
 import {
   SendOutline,
@@ -10,6 +11,10 @@ import {
   GlobeOutline,
   BulbOutline,
   CloseOutline,
+  MicOutline,
+  MicOffOutline,
+  VolumeHighOutline,
+  VolumeMuteOutline,
 } from "@vicons/ionicons5";
 import ModelSelector from "./ModelSelector.vue";
 
@@ -21,6 +26,18 @@ const { isLoading: isStreaming, sendMessage, stopStreaming } = useAIChat();
 const { isUploading, attachments, uploadMultiple, remove, clear } =
   useFileUpload({ maxFiles: 5 });
 const chatStore = useChatStore();
+const {
+  isRecording,
+  isRecognizing,
+  startRecording,
+  stopRecording,
+  ttsStatus,
+  ttsSessionId,
+  connectTts,
+  disconnectTts,
+  setOnRecognized,
+  dispose: disposeVoice,
+} = useVoice();
 
 const inputValue = ref("");
 const isFocused = ref(false);
@@ -28,6 +45,7 @@ const isFocused = ref(false);
 // 功能开关状态
 const webSearchEnabled = ref(true);
 const thinkingEnabled = ref(false);
+const voiceEnabled = ref(false);
 
 const canSend = computed(
   () =>
@@ -38,6 +56,36 @@ const canSend = computed(
 
 // 文件输入引用
 const fileInput = ref<HTMLInputElement | null>(null);
+
+// TTS 状态
+const isTtsSpeaking = computed(() => ttsStatus.value === "speaking");
+
+// 语音识别回调 — 将识别结果填入输入框
+setOnRecognized((text) => {
+  if (text) {
+    inputValue.value = text;
+  }
+});
+
+// TTS 开关
+async function toggleTts() {
+  if (voiceEnabled.value) {
+    disconnectTts();
+    voiceEnabled.value = false;
+  } else {
+    const sid = await connectTts();
+    voiceEnabled.value = !!sid;
+  }
+}
+
+// 录音切换
+function toggleRecording() {
+  if (isRecording.value) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+}
 
 function triggerFileUpload() {
   fileInput.value?.click();
@@ -67,6 +115,7 @@ async function handleSend() {
       attachments: attachments.value,
       webSearch: webSearchEnabled.value,
       thinking: thinkingEnabled.value,
+      ttsSessionId: voiceEnabled.value ? ttsSessionId.value : undefined,
     });
     emit("send", message);
     clear();
@@ -86,6 +135,10 @@ function handleKeyDown(e: KeyboardEvent) {
 function handleCancel() {
   stopStreaming();
 }
+
+onUnmounted(() => {
+  disposeVoice();
+});
 </script>
 
 <template>
@@ -205,6 +258,38 @@ function handleCancel() {
         >
           <NIcon :component="BulbOutline" :size="20" />
           <span>思考</span>
+        </button>
+
+        <!-- 语音朗读 (TTS) -->
+        <button
+          class="action-button"
+          :class="{ 'is-active': voiceEnabled, 'is-speaking': isTtsSpeaking }"
+          :disabled="isRecognizing"
+          @click="toggleTts"
+        >
+          <NIcon
+            :component="voiceEnabled ? VolumeHighOutline : VolumeMuteOutline"
+            :size="20"
+          />
+          <span>{{
+            voiceEnabled ? (isTtsSpeaking ? "朗读中" : "朗读") : "朗读"
+          }}</span>
+        </button>
+
+        <!-- 语音输入 (ASR) -->
+        <button
+          class="action-button"
+          :class="{ 'is-active': isRecording, 'is-recognizing': isRecognizing }"
+          :disabled="isStreaming || isRecognizing"
+          @click="toggleRecording"
+        >
+          <NIcon
+            :component="isRecording ? MicOffOutline : MicOutline"
+            :size="20"
+          />
+          <span>{{
+            isRecording ? "停止" : isRecognizing ? "识别中" : "语音"
+          }}</span>
         </button>
       </div>
 
@@ -436,6 +521,24 @@ function handleCancel() {
 .action-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.action-button.is-speaking {
+  animation: pulse-speak 1.5s ease-in-out infinite;
+}
+
+.action-button.is-recognizing {
+  animation: pulse-speak 1s ease-in-out infinite;
+}
+
+@keyframes pulse-speak {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 /* Hints */
