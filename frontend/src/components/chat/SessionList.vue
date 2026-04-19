@@ -50,7 +50,7 @@ async function confirmDelete() {
 </script>
 
 <template>
-  <div class="flex flex-col h-full p-5 px-4">
+  <div class="flex flex-col h-full p-5 px-4 overflow-hidden">
     <!-- 头部 -->
     <div class="mb-5">
       <div class="flex flex-col gap-1">
@@ -67,9 +67,9 @@ async function confirmDelete() {
     </div>
 
     <!-- 新建按钮 -->
-    <div class="mb-5">
+    <div class="mb-5 min-w-0">
       <button
-        class="flex items-center justify-center gap-2 w-full py-3.5 px-4 bg-[var(--color-primary-light)] border border-[var(--color-primary)] rounded-[var(--radius-md)] text-[var(--color-primary)] font-mono text-[13px] font-medium tracking-wide cursor-pointer transition-all duration-150 hover:bg-[var(--color-primary)] hover:text-white"
+        class="flex items-center justify-center gap-2 w-full py-3.5 px-4 bg-[var(--color-primary-light)] border border-[var(--color-primary)] rounded-[var(--radius-md)] text-[var(--color-primary)] font-mono text-[13px] font-medium tracking-wide cursor-pointer transition-all duration-150 hover:bg-[var(--color-primary)] hover:text-white box-border"
         @click="handleNewChat"
       >
         <NIcon :component="AddOutline" :size="18" />

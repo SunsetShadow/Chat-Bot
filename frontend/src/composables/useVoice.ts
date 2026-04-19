@@ -1,4 +1,4 @@
-import { ref } from "vue";
+import { ref, onUnmounted } from "vue";
 import { recognizeSpeech } from "@/api/speech";
 
 export type TtsStatus = "idle" | "connecting" | "ready" | "speaking" | "error";
@@ -10,8 +10,15 @@ export function useVoice() {
   // ASR state
   const isRecording = ref(false);
   const isRecognizing = ref(false);
+  const asrError = ref<string | null>(null);
+  const recordingDuration = ref(0);
+  const audioLevel = ref(0);
   let mediaRecorder: MediaRecorder | null = null;
   let mediaStream: MediaStream | null = null;
+  let audioContext: AudioContext | null = null;
+  let analyser: AnalyserNode | null = null;
+  let levelTimer: ReturnType<typeof setInterval> | null = null;
+  let durationTimer: ReturnType<typeof setInterval> | null = null;
 
   // TTS state
   const ttsStatus = ref<TtsStatus>("idle");
@@ -25,7 +32,47 @@ export function useVoice() {
 
   // --- ASR ---
 
+  function setupAudioLevel(stream: MediaStream) {
+    audioContext = new AudioContext();
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 256;
+    const source = audioContext.createMediaStreamSource(stream);
+    source.connect(analyser);
+
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    levelTimer = setInterval(() => {
+      analyser?.getByteFrequencyData(data);
+      const avg = data.reduce((a, b) => a + b, 0) / data.length;
+      audioLevel.value = Math.min(avg / 128, 1);
+    }, 50);
+  }
+
+  function cleanupAudioLevel() {
+    if (levelTimer) {
+      clearInterval(levelTimer);
+      levelTimer = null;
+    }
+    if (durationTimer) {
+      clearInterval(durationTimer);
+      durationTimer = null;
+    }
+    audioContext?.close();
+    audioContext = null;
+    analyser = null;
+    audioLevel.value = 0;
+  }
+
   async function startRecording(): Promise<void> {
+    if (!window.isSecureContext) {
+      asrError.value = "当前环境不支持录音（需要 HTTPS），请使用 https 访问或使用 localhost";
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      asrError.value = "当前浏览器不支持录音功能";
+      return;
+    }
+
     try {
       mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
@@ -47,6 +94,7 @@ export function useVoice() {
 
       mediaRecorder.onstop = async () => {
         cleanupStream();
+        cleanupAudioLevel();
         const blob = new Blob(chunks, {
           type: mediaRecorder?.mimeType || "audio/webm",
         });
@@ -57,6 +105,7 @@ export function useVoice() {
           onRecognized?.(text);
         } catch (err) {
           console.error("ASR recognition failed:", err);
+          asrError.value = "语音识别失败，请重试";
           onRecognized?.("");
         } finally {
           isRecognizing.value = false;
@@ -65,9 +114,26 @@ export function useVoice() {
 
       mediaRecorder.start(250);
       isRecording.value = true;
+      recordingDuration.value = 0;
+
+      setupAudioLevel(mediaStream);
+      durationTimer = setInterval(() => {
+        recordingDuration.value++;
+      }, 1000);
     } catch (err) {
       console.error("Failed to start recording:", err);
       cleanupStream();
+      cleanupAudioLevel();
+      const name = err instanceof DOMException ? err.name : "";
+      if (name === "NotAllowedError") {
+        asrError.value = "麦克风权限被拒绝，请在浏览器设置中允许麦克风访问";
+      } else if (name === "NotFoundError") {
+        asrError.value = "未检测到麦克风设备，请确认设备已连接";
+      } else if (name === "NotReadableError") {
+        asrError.value = "麦克风被其他应用占用，请关闭后重试";
+      } else {
+        asrError.value = "无法启动录音，请检查麦克风设备是否可用";
+      }
     }
   }
 
@@ -75,6 +141,18 @@ export function useVoice() {
     if (mediaRecorder && mediaRecorder.state !== "inactive") {
       mediaRecorder.stop();
     }
+    cleanupAudioLevel();
+  }
+
+  function cancelRecording(): void {
+    cleanupAudioLevel();
+    cleanupStream();
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.onstop = null;
+      mediaRecorder.stop();
+    }
+    isRecording.value = false;
+    recordingDuration.value = 0;
   }
 
   function cleanupStream(): void {
@@ -240,16 +318,23 @@ export function useVoice() {
   // --- Lifecycle ---
 
   function dispose(): void {
-    stopRecording();
-    cleanupStream();
+    cancelRecording();
     disconnectTts();
   }
+
+  onUnmounted(() => {
+    dispose();
+  });
 
   return {
     isRecording,
     isRecognizing,
+    asrError,
+    recordingDuration,
+    audioLevel,
     startRecording,
     stopRecording,
+    cancelRecording,
     ttsStatus,
     ttsSessionId,
     connectTts,

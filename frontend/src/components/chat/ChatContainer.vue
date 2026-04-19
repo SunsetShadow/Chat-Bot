@@ -35,16 +35,16 @@ watch(
 </script>
 
 <template>
-  <div class="flex h-full p-4 gap-4">
+  <div class="flex h-full p-2 md:p-4 gap-2 md:gap-4">
     <!-- 左侧会话列表 -->
     <aside
-      class="w-[280px] shrink-0 p-0 overflow-hidden relative bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl shadow-sm hover:border-[var(--color-primary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300"
+      class="hidden md:flex w-[280px] shrink-0 p-0 overflow-hidden relative bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl shadow-sm hover:border-[var(--color-primary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300"
     >
       <SessionList />
     </aside>
 
     <!-- 主聊天区域 -->
-    <main class="flex-1 flex flex-col min-w-0 gap-4">
+    <main class="flex-1 flex flex-col min-w-0 gap-2 md:gap-4 min-h-0">
       <!-- 顶部工具栏 -->
       <header
         class="flex items-center justify-between px-6 py-4 bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-2xl shadow-sm hover:border-[var(--color-primary)] hover:shadow-[var(--shadow-primary)] transition-all duration-300"
@@ -78,7 +78,7 @@ watch(
       </div>
 
       <!-- 输入区域 -->
-      <div class="relative">
+      <div class="relative shrink-0">
         <MessageInput />
       </div>
     </main>

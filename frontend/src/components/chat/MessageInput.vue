@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from "vue";
+import { ref, computed, onUnmounted, watch } from "vue";
 import { useAIChat } from "@/composables/useAIChat";
 import { useFileUpload } from "@/composables/useFileUpload";
 import { useVoice } from "@/composables/useVoice";
 import { useChatStore } from "@/stores/chat";
+import { useMessage } from "naive-ui";
 import {
   SendOutline,
   StopOutline,
@@ -15,6 +16,7 @@ import {
   MicOffOutline,
   VolumeHighOutline,
   VolumeMuteOutline,
+  TrashOutline,
 } from "@vicons/ionicons5";
 import ModelSelector from "./ModelSelector.vue";
 
@@ -29,8 +31,12 @@ const chatStore = useChatStore();
 const {
   isRecording,
   isRecognizing,
+  asrError,
+  recordingDuration,
+  audioLevel,
   startRecording,
   stopRecording,
+  cancelRecording,
   ttsStatus,
   ttsSessionId,
   connectTts,
@@ -39,13 +45,29 @@ const {
   dispose: disposeVoice,
 } = useVoice();
 
+const nMessage = useMessage();
 const inputValue = ref("");
 const isFocused = ref(false);
 
-// 功能开关状态
-const webSearchEnabled = ref(true);
-const thinkingEnabled = ref(false);
-const voiceEnabled = ref(false);
+watch(asrError, (err) => {
+  if (err) {
+    nMessage.warning(err);
+    asrError.value = null;
+  }
+});
+
+function usePersistedRef<T>(key: string, defaultValue: T) {
+  const stored = localStorage.getItem(key);
+  const refVal = ref<T>(stored !== null ? JSON.parse(stored) : defaultValue);
+  watch(refVal, (val) => {
+    localStorage.setItem(key, JSON.stringify(val));
+  });
+  return refVal;
+}
+
+const webSearchEnabled = usePersistedRef("chat:webSearch", true);
+const thinkingEnabled = usePersistedRef("chat:thinking", false);
+const voiceEnabled = usePersistedRef("chat:voice", false);
 
 const canSend = computed(
   () =>
@@ -54,20 +76,21 @@ const canSend = computed(
     !isUploading.value,
 );
 
-// 文件输入引用
 const fileInput = ref<HTMLInputElement | null>(null);
-
-// TTS 状态
 const isTtsSpeaking = computed(() => ttsStatus.value === "speaking");
 
-// 语音识别回调 — 将识别结果填入输入框
+const formatDuration = (seconds: number) => {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+};
+
 setOnRecognized((text) => {
   if (text) {
     inputValue.value = text;
   }
 });
 
-// TTS 开关
 async function toggleTts() {
   if (voiceEnabled.value) {
     disconnectTts();
@@ -78,7 +101,6 @@ async function toggleTts() {
   }
 }
 
-// 录音切换
 function toggleRecording() {
   if (isRecording.value) {
     stopRecording();
@@ -107,17 +129,17 @@ function removeAttachment(id: string) {
 async function handleSend() {
   if (!canSend.value) return;
 
-  const message = inputValue.value.trim();
+  const text = inputValue.value.trim();
   inputValue.value = "";
 
   try {
-    await sendMessage(message, {
+    await sendMessage(text, {
       attachments: attachments.value,
       webSearch: webSearchEnabled.value,
       thinking: thinkingEnabled.value,
       ttsSessionId: voiceEnabled.value ? ttsSessionId.value : undefined,
     });
-    emit("send", message);
+    emit("send", text);
     clear();
     thinkingEnabled.value = false;
   } catch (error) {
@@ -142,7 +164,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="message-input-container" :class="{ 'is-focused': isFocused }">
+  <div class="message-input-container" :class="{ 'is-focused': isFocused, 'is-recording': isRecording }">
     <!-- 模型选择器区域 -->
     <div class="model-selector-bar">
       <ModelSelector :session-id="chatStore.currentSessionId || undefined" />
@@ -155,7 +177,6 @@ onUnmounted(() => {
         :key="attachment.id"
         class="attachment-item group animate-in fade-in zoom-in duration-200"
       >
-        <!-- 图片预览 -->
         <div v-if="attachment.type === 'image'" class="attachment-image">
           <img
             :src="attachment.url"
@@ -163,13 +184,11 @@ onUnmounted(() => {
             class="w-full h-full object-cover"
           />
         </div>
-        <!-- 文档预览 -->
         <div v-else class="attachment-document">
           <span class="font-mono text-[9px] font-bold text-[var(--text-muted)]">
             {{ attachment.filename.split(".").pop()?.toUpperCase() }}
           </span>
         </div>
-        <!-- 删除按钮 -->
         <button
           class="attachment-remove"
           @click="removeAttachment(attachment.id)"
@@ -190,8 +209,40 @@ onUnmounted(() => {
         @change="handleFileSelect"
       />
 
-      <!-- 输入框 -->
-      <div class="input-wrapper flex-1 relative">
+      <!-- 录音状态面板 -->
+      <div v-if="isRecording" class="recording-panel">
+        <div class="recording-left">
+          <div class="recording-indicator">
+            <span class="recording-dot"></span>
+          </div>
+          <div class="waveform-bars">
+            <span
+              v-for="i in 20"
+              :key="i"
+              class="wave-bar"
+              :style="{ height: `${Math.max(4, audioLevel * 100 * (0.3 + Math.random() * 0.7))}%` }"
+            ></span>
+          </div>
+          <span class="recording-timer">{{ formatDuration(recordingDuration) }}</span>
+        </div>
+        <div class="recording-actions">
+          <button class="recording-btn is-cancel" @click="cancelRecording">
+            <NIcon :component="TrashOutline" :size="18" />
+          </button>
+          <button class="recording-btn is-stop" @click="toggleRecording">
+            <NIcon :component="StopOutline" :size="20" />
+          </button>
+        </div>
+      </div>
+
+      <!-- 识别中状态 -->
+      <div v-else-if="isRecognizing" class="recognizing-panel">
+        <div class="recognizing-spinner"></div>
+        <span class="recognizing-text">语音识别中...</span>
+      </div>
+
+      <!-- 正常输入框 -->
+      <div v-else class="input-wrapper flex-1 relative">
         <textarea
           v-model="inputValue"
           :disabled="isStreaming"
@@ -213,7 +264,7 @@ onUnmounted(() => {
         <NIcon :component="StopOutline" :size="22" />
       </button>
       <button
-        v-else
+        v-else-if="!isRecording && !isRecognizing"
         class="send-button"
         :class="{ 'is-active': canSend }"
         :disabled="!canSend"
@@ -225,13 +276,11 @@ onUnmounted(() => {
 
     <!-- 底部功能栏 -->
     <div class="bottom-bar">
-      <!-- 左侧功能按钮 -->
       <div class="action-buttons">
-        <!-- 附件上传 -->
         <button
           class="action-button"
           :class="{ 'is-active': attachments.length > 0 }"
-          :disabled="isStreaming"
+          :disabled="isStreaming || isRecording"
           @click="triggerFileUpload"
         >
           <NIcon :component="AttachOutline" :size="20" />
@@ -240,31 +289,30 @@ onUnmounted(() => {
           }}</span>
         </button>
 
-        <!-- 联网搜索 -->
         <button
           class="action-button"
           :class="{ 'is-active': webSearchEnabled }"
+          :disabled="isRecording"
           @click="webSearchEnabled = !webSearchEnabled"
         >
           <NIcon :component="GlobeOutline" :size="20" />
           <span>联网</span>
         </button>
 
-        <!-- 思考过程 -->
         <button
           class="action-button"
           :class="{ 'is-active': thinkingEnabled }"
+          :disabled="isRecording"
           @click="thinkingEnabled = !thinkingEnabled"
         >
           <NIcon :component="BulbOutline" :size="20" />
           <span>思考</span>
         </button>
 
-        <!-- 语音朗读 (TTS) -->
         <button
           class="action-button"
           :class="{ 'is-active': voiceEnabled, 'is-speaking': isTtsSpeaking }"
-          :disabled="isRecognizing"
+          :disabled="isRecognizing || isRecording"
           @click="toggleTts"
         >
           <NIcon
@@ -276,7 +324,6 @@ onUnmounted(() => {
           }}</span>
         </button>
 
-        <!-- 语音输入 (ASR) -->
         <button
           class="action-button"
           :class="{ 'is-active': isRecording, 'is-recognizing': isRecognizing }"
@@ -293,7 +340,6 @@ onUnmounted(() => {
         </button>
       </div>
 
-      <!-- 右侧提示 -->
       <div class="hints">
         <span
           v-if="inputValue.length > 0"
@@ -312,7 +358,7 @@ onUnmounted(() => {
 
 <style scoped>
 .message-input-container {
-  padding: 16px;
+  padding: 12px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -320,9 +366,20 @@ onUnmounted(() => {
   transition: all var(--transition-smooth);
 }
 
+@media (min-width: 768px) {
+  .message-input-container {
+    padding: 16px;
+  }
+}
+
 .message-input-container.is-focused {
   border-color: var(--color-primary);
   box-shadow: var(--shadow-primary);
+}
+
+.message-input-container.is-recording {
+  border-color: var(--color-error);
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
 }
 
 /* Model Selector Bar */
@@ -431,6 +488,150 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
+/* Recording Panel */
+.recording-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 64px;
+  padding: 12px 16px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.recording-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  margin-right: 16px;
+}
+
+.recording-indicator {
+  flex-shrink: 0;
+}
+
+.recording-dot {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-error);
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.waveform-bars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 32px;
+  flex: 1;
+  min-width: 0;
+}
+
+.wave-bar {
+  flex: 1;
+  max-width: 6px;
+  min-width: 2px;
+  border-radius: 2px;
+  background: var(--color-primary);
+  transition: height 80ms ease;
+  opacity: 0.7;
+}
+
+.recording-timer {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+}
+
+.recording-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.recording-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.recording-btn.is-stop {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.recording-btn.is-stop:hover {
+  background: var(--color-primary-hover);
+  transform: scale(1.05);
+}
+
+.recording-btn.is-cancel {
+  color: var(--color-error);
+  border-color: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.recording-btn.is-cancel:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* Recognizing Panel */
+.recognizing-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 64px;
+  padding: 12px 16px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.recognizing-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.recognizing-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
 /* Send Button */
 .send-button {
   flex-shrink: 0;
@@ -487,23 +688,41 @@ onUnmounted(() => {
 .action-buttons {
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .action-button {
-  height: 40px;
-  padding: 0 16px;
+  height: 36px;
+  padding: 0 12px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   border-radius: var(--radius-sm);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   background: transparent;
   border: 1px solid var(--border-color);
   color: var(--text-primary);
   cursor: pointer;
   transition: all var(--transition-fast);
+}
+
+@media (min-width: 768px) {
+  .action-button {
+    height: 40px;
+    padding: 0 16px;
+    gap: 8px;
+    font-size: 14px;
+  }
+
+  .action-buttons {
+    gap: 8px;
+  }
+
+  .recording-left {
+    margin-right: 20px;
+  }
 }
 
 .action-button:hover {

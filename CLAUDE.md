@@ -19,9 +19,13 @@ Agent 配置中心使用 NTabs segment 分为「自定义 Agent」和「系统 A
 ./dev.sh                    # 同时启动前后端
 cd backend && pnpm dev      # 后端 :8000 (NestJS)
 cd backend && pnpm lint     # 后端 ESLint
-cd frontend && pnpm dev     # 前端 :3000
+cd frontend && pnpm dev     # 前端 https://localhost:3000 (HTTPS, host: true)
 cd frontend && pnpm lint    # 前端 ESLint
 ```
+
+> 前端使用 `@vitejs/plugin-basic-ssl` 提供 HTTPS 开发服务，`host: true` 绑定 `0.0.0.0`。
+> iPad 等移动设备通过 `https://<局域网IP>:3000` 访问（首次需信任自签名证书）。
+> HTTPS 是语音录制（ASR）的前提条件——iOS Safari 在非 Secure Context 下会拒绝 `getUserMedia`。
 
 ## 核心数据流
 
@@ -38,6 +42,7 @@ cd frontend && pnpm lint    # 前端 ESLint
   TTS: 浏览器 WebSocket ↔ NestJS TtsRelayService ↔ 腾讯云 TTS WebSocket
        AI 流式 chunk → EventEmitter → TtsRelayService → 二进制音频帧 → 浏览器 MediaSource 播放
   ASR: MediaRecorder 录音 → Blob → POST /api/v1/speech/asr → 腾讯云 ASR → 识别文本
+       录音面板（波形可视化 + 计时器）通过 Web Audio API AnalyserNode 实时采集音频电平
 ```
 
 ## 环境配置

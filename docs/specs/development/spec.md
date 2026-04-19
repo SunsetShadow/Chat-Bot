@@ -13,6 +13,7 @@
 | 语言 | TypeScript | ~5.9 |
 | 样式 | Tailwind CSS（不要写自定义 CSS）| ^4.2.2 |
 | 构建工具 | Vite | ^8.0 |
+| HTTPS 开发 | @vitejs/plugin-basic-ssl | ^2.3 |
 | 状态管理 | Pinia | ^3.0 |
 | UI 组件库 | Naive UI | ^2.44 |
 | 路由 | Vue Router | ^5.0 |

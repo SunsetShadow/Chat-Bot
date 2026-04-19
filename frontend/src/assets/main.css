@@ -122,6 +122,13 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  height: 100dvh;
+}
+
+@supports not (height: 100dvh) {
+  html {
+    height: 100vh;
+  }
 }
 
 body {
