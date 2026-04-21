@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useChatStore } from "@/stores/chat";
 import { formatRelativeTime } from "@/utils/id";
 import {
@@ -7,13 +7,31 @@ import {
   ChatbubbleEllipsesOutline,
   TrashOutline,
   PushOutline,
+  SearchOutline,
 } from "@vicons/ionicons5";
+
+const emit = defineEmits<{ "session-selected": [] }>();
 
 const chatStore = useChatStore();
 
-// 删除确认对话框状态
+const searchQuery = ref("");
 const showDeleteConfirm = ref(false);
 const sessionToDelete = ref<string | null>(null);
+
+const filteredSessions = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase();
+  if (!q) return chatStore.sessions;
+  return chatStore.sessions.filter((s) =>
+    s.title.toLowerCase().includes(q),
+  );
+});
+
+const isSearchEmpty = computed(
+  () =>
+    searchQuery.value.trim() &&
+    chatStore.sessions.length > 0 &&
+    filteredSessions.value.length === 0,
+);
 
 onMounted(() => {
   chatStore.fetchSessions();
@@ -21,10 +39,12 @@ onMounted(() => {
 
 async function handleSelectSession(sessionId: string) {
   await chatStore.selectSession(sessionId);
+  emit("session-selected");
 }
 
 function handleNewChat() {
   chatStore.clearCurrentSession();
+  emit("session-selected");
 }
 
 function handlePinSession(sessionId: string, isPinned: boolean) {
@@ -67,7 +87,7 @@ async function confirmDelete() {
     </div>
 
     <!-- 新建按钮 -->
-    <div class="mb-5 min-w-0">
+    <div class="mb-3 min-w-0">
       <button
         class="flex items-center justify-center gap-2 w-full py-3.5 px-4 bg-[var(--color-primary-light)] border border-[var(--color-primary)] rounded-[var(--radius-md)] text-[var(--color-primary)] font-mono text-[13px] font-medium tracking-wide cursor-pointer transition-all duration-150 hover:bg-[var(--color-primary)] hover:text-white box-border"
         @click="handleNewChat"
@@ -75,6 +95,20 @@ async function confirmDelete() {
         <NIcon :component="AddOutline" :size="18" />
         <span>新对话</span>
       </button>
+    </div>
+
+    <!-- 搜索框 -->
+    <div class="mb-3">
+      <NInput
+        v-model:value="searchQuery"
+        placeholder="搜索会话..."
+        clearable
+        size="small"
+      >
+        <template #prefix>
+          <NIcon :component="SearchOutline" :size="14" />
+        </template>
+      </NInput>
     </div>
 
     <!-- 会话列表 -->
@@ -96,9 +130,12 @@ async function confirmDelete() {
         <p class="text-sm text-[var(--text-secondary)] mb-1">暂无会话记录</p>
         <p class="text-xs text-[var(--text-muted)]">开始一段新对话吧</p>
       </div>
+      <div v-else-if="isSearchEmpty" class="text-center py-10 px-5">
+        <p class="text-sm text-[var(--text-muted)]">未找到匹配的会话</p>
+      </div>
       <div v-else class="flex flex-col gap-2">
         <div
-          v-for="session in chatStore.sessions"
+          v-for="session in filteredSessions"
           :key="session.id"
           class="group flex items-center gap-3 px-4 py-3.5 rounded-[var(--radius-md)] cursor-pointer transition-all duration-150 border border-transparent"
           :class="

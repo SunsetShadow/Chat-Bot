@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onUnmounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { useAIChat } from "@/composables/useAIChat";
 import { useFileUpload } from "@/composables/useFileUpload";
 import { useVoice } from "@/composables/useVoice";
@@ -77,7 +77,17 @@ const canSend = computed(
 );
 
 const fileInput = ref<HTMLInputElement | null>(null);
+const textareaRef = ref<HTMLTextAreaElement | null>(null);
 const isTtsSpeaking = computed(() => ttsStatus.value === "speaking");
+
+function autoResizeTextarea() {
+  const el = textareaRef.value;
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = el.scrollHeight + "px";
+}
+
+watch(inputValue, () => nextTick(autoResizeTextarea));
 
 const formatDuration = (seconds: number) => {
   const m = Math.floor(seconds / 60);
@@ -158,7 +168,56 @@ function handleCancel() {
   stopStreaming();
 }
 
+// --- 快捷键录音：Alt+Space 长按录音，松手停止，ESC 取消 ---
+
+let shortcutRecordingStart = 0;
+const MIN_RECORDING_MS = 200;
+
+function handleGlobalKeyDown(e: KeyboardEvent) {
+  // ESC 取消录音
+  if (e.key === "Escape" && isRecording.value) {
+    e.preventDefault();
+    cancelRecording();
+    return;
+  }
+
+  // Alt+Space 开始录音
+  if (e.key !== " " || !e.altKey) return;
+  if (isRecording.value || isRecognizing.value || isStreaming.value) return;
+
+  e.preventDefault();
+  shortcutRecordingStart = Date.now();
+  startRecording();
+}
+
+function handleGlobalKeyUp(e: KeyboardEvent) {
+  if (e.key !== " ") return;
+  if (!isRecording.value) return;
+
+  if (Date.now() - shortcutRecordingStart < MIN_RECORDING_MS) {
+    cancelRecording();
+    nMessage.info("按住时间过短，已取消");
+  } else {
+    stopRecording();
+  }
+}
+
+function handleWindowBlur() {
+  if (isRecording.value) {
+    cancelRecording();
+  }
+}
+
+onMounted(() => {
+  document.addEventListener("keydown", handleGlobalKeyDown);
+  document.addEventListener("keyup", handleGlobalKeyUp);
+  window.addEventListener("blur", handleWindowBlur);
+});
+
 onUnmounted(() => {
+  document.removeEventListener("keydown", handleGlobalKeyDown);
+  document.removeEventListener("keyup", handleGlobalKeyUp);
+  window.removeEventListener("blur", handleWindowBlur);
   disposeVoice();
 });
 </script>
@@ -244,10 +303,10 @@ onUnmounted(() => {
       <!-- 正常输入框 -->
       <div v-else class="input-wrapper flex-1 relative">
         <textarea
+          ref="textareaRef"
           v-model="inputValue"
           :disabled="isStreaming"
           placeholder="说点什么..."
-          rows="2"
           class="main-textarea"
           @focus="isFocused = true"
           @blur="isFocused = false"
@@ -325,7 +384,7 @@ onUnmounted(() => {
         </button>
 
         <button
-          class="action-button"
+          class="action-button voice-button"
           :class="{ 'is-active': isRecording, 'is-recognizing': isRecognizing }"
           :disabled="isStreaming || isRecognizing"
           @click="toggleRecording"
@@ -337,6 +396,7 @@ onUnmounted(() => {
           <span>{{
             isRecording ? "停止" : isRecognizing ? "识别中" : "语音"
           }}</span>
+          <kbd v-if="!isRecording && !isRecognizing" class="shortcut-badge">⌥Space</kbd>
         </button>
       </div>
 
@@ -740,6 +800,22 @@ onUnmounted(() => {
 .action-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.action-button:disabled .shortcut-badge {
+  display: none;
+}
+
+.shortcut-badge {
+  padding: 1px 5px;
+  font-size: 9px;
+  font-family: var(--font-mono);
+  line-height: 1.4;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .action-button.is-speaking {

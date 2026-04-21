@@ -6,6 +6,7 @@ import { useAgentStore } from "@/stores/agent";
 import { useRulesStore } from "@/stores/rules";
 import { useModelStore } from "@/stores/model";
 import { useChatStore } from "@/stores/chat";
+import { getSession as apiGetSession } from "@/api/chat";
 
 // 模块级单例：所有组件共享同一个 Chat 实例
 let chatInstance: Chat<UIMessage> | null = null;
@@ -67,6 +68,19 @@ function getChatInstance(): Chat<UIMessage> {
         );
         if (isNewSession) {
           chatStore.fetchSessions();
+        }
+
+        // 延迟刷新标题（后端异步生成标题需要时间）
+        const titleSessionId = chatStore.currentSessionId;
+        if (titleSessionId) {
+          setTimeout(async () => {
+            try {
+              const session = await apiGetSession(titleSessionId);
+              if (session.title && session.title !== "New Chat") {
+                chatStore.updateSessionTitle(titleSessionId, session.title);
+              }
+            } catch { /* 静默失败 */ }
+          }, 3000);
         }
       },
     });

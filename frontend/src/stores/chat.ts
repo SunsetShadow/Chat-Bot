@@ -122,6 +122,16 @@ export const useChatStore = defineStore("chat", () => {
     error.value = null;
   }
 
+  function updateSessionTitle(sessionId: string, title: string) {
+    const idx = sessions.value.findIndex((s) => s.id === sessionId);
+    if (idx !== -1) {
+      sessions.value[idx] = { ...sessions.value[idx], title };
+    }
+    if (currentSession.value?.id === sessionId) {
+      currentSession.value = { ...currentSession.value, title };
+    }
+  }
+
   /**
    * 直接设置当前会话 ID（不触发 API 调用）
    * 用于 SSE 响应中接收后端返回的 session_id
@@ -201,6 +211,7 @@ export const useChatStore = defineStore("chat", () => {
     updateMessage,
     clearCurrentSession,
     clearError,
+    updateSessionTitle,
     setCurrentSessionId,
     addSessionToList,
   };

@@ -1,24 +1,47 @@
 <script setup lang="ts">
-import { ref, watch, nextTick, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
 import { useAIChat } from "@/composables/useAIChat";
 import MessageItem from "./MessageItem.vue";
-import { ChatbubbleEllipsesOutline } from "@vicons/ionicons5";
+import { ChatbubbleEllipsesOutline, ArrowDownOutline } from "@vicons/ionicons5";
 
+const router = useRouter();
 const { messages, isLoading, regenerate } = useAIChat();
 
 const listContainer = ref<HTMLElement | null>(null);
+const isUserAtBottom = ref(true);
 
-// 消息变化时自动滚动到底部
+const showScrollButton = computed(
+  () => !isUserAtBottom.value && messages.value.length > 0,
+);
+
+function checkIfAtBottom() {
+  if (!listContainer.value) return;
+  const { scrollTop, scrollHeight, clientHeight } = listContainer.value;
+  isUserAtBottom.value = scrollHeight - scrollTop - clientHeight < 80;
+}
+
+function scrollToBottom() {
+  if (listContainer.value) {
+    listContainer.value.scrollTo({
+      top: listContainer.value.scrollHeight,
+      behavior: "smooth",
+    });
+    isUserAtBottom.value = true;
+  }
+}
+
+// 消息数量变化时，仅在底部自动滚动
 watch(
   () => messages.value.length,
   () => {
     nextTick(() => {
-      scrollToBottom();
+      if (isUserAtBottom.value) scrollToBottom();
     });
   },
 );
 
-// 流式内容变化时滚动（通过检查最后一条消息的 text part 长度）
+// 流式内容变化时，仅在底部自动滚动
 watch(
   () => {
     const lastMsg = messages.value[messages.value.length - 1];
@@ -30,19 +53,10 @@ watch(
   },
   () => {
     nextTick(() => {
-      scrollToBottom();
+      if (isUserAtBottom.value) scrollToBottom();
     });
   },
 );
-
-function scrollToBottom() {
-  if (listContainer.value) {
-    listContainer.value.scrollTo({
-      top: listContainer.value.scrollHeight,
-      behavior: "smooth",
-    });
-  }
-}
 
 // 代码复制事件委托
 function handleCopyClick(event: MouseEvent) {
@@ -72,7 +86,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="listContainer" class="h-full overflow-y-auto p-6">
+  <div ref="listContainer" class="h-full overflow-y-auto p-6 relative" @scroll="checkIfAtBottom">
     <!-- Empty State -->
     <div
       v-if="messages.length === 0"
@@ -108,7 +122,8 @@ onUnmounted(() => {
           >
         </div>
         <div
-          class="flex flex-col items-center gap-2 px-6 py-4 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-[var(--radius-md)] transition-all duration-300 hover:border-[var(--color-primary)] hover:-translate-y-0.5"
+          class="flex flex-col items-center gap-2 px-6 py-4 bg-[var(--bg-tertiary)] border border-[var(--border-color)] rounded-[var(--radius-md)] transition-all duration-300 hover:border-[var(--color-primary)] hover:-translate-y-0.5 cursor-pointer"
+          @click="router.push('/agentconfig')"
         >
           <span class="text-2xl">🎭</span>
           <span
@@ -144,5 +159,52 @@ onUnmounted(() => {
         />
       </template>
     </div>
+
+    <!-- 滚动到底部按钮 -->
+    <Transition name="fade">
+      <button
+        v-if="showScrollButton"
+        class="scroll-to-bottom-btn"
+        @click="scrollToBottom"
+      >
+        <NIcon :component="ArrowDownOutline" :size="18" />
+      </button>
+    </Transition>
   </div>
 </template>
+
+<style scoped>
+.scroll-to-bottom-btn {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.scroll-to-bottom-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>
