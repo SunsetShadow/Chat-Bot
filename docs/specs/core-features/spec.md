@@ -49,6 +49,28 @@
 | DELETE | `/api/v1/chat/sessions/{id}` | 删除会话及其消息 |
 | PUT | `/api/v1/chat/sessions/{id}/pin` | 切换会话置顶状态 |
 
+### 滚动行为
+
+- **条件自动滚动**：用户在底部时，新消息和流式内容自动滚动到底部；用户向上滚动浏览历史时，不强制跳回底部
+- **滚动到底部按钮**：`isUserAtBottom = false` 且有消息时显示，点击后平滑滚动到底部
+- **底部检测阈值**：`scrollHeight - scrollTop - clientHeight < 80px` 视为在底部
+- **会话标题延迟刷新**：消息发送完成后 3 秒重新获取会话详情，更新侧边栏标题（后端异步生成标题）
+
+### 移动端适配
+
+- **侧边栏抽屉**：桌面端（≥md）显示固定侧边栏，移动端通过 NDrawer 抽屉 + 汉堡按钮访问
+- **响应式断点**：使用 Tailwind `hidden md:flex` / `flex md:hidden` 控制
+
+### 会话搜索
+
+- **客户端过滤**：在已加载的会话列表中按标题模糊匹配
+- **搜索组件**：NInput + SearchOutline 图标，支持清空恢复全部
+
+### 输入区域
+
+- **Textarea 自动增高**：随内容行数自动扩展，最大高度 160px
+- **空状态引导**：无消息时展示功能卡片（Agent 角色、流式响应、记忆系统），Agent 卡片可点击跳转配置页
+
 ### 约束
 
 1. 聊天流式传输基于 AI SDK UI 的 `Chat` 类 + 自定义 `ChatTransport`
@@ -57,6 +79,7 @@
 4. Agent 和 Rule 在请求时通过 ChatTransport 的 extraBody 注入
 5. 会话和消息持久化存储在 PostgreSQL（TypeORM）
 6. 失败消息保留在数据库，支持手动重试（regenerate）
+7. 滚动行为遵循"用户意图优先"：用户主动上滚时不打断阅读
 
 ### 联网搜索控制
 
@@ -653,12 +676,24 @@ TTS（文本朗读）:
 {
   isRecording, isRecognizing,    // ASR 状态
   startRecording, stopRecording,  // ASR 控制
+  cancelRecording,               // 取消录音（不发送）
   ttsStatus, ttsSessionId,      // TTS 状态 ('idle' | 'connecting' | 'ready' | 'speaking' | 'error')
   connectTts, disconnectTts,     // TTS 控制
   setOnRecognized(cb),           // ASR 识别回调
   dispose,                       // 清理所有资源
 }
 ```
+
+### 快捷键
+
+| 快捷键 | 功能 | 说明 |
+|--------|------|------|
+| Alt+Space（长按） | 语音录制 | 按住开始录音，松手停止并发送；按住时间 < 200ms 自动取消 |
+| Alt+Space（释放） | 停止并发送 | 松开按键后停止录音，自动 ASR 识别并发送 |
+| ESC | 取消录音 | 录音中按 ESC 取消，不发送 |
+
+- 语音按钮显示 `⌥Space` 快捷键 badge 提示
+- 录音中（包括语音按钮点击触发）按 ESC 取消录音
 
 ### Chat + TTS 联动
 
@@ -682,7 +717,7 @@ TTS（文本朗读）:
 | `backend/src/modules/speech/speech.controller.ts` | ASR HTTP 端点 |
 | `backend/src/modules/speech/speech.module.ts` | 语音模块（ASR Client 工厂注入） |
 | `backend/src/common/stream-events.ts` | TTS 事件类型定义 |
-| `frontend/src/composables/useVoice.ts` | ASR 录音 + TTS 播放 composable |
+| `frontend/src/composables/useVoice.ts` | ASR 录音 + TTS 播放 composable（含 Alt+Space 快捷键处理） |
 | `frontend/src/api/speech.ts` | ASR API 调用 |
 
 ### 约束

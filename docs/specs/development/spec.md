@@ -20,6 +20,7 @@
 | AI SDK | ai + @ai-sdk/vue | ^6.0 / ^3.0 |
 | Markdown 渲染 | marked + highlight.js | ^17.0 / ^11.11 |
 | 代码检查 | ESLint | ^10.1 |
+| E2E 测试 | Playwright | ^1.52 |
 | 包管理 | pnpm | ^10.26.2 |
 
 ### 后端
@@ -62,6 +63,10 @@ Chat-Bot/
 │   │   ├── stores/              # Pinia 状态管理
 │   │   ├── types/               # TypeScript 类型定义
 │   │   └── utils/               # 工具函数
+│   ├── tests/                   # Playwright E2E 测试
+│   │   ├── chat-ux.spec.ts     #   聊天页交互测试（滚动/侧边栏/搜索/输入/回归）
+│   │   └── voice-shortcut.spec.ts # 语音快捷键测试
+│   ├── playwright.config.ts     # Playwright 配置
 │   └── package.json
 │
 ├── backend/                     # 后端项目
@@ -148,10 +153,15 @@ Naive UI 组件库：[Naive UI](https://naiveui.com/zh-CN/os-theme/components/)
 
 | 路径 | 用途 |
 |------|------|
-| `composables/useAIChat.ts` | AI SDK Chat 实例（单例），sendMessage / stopStreaming / regenerate |
+| `composables/useAIChat.ts` | AI SDK Chat 实例（单例），sendMessage / stopStreaming / regenerate + 会话标题延迟刷新 |
 | `composables/useChatTransport.ts` | 自定义 ChatTransport，SSE → UIMessageChunk |
-| `stores/chat.ts` | Pinia store，会话列表和当前会话状态 |
+| `composables/useVoice.ts` | ASR 录音 + TTS 播放 composable（含 Alt+Space 快捷键、ESC 取消） |
+| `stores/chat.ts` | Pinia store，会话列表和当前会话状态 + updateSessionTitle |
 | `api/chat.ts` | REST API 调用（会话 CRUD、消息历史） |
+| `components/chat/ChatContainer.vue` | 聊天页布局（桌面侧边栏 + 移动端 NDrawer 抽屉） |
+| `components/chat/MessageList.vue` | 消息列表（条件自动滚动 + 滚动到底部按钮 + 空状态卡片） |
+| `components/chat/MessageInput.vue` | 消息输入框（Textarea 自动增高 + Alt+Space 快捷键录音 + ESC 取消） |
+| `components/chat/SessionList.vue` | 会话列表（客户端搜索 + session-selected emit） |
 | `components/chat/ToolCallBlock.vue` | 工具调用实时显示组件 |
 | `api/cron-job.ts` | 定时任务 API 调用层 |
 | `components/settings/SystemSettingsPane.vue` | 系统设置面板（路径沙箱配置） |
