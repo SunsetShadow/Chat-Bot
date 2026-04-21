@@ -80,16 +80,19 @@ export class LangGraphService implements OnModuleInit {
 
     const definitions: AgentDefinition[] = agents
       .filter((a) => !LangGraphService.HIDDEN_AGENTS.includes(a.id))
-      .map((a) => ({
-        id: a.id,
-        name: a.name,
-        system_prompt: this.buildPromptWithToolHints(a.system_prompt, a.tools),
-        capabilities: a.capabilities || a.description,
-        tools: a.tools || [],
-        model_name: a.model_name || undefined,
-        temperature: a.temperature ?? undefined,
-        enabled: a.enabled !== false,
-      }));
+      .map((a) => {
+        const hintTools = this.getHintTools(a);
+        return {
+          id: a.id,
+          name: a.name,
+          system_prompt: this.buildPromptWithToolHints(a.system_prompt, hintTools),
+          capabilities: a.capabilities || a.description,
+          tools: a.tools || [],
+          model_name: a.model_name || undefined,
+          temperature: a.temperature ?? undefined,
+          enabled: a.enabled !== false,
+        };
+      });
 
     this.supervisorGraph = buildSupervisorGraph(
       this.model,
@@ -112,10 +115,11 @@ export class LangGraphService implements OnModuleInit {
       .map((name) => this.toolRegistry.get(name))
       .filter((t): t is DynamicStructuredTool => t !== undefined);
 
+    const hintTools = this.getHintTools(executorDef);
     const agent = createReactAgent({
       llm: this.model as any,
       tools: agentTools as any,
-      prompt: this.buildPromptWithToolHints(executorDef.system_prompt, executorDef.tools),
+      prompt: this.buildPromptWithToolHints(executorDef.system_prompt, hintTools),
       name: executorDef.id,
     });
 
@@ -165,39 +169,40 @@ export class LangGraphService implements OnModuleInit {
     const agent = createReactAgent({
       llm: this.model as any,
       tools: agentTools as any,
-      prompt: executorDef.system_prompt,
+      prompt: this.buildPromptWithToolHints(executorDef.system_prompt, allowedTools),
       name: executorDef.id,
     });
 
     return agent as any;
   }
 
-  /** 前端旧版本会在 system_prompt 末尾拼接工具提示词（【可用工具】marker），这里自动剥离 */
-  private static readonly TOOL_PROMPT_MARKER = '\n\n【可用工具】\n';
-
   private stripLegacyToolHints(prompt: string): string {
-    const idx = prompt.lastIndexOf(LangGraphService.TOOL_PROMPT_MARKER);
-    return idx !== -1 ? prompt.slice(0, idx) : prompt;
+    const markers = ['\n\n【可用工具】\n', '\n\n可用工具：\n'];
+    for (const marker of markers) {
+      const idx = prompt.lastIndexOf(marker);
+      if (idx !== -1) return prompt.slice(0, idx);
+    }
+    return prompt;
   }
 
-  /**
-   * 根据 tools 列表动态生成工具提示词，追加到 system_prompt 末尾。
-   * 同时清理可能存在的旧版前端拼接的工具提示词。
-   */
   private buildPromptWithToolHints(systemPrompt: string, tools?: string[]): string {
     const prompt = this.stripLegacyToolHints(systemPrompt || '');
     if (!tools || tools.length === 0) return prompt;
 
-    const hints = tools
-      .map((name) => {
+    const lines = tools
+      .map((name, i) => {
         const meta = this.toolRegistry.getMetadata(name);
-        return meta ? `${name}: ${meta.description}` : null;
+        return meta ? `(${i + 1}) ${name}：${meta.description}。` : null;
       })
       .filter(Boolean);
 
-    if (hints.length === 0) return prompt;
+    if (lines.length === 0) return prompt;
 
-    return prompt + '\n\n可用工具：\n' + hints.map((h, i) => `${i + 1}. ${h}`).join('\n');
+    return prompt + '\n\n【可用工具】\n' + lines.join('\n');
+  }
+
+  private getHintTools(agent: AgentEntity): string[] {
+    return agent.is_system ? this.toolRegistry.getAllNames() : (agent.tools || []);
   }
 
   /**
@@ -402,8 +407,9 @@ export class LangGraphService implements OnModuleInit {
 
             if (!toolCalls.has(tcId)) {
               const tcName = chunk.name || 'unknown';
-              // 过滤 Supervisor 内部 handoff 工具（transfer_to_* / transfer_back），不向前端暴露
-              if (isHandoffTool(tcName)) {
+              const isFromSupervisor = agentName === 'supervisor';
+              // Supervisor 只应使用 handoff 工具，过滤其所有工具调用（含非 handoff 的错误调用）
+              if (isHandoffTool(tcName) || isFromSupervisor) {
                 toolCalls.set(tcId, {
                   name: tcName,
                   argsBuffer: '',
@@ -428,7 +434,7 @@ export class LangGraphService implements OnModuleInit {
             }
 
             const tc = toolCalls.get(tcId)!;
-            if (tc && isHandoffTool(tc.name)) continue;
+            if (tc && (isHandoffTool(tc.name) || tc.inputEmitted)) continue;
             if (chunk.args) {
               tc.argsBuffer += chunk.args;
               yield {
@@ -455,16 +461,22 @@ export class LangGraphService implements OnModuleInit {
         const toolCallId =
           (message as any).tool_call_id || (message as any).id || '';
         const tc = toolCalls.get(toolCallId);
+        const rawContent = (message as any).content;
+        const outputStr = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent);
 
-        // 跳过已知 handoff 工具
-        if (tc && isHandoffTool(tc.name)) {
+        // 跳过已知 handoff 工具和已标记的 Supervisor 工具调用输出
+        if (tc && (isHandoffTool(tc.name) || tc.outputEmitted)) {
           tc.outputEmitted = true;
           continue;
         }
 
-        // 兜底：框架内部创建的 handoff 工具可能不在 toolCalls 中，通过内容判断
-        const rawContent = (message as any).content;
-        const outputStr = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent);
+        // 内容过滤：Supervisor 的 ToolNode 错误（ID 不一致时 tc 查找失败）
+        if (isToolNodeError(outputStr)) {
+          if (tc) tc.outputEmitted = true;
+          continue;
+        }
+
+        // 兜底：框架内部创建的 handoff 工具
         if (!tc && outputStr.includes('transferred back to supervisor')) {
           continue;
         }
@@ -521,6 +533,15 @@ export class LangGraphService implements OnModuleInit {
     }
     return result;
   }
+}
+
+/** 检测 ToolNode 内部错误（Supervisor 错误调用 worker 工具时产生） */
+function isToolNodeError(output: string): boolean {
+  return (
+    (output.includes('Tool "') && output.includes('not found')) ||
+    output.includes('Please fix your mistakes') ||
+    output.includes('Received tool input did not match expected schema')
+  );
 }
 
 /** 从 tool call buffer 解析并 emit tool_input 事件 */

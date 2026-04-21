@@ -36,7 +36,8 @@ cd frontend && pnpm lint    # 前端 ESLint
   → getGraph(preferredAgent):
       standalone Agent? → 单 Agent 独立图 (createReactAgent + 该 Agent 的 tools/prompt/model)
       否则?             → Supervisor 图 (多 Agent 编排，按 capabilities 路由)
-  → SSE 流 → ChatTransport → UIMessageChunk → Vue 响应式渲染
+  → SSE 流（Supervisor 工具调用/文本/ToolNode 错误均过滤，仅 Worker 结果透传）
+    → ChatTransport → UIMessageChunk → Vue 响应式渲染
 
 语音通道（独立于 SSE）:
   TTS: 浏览器 WebSocket ↔ NestJS TtsRelayService ↔ 腾讯云 TTS WebSocket

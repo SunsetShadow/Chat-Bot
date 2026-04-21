@@ -106,6 +106,7 @@ Standalone 模式（自定义 Agent）
 - `standalone` 模式的 Agent 跳过 Supervisor，用户选它时只走单 Agent 图
 - Agent 变更时自动触发 Supervisor 图重建和 standalone 图缓存清理
 - 定时任务执行通过 `LangGraphService.executeAsAgent()` 独立运行，不经过 Supervisor
+- **Supervisor 流式过滤**：Supervisor 的所有工具调用和文本输出在 SSE 流中过滤，仅 Worker Agent 的工具调用结果展示给用户。包含 ToolNode 内部错误（"Tool not found"、"schema 验证失败"等）的输出也通过内容匹配兜底过滤
 
 ### 数据模型
 
