@@ -4,27 +4,27 @@ services:
     container_name: chatbot-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: chatbot
-      POSTGRES_PASSWORD: chatbot
-      POSTGRES_DB: chatbot
+      POSTGRES_USER: ${POSTGRES_USER:-chatbot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chatbot}
+      POSTGRES_DB: ${POSTGRES_DB:-chatbot}
     ports:
-      - "5433:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
-      - /vol1/1000/SoftDisk/docker/postgres:/var/lib/postgresql/data
+      - ${POSTGRES_DATA_PATH:-./data/postgres}:/var/lib/postgresql/data
 
   mysql:
     image: mysql:latest
     container_name: chatbot-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: chatbot
-      MYSQL_DATABASE: chatbot
-      MYSQL_USER: chatbot
-      MYSQL_PASSWORD: chatbot
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-chatbot}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-chatbot}
+      MYSQL_USER: ${MYSQL_USER:-chatbot}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-chatbot}
     ports:
-      - "3306:3306"
+      - "${MYSQL_PORT:-3306}:3306"
     volumes:
-      - /vol1/1000/SoftDisk/docker/mysql:/var/lib/mysql
+      - ${MYSQL_DATA_PATH:-./data/mysql}:/var/lib/mysql
 
   milvus:
     image: milvusdb/milvus:v2.5.27
@@ -39,8 +39,8 @@ services:
       MILVUS_GC_ENABLED: "false"
       DEPLOY_MODE: standalone
     ports:
-      - "19530:19530"
-      - "9091:9091"
+      - "${MILVUS_PORT:-19530}:19530"
+      - "${MILVUS_API_PORT:-9091}:9091"
     volumes:
       - milvus-data:/var/lib/milvus
     healthcheck:

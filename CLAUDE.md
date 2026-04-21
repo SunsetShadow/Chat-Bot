@@ -23,6 +23,25 @@ cd frontend && pnpm dev     # 前端 https://localhost:3000 (HTTPS, host: true)
 cd frontend && pnpm lint    # 前端 ESLint
 ```
 
+### Docker（数据库等基础设施）
+
+项目支持多设备 Docker 配置，通过 `docker.sh` 自动选择环境：
+
+```bash
+./docker.sh up    # 自动检测设备，启动对应配置（NAS → .env.nas，Mac → .env.mac）
+./docker.sh down  # 停止所有容器
+./docker.sh ps    # 查看容器状态
+```
+
+也可手动指定环境文件：
+
+```bash
+docker compose --env-file .env.nas up -d   # NAS
+docker compose --env-file .env.mac up -d   # Mac
+```
+
+配置文件：`.env.nas`（NAS 设备）、`.env.mac`（Mac 设备），参数化控制端口和数据卷路径。
+
 > 前端使用 `@vitejs/plugin-basic-ssl` 提供 HTTPS 开发服务，`host: true` 绑定 `0.0.0.0`。
 > iPad 等移动设备通过 `https://<局域网IP>:3000` 访问（首次需信任自签名证书）。
 > HTTPS 是语音录制（ASR）的前提条件——iOS Safari 在非 Secure Context 下会拒绝 `getUserMedia`。
