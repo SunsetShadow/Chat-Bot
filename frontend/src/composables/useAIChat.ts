@@ -46,7 +46,22 @@ function getChatInstance(): Chat<UIMessage> {
         console.error("[AIChat] error:", err.message);
       },
       onFinish: ({ isError }) => {
-        if (isError) return;
+        if (isError) {
+          // 将错误信息注入最后一条空的 assistant 消息
+          const msgs = chatInstance!.messages;
+          const last = msgs[msgs.length - 1];
+          if (last?.role === "assistant") {
+            const hasText = last.parts?.some(
+              (p) => p.type === "text" && p.text.trim(),
+            );
+            if (!hasText) {
+              last.parts = [
+                { type: "text", text: "请求失败，请稍后重试" },
+              ];
+            }
+          }
+          return;
+        }
         const isNewSession = !chatStore.sessions.some(
           (s) => s.id === chatStore.currentSessionId,
         );
