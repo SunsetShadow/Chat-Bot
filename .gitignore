@@ -25,6 +25,7 @@ lerna-debug.log*
 .env.local
 .env.*.local
 *.local
+!frontend/.env
 
 # IDE and Editor
 .idea/
