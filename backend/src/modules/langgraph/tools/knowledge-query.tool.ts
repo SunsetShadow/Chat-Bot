@@ -8,9 +8,13 @@ export function createKnowledgeQueryTool(memoryService: MemoryService) {
     '从用户的长期记忆和知识库中检索相关信息。当需要回忆用户偏好、历史事实、或先前对话内容时使用。',
     z.object({
       query: z.string().describe('查询内容'),
+      agent_id: z
+        .string()
+        .optional()
+        .describe('当前 Agent ID，用于筛选专属记忆'),
     }),
-    async () => {
-      const context = await memoryService.buildMemoryContext();
+    async ({ agent_id }) => {
+      const context = await memoryService.buildMemoryContext(undefined, agent_id);
       if (!context) return '暂无相关记忆或知识。';
       return `相关记忆：\n${context}`;
     },

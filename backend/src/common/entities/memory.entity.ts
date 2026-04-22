@@ -20,6 +20,9 @@ export class MemoryEntity {
   @Column({ nullable: true })
   source_session_id: string;
 
+  @Column({ nullable: true })
+  agent_id: string;
+
   @Column('float')
   importance: number;
 

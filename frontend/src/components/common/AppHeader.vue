@@ -6,6 +6,7 @@ import {
   SettingsOutline,
   ChatbubblesOutline,
   SparklesOutline,
+  PersonOutline,
 } from "@vicons/ionicons5";
 import ThemeToggle from "./ThemeToggle.vue";
 import NotificationBell from "./NotificationBell.vue";
@@ -19,6 +20,10 @@ function goToSettings() {
 
 function goToAgentConfig() {
   router.push("/agentconfig");
+}
+
+function goToAvatar() {
+  router.push("/avatar");
 }
 </script>
 
@@ -49,6 +54,15 @@ function goToAgentConfig() {
     <div class="flex items-center gap-2">
       <NotificationBell />
       <ThemeToggle />
+      <NButton
+        text
+        class="text-[var(--text-secondary)] hover:text-[var(--color-primary)]"
+        @click="goToAvatar"
+      >
+        <template #icon>
+          <NIcon :component="PersonOutline" size="20" />
+        </template>
+      </NButton>
       <NButton
         text
         class="text-[var(--text-secondary)] hover:text-[var(--color-primary)]"

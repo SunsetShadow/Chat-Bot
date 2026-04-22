@@ -48,6 +48,9 @@ export class LangGraphService implements OnModuleInit {
   /** 不参与 supervisor 路由的 agent ID（仅供内部执行调用） */
   private static readonly HIDDEN_AGENTS = ['builtin-job-executor'];
 
+  /** 默认最大 handoff 次数，防止 Agent 间无限乒乓 */
+  private static readonly DEFAULT_MAX_HANDOFFS = 5;
+
   constructor(
     private configService: AppConfigService,
     private toolRegistry: ToolRegistryService,
@@ -232,7 +235,10 @@ export class LangGraphService implements OnModuleInit {
    * - standalone Agent → 该 Agent 的独立图
    * - 否则 → supervisorGraph || singleAgentGraph
    */
-  private async getGraph(preferredAgent?: string): Promise<CompiledStateGraph<any, any, any>> {
+  private async getGraph(
+    preferredAgent?: string,
+    messages?: { role: string; content: string }[],
+  ): Promise<CompiledStateGraph<any, any, any>> {
     if (this.rebuildNeeded) {
       this.rebuildNeeded = false;
       await this.rebuildSupervisorGraph();
@@ -244,12 +250,53 @@ export class LangGraphService implements OnModuleInit {
         if (agent.standalone) {
           return this.buildStandaloneGraph(agent);
         }
+        // Fast-path：意图明确匹配 Agent 能力时跳过 Supervisor
+        if (messages && this.isIntentMatchForAgent(messages, agent)) {
+          return this.buildStandaloneGraph(agent);
+        }
       } catch {
         // Agent 不存在，回退到默认逻辑
       }
     }
 
     return this.supervisorGraph || this.singleAgentGraph;
+  }
+
+  /** 工具名 → 关联意图关键词的静态映射 */
+  private static readonly TOOL_KEYWORDS: Record<string, string[]> = {
+    cron_job: ['定时', '提醒', '闹钟', '每天', '每小时', '周期', 'schedule', 'remind'],
+    web_search: ['搜索', '查找', '最新', '新闻', 'search', '查一下'],
+    extract_memory: ['记住', '记下', '别忘了'],
+    knowledge_query: ['我的偏好', '我之前说过', '你应该知道'],
+    send_mail: ['发邮件', '发送邮件', '邮件', 'mail'],
+    execute_command: ['执行命令', '运行', '终端'],
+  };
+
+  /** 轻量意图匹配：基于关键词判断用户消息是否明确属于某 Agent 的能力范围 */
+  private isIntentMatchForAgent(
+    messages: { role: string; content: string }[],
+    agent: AgentEntity,
+  ): boolean {
+    const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
+    if (!lastUserMsg) return false;
+
+    const text = lastUserMsg.content.toLowerCase();
+
+    const capKeywords = (agent.capabilities || '')
+      .split(/[、,，;；\s]+/)
+      .filter((k) => k.length >= 2)
+      .map((k) => k.toLowerCase());
+
+    const toolKws = (agent.tools || []).flatMap(
+      (t) => LangGraphService.TOOL_KEYWORDS[t] || [],
+    );
+
+    for (const keyword of [...capKeywords, ...toolKws]) {
+      if (keyword.length >= 2 && text.includes(keyword)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -277,10 +324,12 @@ export class LangGraphService implements OnModuleInit {
       });
     }
 
+    const agentIdHint = `\n\n[Agent 身份] 你的 Agent ID 是 "${agent.id}"。调用 extract_memory 或 knowledge_query 工具时，请传入 agent_id="${agent.id}" 以确保记忆隔离。`;
+
     const graph = createReactAgent({
       llm: agentModel,
       tools: agentTools,
-      prompt: this.buildPromptWithToolHints(agent.system_prompt, agent.tools),
+      prompt: this.buildPromptWithToolHints(agent.system_prompt, agent.tools) + agentIdHint,
       name: agent.id,
       checkpointer: new MemorySaver(),
     }) as unknown as CompiledStateGraph<any, any, any>;
@@ -303,7 +352,7 @@ export class LangGraphService implements OnModuleInit {
     preferredAgent?: string,
   ): Promise<{ content: string; finish_reason: string }> {
     const langchainMessages = this.buildMessages(messages, systemPrompt, preferredAgent);
-    const graph = await this.getGraph(preferredAgent);
+    const graph = await this.getGraph(preferredAgent, messages);
 
     const result = (await graph.invoke(
       { messages: langchainMessages },
@@ -324,13 +373,27 @@ export class LangGraphService implements OnModuleInit {
     preferredAgent?: string,
   ): AsyncGenerator<StreamEvent> {
     const langchainMessages = this.buildMessages(messages, systemPrompt, preferredAgent);
-    const graph = await this.getGraph(preferredAgent);
+    const graph = await this.getGraph(preferredAgent, messages);
+
+    // 确定 handoff 上限
+    let maxHandoffs = LangGraphService.DEFAULT_MAX_HANDOFFS;
+    if (preferredAgent) {
+      try {
+        const agent = await this.agentService.findOne(preferredAgent);
+        if (agent.max_turns && agent.max_turns > 0) {
+          maxHandoffs = agent.max_turns;
+        }
+      } catch {
+        // 使用默认值
+      }
+    }
 
     const isHandoffTool = (name: string) =>
       name.startsWith('transfer_to_') || name === 'transfer_back_to_supervisor';
 
     let sawToolOutput = false;
     let currentAgent = '';
+    let handoffCount = 0;
     const toolCalls = new Map<
       string,
       {
@@ -369,6 +432,15 @@ export class LangGraphService implements OnModuleInit {
           agentName !== currentAgent &&
           agentName !== 'supervisor'
         ) {
+          handoffCount++;
+          if (handoffCount > maxHandoffs) {
+            yield {
+              type: 'text',
+              content: `[系统提示] 检测到过多的 Agent 切换（${handoffCount} 次），为避免循环已终止流转。请简化问题或指定特定助手。`,
+            };
+            yield { type: 'finish', finishReason: 'max_handoffs_exceeded' };
+            return;
+          }
           yield {
             type: 'agent_switched',
             fromAgent: currentAgent,

@@ -12,7 +12,12 @@ import NotificationBell from "@/components/common/NotificationBell.vue";
 import { useChatStore } from "@/stores/chat";
 import { useAgentStore } from "@/stores/agent";
 import { useAIChat } from "@/composables/useAIChat";
-import { SparklesOutline, SettingsOutline, ReorderTwoOutline } from "@vicons/ionicons5";
+import { NDrawer, NDrawerContent, NIcon } from "naive-ui";
+import {
+  SettingsOutline,
+  ReorderTwoOutline,
+  EllipsisVerticalOutline,
+} from "@vicons/ionicons5";
 
 const router = useRouter();
 const chatStore = useChatStore();
@@ -20,6 +25,7 @@ const agentStore = useAgentStore();
 const { loadMessages, clearMessages, activeAgent } = useAIChat();
 
 const mobileDrawerOpen = ref(false);
+const mobileActionsOpen = ref(false);
 
 // 会话切换时同步历史消息到 AI SDK Chat 实例
 watch(
@@ -71,7 +77,8 @@ watch(
             :agent-id="activeAgent || agentStore.currentAgentId || ''"
           />
         </div>
-        <div class="flex items-center gap-3 md:gap-4">
+        <!-- 桌面端：全部按钮平铺 -->
+        <div class="hidden md:flex items-center gap-3 md:gap-4">
           <RuleEditor />
           <ThemeToggle />
           <button
@@ -84,7 +91,50 @@ watch(
           <div class="w-px h-6 bg-[var(--border-color)]"></div>
           <NotificationBell />
         </div>
+
+        <!-- 移动端：省略号按钮，点击打开底部抽屉 -->
+        <button
+          class="flex md:hidden items-center justify-center w-9 h-9 bg-transparent border border-[var(--border-color)] rounded-[var(--radius-sm)] text-[var(--text-muted)] cursor-pointer transition-all duration-150 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+          @click="mobileActionsOpen = true"
+        >
+          <NIcon :component="EllipsisVerticalOutline" :size="18" />
+        </button>
       </header>
+
+      <!-- 移动端操作抽屉 -->
+      <NDrawer
+        v-model:show="mobileActionsOpen"
+        placement="bottom"
+        :height="280"
+      >
+        <NDrawerContent body-content-style="padding: 8px 16px 24px;">
+          <div class="flex flex-col gap-1">
+            <div class="flex items-center justify-between py-3">
+              <span class="text-[13px] text-[var(--text-secondary)]">主题</span>
+              <ThemeToggle />
+            </div>
+            <div class="flex items-center justify-between py-3">
+              <span class="text-[13px] text-[var(--text-secondary)]">规则</span>
+              <RuleEditor />
+            </div>
+            <button
+              class="flex items-center gap-3 w-full py-3 text-[13px] text-[var(--text-secondary)] cursor-pointer"
+              @click="
+                mobileActionsOpen = false;
+                router.push('/settings');
+              "
+            >
+              <NIcon :component="SettingsOutline" :size="16" />
+              设置
+            </button>
+            <div class="h-px bg-[var(--border-color)] my-1"></div>
+            <div class="flex items-center justify-between py-3">
+              <span class="text-[13px] text-[var(--text-secondary)]">通知</span>
+              <NotificationBell />
+            </div>
+          </div>
+        </NDrawerContent>
+      </NDrawer>
 
       <!-- 消息列表 -->
       <div

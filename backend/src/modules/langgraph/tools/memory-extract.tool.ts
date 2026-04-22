@@ -17,12 +17,17 @@ export function createMemoryExtractTool(memoryService: MemoryService) {
         .max(10)
         .default(5)
         .describe('重要程度 1-10'),
+      agent_id: z
+        .string()
+        .optional()
+        .describe('当前 Agent ID，用于记忆隔离'),
     }),
-    async ({ content, memory_type, importance }) => {
+    async ({ content, memory_type, importance, agent_id }) => {
       await memoryService.create({
         content,
         type: memory_type as any,
         importance,
+        agent_id,
       });
       return `记忆已保存：${content}`;
     },

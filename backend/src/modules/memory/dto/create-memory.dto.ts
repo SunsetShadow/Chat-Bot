@@ -16,6 +16,10 @@ export class CreateMemoryDto {
   @IsOptional()
   source_session_id?: string;
 
+  @IsString()
+  @IsOptional()
+  agent_id?: string;
+
   @IsInt()
   @Min(1)
   @Max(10)

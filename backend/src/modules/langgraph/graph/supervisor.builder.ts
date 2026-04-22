@@ -63,10 +63,12 @@ export function buildSupervisorGraph(
       });
     }
 
+    const agentIdHint = `\n\n[Agent 身份] 你的 Agent ID 是 "${def.id}"。调用 extract_memory 或 knowledge_query 工具时，请传入 agent_id="${def.id}" 以确保记忆隔离。`;
+
     return createReactAgent({
       llm: agentModel,
       tools: agentTools,
-      prompt: def.system_prompt,
+      prompt: def.system_prompt + agentIdHint,
       name: def.id,
     });
   });

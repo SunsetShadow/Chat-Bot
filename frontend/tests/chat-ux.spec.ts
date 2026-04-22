@@ -239,7 +239,7 @@ test.describe("移动端侧边栏抽屉", () => {
     await expect(page.locator("aside").locator("text=Conversations")).toBeVisible({ timeout: 5000 });
 
     // 汉堡按钮有 md:hidden 所以桌面端不显示
-    const hamburger = page.locator("button.flex.md\\:hidden");
+    const hamburger = page.locator("header button.flex.md\\:hidden").first();
     await expect(hamburger).not.toBeVisible();
   });
 
@@ -252,7 +252,7 @@ test.describe("移动端侧边栏抽屉", () => {
     const aside = page.locator("aside.hidden");
     await expect(aside).not.toBeVisible();
 
-    const hamburger = page.locator("button.flex.md\\:hidden");
+    const hamburger = page.locator("header button.flex.md\\:hidden").first();
     await expect(hamburger).toBeVisible();
   });
 
@@ -261,7 +261,7 @@ test.describe("移动端侧边栏抽屉", () => {
     await page.goto(CHAT_URL);
     await waitForChatInput(page);
 
-    await page.locator("button.flex.md\\:hidden").click();
+    await page.locator("header button.flex.md\\:hidden").first().click();
 
     // 抽屉出现（n-drawer）
     const drawer = page.locator(".n-drawer");
@@ -275,7 +275,7 @@ test.describe("移动端侧边栏抽屉", () => {
     await page.goto(CHAT_URL);
     await waitForChatInput(page);
 
-    await page.locator("button.flex.md\\:hidden").click();
+    await page.locator("header button.flex.md\\:hidden").first().click();
     const drawer = page.locator(".n-drawer");
     await expect(drawer).toBeVisible({ timeout: 3000 });
 
@@ -445,5 +445,88 @@ test.describe("现有功能回归", () => {
   test("顶部工具栏可见", async ({ page }) => {
     await expect(page.locator("header")).toBeVisible();
     await expect(page.getByRole("button", { name: /设置/ })).toBeVisible();
+  });
+});
+
+// ============================================================
+// 移动端 header 按钮响应式测试
+// ============================================================
+test.describe("移动端 header 按钮响应式", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await mockRecordingAPI(page);
+    await page.goto(CHAT_URL);
+    await waitForChatInput(page);
+  });
+
+  test("移动端省略号按钮可见", async ({ page }) => {
+    // 省略号按钮（EllipsisVerticalOutline）在 header 右侧
+    const ellipsisBtn = page.locator("header button.flex.md\\:hidden").last();
+    await expect(ellipsisBtn).toBeVisible();
+  });
+
+  test("移动端桌面端按钮组隐藏", async ({ page }) => {
+    // 桌面端按钮容器 hidden md:flex（精确匹配第二个，即按钮容器而非 Agent 标签）
+    const desktopBtns = page.locator("header > div:nth-child(1) ~ div.hidden.md\\:flex");
+    await expect(desktopBtns).not.toBeVisible();
+  });
+
+  test("移动端 header 按钮不超出容器宽度", async ({ page }) => {
+    const headerBox = await page.locator("header").boundingBox();
+    expect(headerBox).toBeTruthy();
+
+    // 获取 header 内所有可见 button 的 boundingBox
+    const buttons = await page.locator("header button:visible").all();
+    for (const btn of buttons) {
+      const box = await btn.boundingBox();
+      if (box) {
+        // 每个按钮不应该超出 header 的左右边界
+        expect(box.x).toBeGreaterThanOrEqual(headerBox!.x - 1);
+        expect(box.x + box.width).toBeLessThanOrEqual(headerBox!.x + headerBox!.width + 1);
+      }
+    }
+  });
+
+  test("移动端按钮不变形（宽高比合理）", async ({ page }) => {
+    const buttons = await page.locator("header button:visible").all();
+    for (const btn of buttons) {
+      const box = await btn.boundingBox();
+      if (box && box.width > 0 && box.height > 0) {
+        const ratio = box.width / box.height;
+        // 正方形按钮宽高比应在 0.8~1.3 之间（允许少量文字按钮更宽）
+        expect(ratio).toBeLessThan(2.5);
+        expect(ratio).toBeGreaterThan(0.5);
+      }
+    }
+  });
+
+  test("点击省略号按钮打开底部抽屉", async ({ page }) => {
+    const ellipsisBtn = page.locator("header button.flex.md\\:hidden").last();
+    await ellipsisBtn.click();
+
+    // 底部抽屉出现（n-drawer，placement=bottom）
+    const drawer = page.locator(".n-drawer.n-drawer--bottom-placement, .n-drawer");
+    await expect(drawer).toBeVisible({ timeout: 3000 });
+
+    // 抽屉内包含操作项
+    await expect(drawer.locator("text=主题")).toBeVisible();
+    await expect(drawer.locator("span:text-is('规则')").first()).toBeVisible();
+    await expect(drawer.locator("button:text-is('设置')").first()).toBeVisible();
+    await expect(drawer.locator("span:text-is('通知')").first()).toBeVisible();
+  });
+
+  test("桌面端显示全部平铺按钮", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.waitForTimeout(500);
+
+    // 桌面端按钮容器可见（精确匹配，排除 Agent 标签 div）
+    const desktopBtns = page.locator("header > div:nth-child(1) ~ div.hidden.md\\:flex");
+    await expect(desktopBtns).toBeVisible();
+
+    // 省略号按钮不可见（移动端专用）
+    const mobileButtons = await page.locator("header button.flex.md\\:hidden").all();
+    for (const btn of mobileButtons) {
+      await expect(btn).not.toBeVisible();
+    }
   });
 });

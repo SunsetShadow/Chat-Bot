@@ -275,6 +275,9 @@ ToolRegistryService（注册中心）
 6. 路径沙箱配置通过设置中心 UI 管理（`/settings` → 系统设置），存储在数据库 `settings` 表
 7. 路径沙箱自动屏蔽系统目录（`/etc`、`/usr`、`/System` 等）和敏感文件（`.env`、`*.pem`、`id_rsa` 等）
 8. Agent 间路由由 Supervisor 原生 `transfer_to_<agent_name>` handoff 工具处理，无需自定义委托工具
+9. **Fast-path 快速路由**：当用户选择特定 Agent 且消息包含其能力关键词时，跳过 Supervisor 直接 standalone，降低约 30% 延迟（`isIntentMatchForAgent()` 关键词匹配）
+10. **Handoff 上限保护**：Agent 切换超过 `max_turns`（默认 5 次）时自动终止流并提示用户，防止 Agent 间无限乒乓
+11. **Agent 私有记忆**：记忆系统支持 `agent_id` 隔离，Agent 专属记忆仅该 Agent 可见，全局记忆（`agent_id=NULL`）所有 Agent 可见
 
 ### 路径沙箱
 
@@ -400,6 +403,7 @@ interface Memory {
   content: string
   type: 'fact' | 'preference' | 'event'
   source_session_id: string | null
+  agent_id: string | null  // Agent 隔离：null=全局记忆，非 null=Agent 专属记忆
   importance: number       // 1-10
   created_at: Date
   last_accessed: Date

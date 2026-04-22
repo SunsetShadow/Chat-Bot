@@ -18,6 +18,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import("@/views/AgentConfigView.vue"),
   },
   {
+    path: "/avatar",
+    name: "Avatar",
+    component: () => import("@/views/AvatarView.vue"),
+  },
+  {
     path: "/cron-jobs",
     name: "CronJobs",
     component: () => import("@/views/CronJobsView.vue"),

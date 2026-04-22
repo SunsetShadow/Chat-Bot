@@ -19,7 +19,7 @@ export class MemoryService {
     private milvusService: MilvusService,
   ) {}
 
-  async findAll(type?: string, minImportance?: number): Promise<MemoryEntity[]> {
+  async findAll(type?: string, minImportance?: number, agentId?: string): Promise<MemoryEntity[]> {
     const qb = this.memoryRepo.createQueryBuilder('m');
 
     if (type) {
@@ -27,6 +27,9 @@ export class MemoryService {
     }
     if (minImportance) {
       qb.andWhere('m.importance >= :minImportance', { minImportance });
+    }
+    if (agentId) {
+      qb.andWhere('(m.agent_id = :agentId OR m.agent_id IS NULL)', { agentId });
     }
 
     return qb.getMany();
@@ -46,6 +49,7 @@ export class MemoryService {
       content: dto.content,
       type: dto.type || MemoryType.FACT,
       source_session_id: dto.source_session_id || undefined,
+      agent_id: dto.agent_id || undefined,
       importance: dto.importance || 5,
       last_accessed: new Date(),
     });
@@ -95,8 +99,8 @@ export class MemoryService {
     }
   }
 
-  async buildMemoryContext(_sessionId?: string): Promise<string> {
-    const all = await this.findAll();
+  async buildMemoryContext(_sessionId?: string, agentId?: string): Promise<string> {
+    const all = await this.findAll(undefined, undefined, agentId);
     const sorted = all.sort((a, b) => b.importance - a.importance);
     if (sorted.length === 0) return '';
 

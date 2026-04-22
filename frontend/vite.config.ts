@@ -40,6 +40,9 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": fileURLToPath(new URL("./src", import.meta.url)),
+        "pixi-live2d-display/dist/cubism4": fileURLToPath(
+          new URL("./node_modules/pixi-live2d-display/dist/cubism4.es.js", import.meta.url)
+        ),
       },
     },
     server: {

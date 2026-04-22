@@ -308,7 +308,7 @@ export class ChatService {
       parts.push(...allRules.map((r) => r.content));
     }
 
-    const memoryContext = await this.memoryService.buildMemoryContext();
+    const memoryContext = await this.memoryService.buildMemoryContext(undefined, resolvedAgentId);
     if (memoryContext) parts.push(memoryContext);
 
     return parts.join('\n\n');

@@ -45,8 +45,8 @@ watch(
 </script>
 
 <template>
-  <div class="flex items-center gap-3">
-    <div class="flex flex-col">
+  <div class="flex items-center gap-2 md:gap-3">
+    <div class="hidden md:flex flex-col">
       <span
         class="font-mono text-[11px] tracking-wider uppercase text-[var(--text-muted)]"
         >Agent</span
@@ -57,7 +57,7 @@ watch(
       :options="agentOptions"
       :loading="agentStore.isLoading"
       :render-label="(option: any) => option.label"
-      style="width: 180px"
+      class="agent-select"
       @update:value="handleChange"
     >
       <template #arrow>
@@ -67,7 +67,7 @@ watch(
     <NTooltip v-if="agentStore.currentAgent" placement="bottom">
       <template #trigger>
         <button
-          class="w-8 h-8 flex items-center justify-center bg-transparent border border-[var(--border-color)] rounded-[var(--radius-sm)] text-[var(--text-muted)] cursor-pointer transition-all duration-150 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+          class="hidden md:flex w-8 h-8 items-center justify-center bg-transparent border border-[var(--border-color)] rounded-[var(--radius-sm)] text-[var(--text-muted)] cursor-pointer transition-all duration-150 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
         >
           <NIcon :component="InformationCircleOutline" :size="16" />
         </button>
@@ -97,3 +97,14 @@ watch(
     </NTooltip>
   </div>
 </template>
+
+<style scoped>
+.agent-select {
+  width: 180px;
+}
+@media (max-width: 767px) {
+  .agent-select {
+    width: 120px;
+  }
+}
+</style>
