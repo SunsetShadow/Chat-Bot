@@ -21,6 +21,7 @@
 | Markdown 渲染 | marked + highlight.js | ^17.0 / ^11.11 |
 | 代码检查 | ESLint | ^10.1 |
 | E2E 测试 | Playwright | ^1.52 |
+| Live2D 渲染 | pixi.js + pixi-live2d-display | ^6.5 / ^0.4 |
 | 包管理 | pnpm | ^10.26.2 |
 
 ### 后端
@@ -55,6 +56,7 @@ Chat-Bot/
 │   │   ├── components/          # Vue 组件
 │   │   │   ├── agent/           #   Agent 相关组件
 │   │   │   ├── chat/            #   聊天相关组件
+│   │   │   ├── avatar/          #   Avatar 组件（Live2DAvatar + emotion-map）
 │   │   │   ├── common/          #   通用组件（AppHeader、NotificationBell、NotificationToast、ThemeToggle）
 │   │   │   ├── cron-job/        #   定时任务组件（JobForm、ExecutionHistory）
 │   │   │   └── settings/        #   系统设置组件（SystemSettingsPane、DirectoryBrowser）
@@ -163,6 +165,8 @@ Naive UI 组件库：[Naive UI](https://naiveui.com/zh-CN/os-theme/components/)
 | `components/chat/MessageInput.vue` | 消息输入框（Textarea 自动增高 + Alt+Space 快捷键录音 + ESC 取消） |
 | `components/chat/SessionList.vue` | 会话列表（客户端搜索 + session-selected emit） |
 | `components/chat/ToolCallBlock.vue` | 工具调用实时显示组件 |
+| `components/avatar/Live2DAvatar.vue` | Live2D 角色渲染组件（PixiJS WebGL + Cubism 4，支持表情/动作/口型同步） |
+| `views/AvatarView.vue` | Avatar 体验页（角色展示 + 语音交互 + 表情/动作控制面板） |
 | `api/cron-job.ts` | 定时任务 API 调用层 |
 | `components/settings/SystemSettingsPane.vue` | 系统设置面板（路径沙箱配置） |
 | `components/settings/DirectoryBrowser.vue` | 目录浏览器（NDrawer 懒加载） |

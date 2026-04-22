@@ -69,6 +69,15 @@ docker compose --env-file .env.mac up -d   # Mac
        AI 流式 chunk → EventEmitter → TtsRelayService → 二进制音频帧 → 浏览器 MediaSource 播放
   ASR: MediaRecorder 录音 → Blob → POST /api/v1/speech/asr → 腾讯云 ASR → 识别文本
        录音面板（波形可视化 + 计时器）通过 Web Audio API AnalyserNode 实时采集音频电平
+
+Avatar 通道（独立页面 /avatar）:
+  Live2D 角色渲染: PixiJS 6 WebGL 画布 + pixi-live2d-display (Cubism 4 专用构建)
+  Core SDK: index.html 预加载 live2dcubismcore.min.js（import 时序要求）
+  表情: LLM 输出 [emotion] 标签 → SSE emotion 事件 → Live2DAvatar.setExpression()
+  口型: TTS 播放时 AnalyserNode 提取音量 → volume prop (0~1) → ParamMouthOpenY
+  交互: autoInteract 鼠标追踪 + hit 点击触发动作
+  独立体验页: AvatarView.vue（角色 + 语音录音 + 表情/动作控制面板）
+  后续: 集成到 ChatView 悬浮窗模式，替代纯文字交互
 ```
 
 ## 环境配置
