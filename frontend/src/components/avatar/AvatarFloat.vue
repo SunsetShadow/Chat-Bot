@@ -5,32 +5,79 @@ import { useAIChat } from "@/composables/useAIChat";
 import { useAvatarLayout } from "@/composables/useAvatarLayout";
 import { useVoice } from "@/composables/useVoice";
 import { HARU_EMOTION_MAP } from "@/config/emotion-map";
-import type { AvatarActionPayload } from "@/types/avatar";
+import type { AvatarActionPayload, AvatarLayoutMode } from "@/types/avatar";
 import { NIcon } from "naive-ui";
-import { CloseOutline, RemoveOutline } from "@vicons/ionicons5";
+import {
+  CloseOutline,
+  RemoveOutline,
+  ContractOutline,
+  ExpandOutline,
+  TabletLandscapeOutline,
+} from "@vicons/ionicons5";
 
 const MODEL_URL = "/live2d/haru_greeter_t03.model3.json";
 const FLOAT_WIDTH = 240;
 const FLOAT_HEIGHT = 340;
+const SIDE_WIDTH = 280;
 
 const avatarRef = ref<InstanceType<typeof Live2DAvatar>>();
 const { avatarAction, isLoading: isStreaming } = useAIChat();
-const { setVisible } = useAvatarLayout();
+const { layoutMode, setLayout, setVisible } = useAvatarLayout();
 const { ttsAudioLevel, ttsStatus } = useVoice();
 
-// 悬浮窗位置
+// 悬浮窗位置（仅 float 模式使用）
 const posX = ref(window.innerWidth - FLOAT_WIDTH - 20);
 const posY = ref(80);
 const isDragging = ref(false);
 const isMinimized = ref(false);
 
-// 拖拽逻辑
+// 布局切换图标
+const layoutIcon = computed(() => {
+  const map: Record<AvatarLayoutMode, typeof TabletLandscapeOutline> = {
+    float: TabletLandscapeOutline,
+    side: ExpandOutline,
+    fullscreen: ContractOutline,
+  };
+  return map[layoutMode.value];
+});
+
+const layoutLabel = computed(() => {
+  const map: Record<AvatarLayoutMode, string> = {
+    float: "侧栏模式",
+    side: "全屏模式",
+    fullscreen: "悬浮模式",
+  };
+  return map[layoutMode.value];
+});
+
+function cycleLayout() {
+  const next: AvatarLayoutMode =
+    layoutMode.value === "float"
+      ? "side"
+      : layoutMode.value === "side"
+        ? "fullscreen"
+        : "float";
+  setLayout(next);
+}
+
+// Avatar 尺寸根据布局模式计算
+const avatarSize = computed(() => {
+  const map: Record<AvatarLayoutMode, { width: number; height: number }> = {
+    float: { width: FLOAT_WIDTH, height: FLOAT_HEIGHT - 32 },
+    side: { width: SIDE_WIDTH, height: 0 },
+    fullscreen: { width: 0, height: 0 },
+  };
+  return map[layoutMode.value];
+});
+
+// 拖拽逻辑（仅 float 模式）
 let dragStartX = 0;
 let dragStartY = 0;
 let posStartX = 0;
 let posStartY = 0;
 
 function onDragStart(e: MouseEvent) {
+  if (layoutMode.value !== "float") return;
   isDragging.value = true;
   dragStartX = e.clientX;
   dragStartY = e.clientY;
@@ -101,9 +148,9 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- 最小化状态 -->
+  <!-- 最小化状态（仅 float 模式） -->
   <div
-    v-if="isMinimized"
+    v-if="isMinimized && layoutMode === 'float'"
     class="avatar-mini"
     :style="{ left: posX + 'px', top: posY + 'px' }"
     @click="isMinimized = false"
@@ -111,7 +158,63 @@ onUnmounted(() => {
     <div class="avatar-mini-inner">🎭</div>
   </div>
 
-  <!-- 悬浮窗状态 -->
+  <!-- 全屏模式：覆盖聊天区域 -->
+  <div v-else-if="layoutMode === 'fullscreen'" class="avatar-fullscreen">
+    <div class="fullscreen-header">
+      <span class="float-title">Avatar</span>
+      <div class="float-actions">
+        <button
+          class="float-btn"
+          :title="layoutLabel"
+          @click.stop="cycleLayout"
+        >
+          <NIcon :component="layoutIcon" :size="14" />
+        </button>
+        <button class="float-btn" title="关闭" @click.stop="closeAvatar">
+          <NIcon :component="CloseOutline" :size="14" />
+        </button>
+      </div>
+    </div>
+    <div class="fullscreen-body">
+      <Live2DAvatar
+        ref="avatarRef"
+        :model-url="MODEL_URL"
+        :width="avatarSize.width"
+        :height="avatarSize.height"
+        :volume="avatarVolume"
+      />
+    </div>
+  </div>
+
+  <!-- 侧栏模式：固定右侧 -->
+  <div v-else-if="layoutMode === 'side'" class="avatar-side">
+    <div class="side-header">
+      <span class="float-title">Avatar</span>
+      <div class="float-actions">
+        <button
+          class="float-btn"
+          :title="layoutLabel"
+          @click.stop="cycleLayout"
+        >
+          <NIcon :component="layoutIcon" :size="14" />
+        </button>
+        <button class="float-btn" title="关闭" @click.stop="closeAvatar">
+          <NIcon :component="CloseOutline" :size="14" />
+        </button>
+      </div>
+    </div>
+    <div class="side-body">
+      <Live2DAvatar
+        ref="avatarRef"
+        :model-url="MODEL_URL"
+        :width="avatarSize.width"
+        :height="avatarSize.height"
+        :volume="avatarVolume"
+      />
+    </div>
+  </div>
+
+  <!-- 悬浮窗模式（默认） -->
   <div
     v-else
     class="avatar-float"
@@ -123,10 +226,16 @@ onUnmounted(() => {
       height: FLOAT_HEIGHT + 'px',
     }"
   >
-    <!-- 标题栏 -->
     <div class="float-header" @mousedown="onDragStart">
       <span class="float-title">Avatar</span>
       <div class="float-actions">
+        <button
+          class="float-btn"
+          :title="layoutLabel"
+          @click.stop="cycleLayout"
+        >
+          <NIcon :component="layoutIcon" :size="14" />
+        </button>
         <button
           class="float-btn"
           title="最小化"
@@ -139,14 +248,12 @@ onUnmounted(() => {
         </button>
       </div>
     </div>
-
-    <!-- Live2D 渲染区 -->
     <div class="float-body">
       <Live2DAvatar
         ref="avatarRef"
         :model-url="MODEL_URL"
-        :width="FLOAT_WIDTH"
-        :height="FLOAT_HEIGHT - 32"
+        :width="avatarSize.width"
+        :height="avatarSize.height"
         :volume="avatarVolume"
       />
     </div>
@@ -154,6 +261,7 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* --- 悬浮窗模式 --- */
 .avatar-float {
   position: fixed;
   z-index: 1000;
@@ -171,6 +279,66 @@ onUnmounted(() => {
   cursor: grabbing;
 }
 
+/* --- 侧栏模式 --- */
+.avatar-side {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: SIDE_WIDTH;
+  z-index: 1000;
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border-color);
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+}
+
+.side-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 32px;
+  padding: 0 8px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.side-body {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* --- 全屏模式 --- */
+.avatar-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+}
+
+.fullscreen-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  padding: 0 12px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.fullscreen-body {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* --- 共用组件 --- */
 .float-header {
   display: flex;
   align-items: center;
@@ -217,6 +385,7 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
+/* --- 最小化圆圈 --- */
 .avatar-mini {
   position: fixed;
   z-index: 1000;
