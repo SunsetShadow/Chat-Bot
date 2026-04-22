@@ -2,6 +2,7 @@ import { ref, computed } from "vue";
 import { Chat } from "@ai-sdk/vue";
 import type { UIMessage } from "ai";
 import { createChatTransport } from "./useChatTransport";
+import type { AvatarActionPayload } from "@/types/avatar";
 import { useAgentStore } from "@/stores/agent";
 import { useRulesStore } from "@/stores/rules";
 import { useModelStore } from "@/stores/model";
@@ -13,6 +14,9 @@ let chatInstance: Chat<UIMessage> | null = null;
 
 // 当前活跃 Agent（多 Agent 模式下由 supervisor 动态切换）
 const activeAgent = ref<string | null>(null);
+
+const avatarAction = ref<AvatarActionPayload | null>(null);
+let avatarActionTimer: ReturnType<typeof setTimeout> | null = null;
 
 function getChatInstance(): Chat<UIMessage> {
   if (!chatInstance) {
@@ -42,6 +46,15 @@ function getChatInstance(): Chat<UIMessage> {
         (_from, to) => {
           activeAgent.value = to;
         },
+        undefined, // getTtsSessionId — not handled here
+        (payload) => {
+          avatarAction.value = payload as AvatarActionPayload;
+          if (avatarActionTimer) clearTimeout(avatarActionTimer);
+          avatarActionTimer = setTimeout(() => {
+            avatarActionTimer = null;
+            avatarAction.value = null;
+          }, 3000);
+        },
       ),
       onError: (err) => {
         console.error("[AIChat] error:", err.message);
@@ -56,9 +69,7 @@ function getChatInstance(): Chat<UIMessage> {
               (p) => p.type === "text" && p.text.trim(),
             );
             if (!hasText) {
-              last.parts = [
-                { type: "text", text: "请求失败，请稍后重试" },
-              ];
+              last.parts = [{ type: "text", text: "请求失败，请稍后重试" }];
             }
           }
           return;
@@ -79,7 +90,9 @@ function getChatInstance(): Chat<UIMessage> {
               if (session.title && session.title !== "New Chat") {
                 chatStore.updateSessionTitle(titleSessionId, session.title);
               }
-            } catch { /* 静默失败 */ }
+            } catch {
+              /* 静默失败 */
+            }
           }, 3000);
         }
       },
@@ -128,7 +141,9 @@ export function useAIChat() {
           body: {
             web_search: options?.webSearch,
             thinking: options?.thinking,
-            ...(options?.ttsSessionId ? { tts_session_id: options.ttsSessionId } : {}),
+            ...(options?.ttsSessionId
+              ? { tts_session_id: options.ttsSessionId }
+              : {}),
           },
         },
       );
@@ -176,6 +191,11 @@ export function useAIChat() {
     chat.messages = [];
     chatInstance = null;
     activeAgent.value = null;
+    avatarAction.value = null;
+    if (avatarActionTimer) {
+      clearTimeout(avatarActionTimer);
+      avatarActionTimer = null;
+    }
   }
 
   return {
@@ -184,6 +204,7 @@ export function useAIChat() {
     isLoading,
     error,
     activeAgent,
+    avatarAction,
     sendMessage,
     stopStreaming,
     regenerate,

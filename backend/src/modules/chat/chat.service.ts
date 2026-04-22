@@ -157,6 +157,13 @@ export class ChatService {
             };
             break;
 
+          case 'avatar_action':
+            yield {
+              event: 'avatar_action',
+              data: { ...base, ...event.payload },
+            };
+            break;
+
           case 'finish':
             yield { event: 'message_done', data: { ...base, finish_reason: event.finishReason } };
             break;

@@ -16,6 +16,7 @@ import { registerAllTools } from './tools/tool.loader';
 import { createMemoryExtractTool } from './tools/memory-extract.tool';
 import { createKnowledgeQueryTool } from './tools/knowledge-query.tool';
 import { createCronJobTool } from './tools/cron-job.tool';
+import { createExpressEmotionTool, createPlayMotionTool } from './tools/avatar.tool';
 import { MemoryService } from '../memory/memory.service';
 import { JobService } from '../cron-job/job.service';
 
@@ -64,6 +65,18 @@ export class LangGraphModule implements OnModuleInit {
         description: '创建和管理 AI 定时任务',
       },
     );
+
+    // 注册 Avatar 控制工具
+    this.toolRegistry.register(createExpressEmotionTool(), {
+      permission_level: 'write',
+      category: 'avatar',
+      description: '设置虚拟角色表情',
+    });
+    this.toolRegistry.register(createPlayMotionTool(), {
+      permission_level: 'write',
+      category: 'avatar',
+      description: '播放虚拟角色动作',
+    });
 
     // 所有工具注册完成后，构建 LangGraph
     await this.langGraphService.initGraph();

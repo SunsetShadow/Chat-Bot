@@ -4,7 +4,7 @@
 
 ## 项目概述
 
-Vue 3 + NestJS 聊天应用，使用 AI SDK 驱动流式聊天，LangGraph Supervisor 模式编排多 Agent 工作流。支持多 Agent 协作编排（Supervisor 多步路由）、standalone 模式（自定义 Agent 独立运行）、Agent 权限分级（系统内置/系统示例/用户自定义）、工具权限分级、**路径沙箱**（限制工具可访问的目录范围，通过设置中心 UI 配置）、**规则系统**（全局规则强制生效 + 通用规则按需启用，支持按 Agent 分别配置）、**语音系统**（ASR 语音识别 + TTS 文本朗读，腾讯云 API）、AI 记忆提取与语义检索、定时任务系统（含全局通知）、联网搜索意图判断（默认开启，按需调用 web_search）、文件搜索工具（按文件名/内容搜索）、**Avatar 系统**（Live2D 角色交互，PixiJS 6 + Cubism 4，支持语音驱动表情/动作/口型同步）。UI 主题：暗色/亮色双主题，简约清晰风格。
+Vue 3 + NestJS 聊天应用，使用 AI SDK 驱动流式聊天，LangGraph Supervisor 模式编排多 Agent 工作流。支持多 Agent 协作编排（Supervisor 多步路由）、standalone 模式（自定义 Agent 独立运行）、Agent 权限分级（系统内置/系统示例/用户自定义）、工具权限分级、**路径沙箱**（限制工具可访问的目录范围，通过设置中心 UI 配置）、**规则系统**（全局规则强制生效 + 通用规则按需启用，支持按 Agent 分别配置）、**语音系统**（ASR 语音识别 + TTS 文本朗读，腾讯云 API）、AI 记忆提取与语义检索、定时任务系统（含全局通知）、联网搜索意图判断（默认开启，按需调用 web_search）、文件搜索工具（按文件名/内容搜索）、**Avatar 系统**（Live2D 角色交互，PixiJS 6 + Cubism 4，Agent 工具驱动表情/动作，ChatView 悬浮窗集成，TTS 口型同步）。UI 主题：暗色/亮色双主题，简约清晰风格。
 
 ### Agent 管理页（AgentConfigView）
 
@@ -70,14 +70,15 @@ docker compose --env-file .env.mac up -d   # Mac
   ASR: MediaRecorder 录音 → Blob → POST /api/v1/speech/asr → 腾讯云 ASR → 识别文本
        录音面板（波形可视化 + 计时器）通过 Web Audio API AnalyserNode 实时采集音频电平
 
-Avatar 通道（独立页面 /avatar）:
-  Live2D 角色渲染: PixiJS 6 WebGL 画布 + pixi-live2d-display (Cubism 4 专用构建)
-  Core SDK: index.html 预加载 live2dcubismcore.min.js（import 时序要求）
-  表情: LLM 输出 [emotion] 标签 → SSE emotion 事件 → Live2DAvatar.setExpression()
-  口型: TTS 播放时 AnalyserNode 提取音量 → volume prop (0~1) → ParamMouthOpenY
-  交互: autoInteract 鼠标追踪 + hit 点击触发动作
+Avatar 通道（双通道渲染: 文本 + Live2D 可视化）:
+  驱动方式: LLM 调用 express_emotion / play_motion 工具 → langgraph.service 拦截工具输出 → SSE avatar_action 事件
+  后端: avatar.tool.ts (safeTool) → ToolRegistryService (category: 'avatar') → langgraph.service 拦截 yield → chat.service SSE
+  前端: useChatTransport 解析 avatar_action → useAIChat avatarAction ref (3s 自动清除) → AvatarFloat 组件驱动表情/动作
+  悬浮窗: ChatContainer 集成 AvatarFloat（可拖拽/最小化/关闭），🎭 按钮切换显隐
+  渲染: PixiJS 6 WebGL + pixi-live2d-display (Cubism 4)，HARU_EMOTION_MAP 情绪→表情索引映射
+  口型同步: TTS 播放时 AnalyserNode 提取音量 → ttsAudioLevel ref → Live2DAvatar ParamMouthOpenY
+  布局: useAvatarLayout 模块级单例 (float/side/fullscreen)，localStorage 持久化
   独立体验页: AvatarView.vue（角色 + 语音录音 + 表情/动作控制面板）
-  后续: 集成到 ChatView 悬浮窗模式，替代纯文字交互
 ```
 
 ## 环境配置

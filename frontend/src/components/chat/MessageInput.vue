@@ -98,6 +98,9 @@ const formatDuration = (seconds: number) => {
 setOnRecognized((text) => {
   if (text) {
     inputValue.value = text;
+    nMessage.success("语音识别成功");
+  } else {
+    nMessage.warning("未识别到有效内容，请重试");
   }
 });
 
@@ -168,21 +171,27 @@ function handleCancel() {
   stopStreaming();
 }
 
-// --- 快捷键录音：Alt+Space 长按录音，松手停止，ESC 取消 ---
+// --- 快捷键录音：Ctrl+Shift+V 长按录音，松手停止，ESC 取消 ---
+// Alt+Space 在 macOS 被 Option 输入法拦截，改用 Ctrl+Shift+V 跨平台兼容
 
 let shortcutRecordingStart = 0;
 const MIN_RECORDING_MS = 200;
+const VOICE_SHORTCUT = "KeyV";
+
+function isVoiceShortcut(e: KeyboardEvent) {
+  return e.code === VOICE_SHORTCUT && e.ctrlKey && e.shiftKey;
+}
 
 function handleGlobalKeyDown(e: KeyboardEvent) {
   // ESC 取消录音
   if (e.key === "Escape" && isRecording.value) {
     e.preventDefault();
     cancelRecording();
+    nMessage.info("录音已取消");
     return;
   }
 
-  // Alt+Space 开始录音
-  if (e.key !== " " || !e.altKey) return;
+  if (!isVoiceShortcut(e)) return;
   if (isRecording.value || isRecognizing.value || isStreaming.value) return;
 
   e.preventDefault();
@@ -191,7 +200,7 @@ function handleGlobalKeyDown(e: KeyboardEvent) {
 }
 
 function handleGlobalKeyUp(e: KeyboardEvent) {
-  if (e.key !== " ") return;
+  if (e.code !== VOICE_SHORTCUT) return;
   if (!isRecording.value) return;
 
   if (Date.now() - shortcutRecordingStart < MIN_RECORDING_MS) {
@@ -396,7 +405,7 @@ onUnmounted(() => {
           <span>{{
             isRecording ? "停止" : isRecognizing ? "识别中" : "语音"
           }}</span>
-          <kbd v-if="!isRecording && !isRecognizing" class="shortcut-badge">⌥Space</kbd>
+          <kbd v-if="!isRecording && !isRecognizing" class="shortcut-badge">⌃⇧V</kbd>
         </button>
       </div>
 

@@ -69,3 +69,6 @@ coverage/
 
 .trae/
 .agents/
+
+# Docker data
+docker-data/

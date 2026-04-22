@@ -9,9 +9,11 @@ import AgentIndicator from "@/components/chat/AgentIndicator.vue";
 import RuleEditor from "@/components/rules/RuleEditor.vue";
 import ThemeToggle from "@/components/common/ThemeToggle.vue";
 import NotificationBell from "@/components/common/NotificationBell.vue";
+import AvatarFloat from '@/components/avatar/AvatarFloat.vue';
 import { useChatStore } from "@/stores/chat";
 import { useAgentStore } from "@/stores/agent";
 import { useAIChat } from "@/composables/useAIChat";
+import { useAvatarLayout } from '@/composables/useAvatarLayout';
 import { NDrawer, NDrawerContent, NIcon } from "naive-ui";
 import {
   SettingsOutline,
@@ -23,6 +25,7 @@ const router = useRouter();
 const chatStore = useChatStore();
 const agentStore = useAgentStore();
 const { loadMessages, clearMessages, activeAgent } = useAIChat();
+const { avatarVisible } = useAvatarLayout();
 
 const mobileDrawerOpen = ref(false);
 const mobileActionsOpen = ref(false);
@@ -90,6 +93,15 @@ watch(
           </button>
           <div class="w-px h-6 bg-[var(--border-color)]"></div>
           <NotificationBell />
+          <div class="w-px h-6 bg-[var(--border-color)]"></div>
+          <button
+            class="flex items-center justify-center w-9 h-9 bg-transparent border border-[var(--border-color)] rounded-[var(--radius-sm)] text-[var(--text-muted)] cursor-pointer transition-all duration-150 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+            :class="{ '!border-[var(--color-primary)] !text-[var(--color-primary)]': avatarVisible }"
+            title="Avatar"
+            @click="avatarVisible = !avatarVisible"
+          >
+            🎭
+          </button>
         </div>
 
         <!-- 移动端：省略号按钮，点击打开底部抽屉 -->
@@ -129,6 +141,17 @@ watch(
             </button>
             <div class="h-px bg-[var(--border-color)] my-1"></div>
             <div class="flex items-center justify-between py-3">
+              <span class="text-[13px] text-[var(--text-secondary)]">Avatar</span>
+              <button
+                class="text-[13px] cursor-pointer"
+                :class="avatarVisible ? 'text-[var(--color-primary)]' : 'text-[var(--text-muted)]'"
+                @click="avatarVisible = !avatarVisible; mobileActionsOpen = false"
+              >
+                {{ avatarVisible ? '关闭' : '开启' }}
+              </button>
+            </div>
+            <div class="h-px bg-[var(--border-color)] my-1"></div>
+            <div class="flex items-center justify-between py-3">
               <span class="text-[13px] text-[var(--text-secondary)]">通知</span>
               <NotificationBell />
             </div>
@@ -148,5 +171,8 @@ watch(
         <MessageInput />
       </div>
     </main>
+
+    <!-- Avatar 悬浮窗 -->
+    <AvatarFloat v-if="avatarVisible" />
   </div>
 </template>

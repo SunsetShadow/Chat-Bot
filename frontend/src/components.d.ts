@@ -15,6 +15,7 @@ declare module 'vue' {
     AgentIndicator: typeof import('./components/chat/AgentIndicator.vue')['default']
     AgentSelector: typeof import('./components/agent/AgentSelector.vue')['default']
     AppHeader: typeof import('./components/common/AppHeader.vue')['default']
+    AvatarFloat: typeof import('./components/avatar/AvatarFloat.vue')['default']
     ChatContainer: typeof import('./components/chat/ChatContainer.vue')['default']
     CommandCard: typeof import('./components/chat/tools/CommandCard.vue')['default']
     CronJobCard: typeof import('./components/chat/tools/CronJobCard.vue')['default']

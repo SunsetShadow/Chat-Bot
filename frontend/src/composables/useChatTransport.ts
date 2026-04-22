@@ -6,6 +6,7 @@ import type {
   ChatRequestOptions,
 } from "ai";
 import { API_BASE_URL } from "@/api/request";
+import type { AvatarActionPayload } from "@/types/avatar";
 
 /**
  * 自定义 ChatTransport，适配当前后端 SSE 协议
@@ -30,6 +31,7 @@ export function createChatTransport(
   onSessionCreated?: (sessionId: string) => void,
   onAgentSwitched?: (from: string, to: string) => void,
   getTtsSessionId?: () => string | null,
+  onAvatarAction?: (payload: AvatarActionPayload) => void,
 ): ChatTransport<UIMessage> {
   return {
     async sendMessages({
@@ -81,7 +83,12 @@ export function createChatTransport(
         throw new Error("无法获取响应流");
       }
 
-      return convertSSEStream(response.body, onSessionCreated, onAgentSwitched);
+      return convertSSEStream(
+        response.body,
+        onSessionCreated,
+        onAgentSwitched,
+        onAvatarAction,
+      );
     },
 
     async reconnectToStream(): Promise<ReadableStream<UIMessageChunk> | null> {
@@ -97,6 +104,7 @@ function convertSSEStream(
   rawStream: ReadableStream<Uint8Array>,
   onSessionCreated?: (sessionId: string) => void,
   onAgentSwitched?: (from: string, to: string) => void,
+  onAvatarAction?: (payload: AvatarActionPayload) => void,
 ): ReadableStream<UIMessageChunk> {
   const reader = rawStream.getReader();
   const decoder = new TextDecoder();
@@ -134,6 +142,19 @@ function convertSSEStream(
             const from = (event.data.from as string) || "";
             const to = (event.data.to as string) || "";
             if (to) onAgentSwitched(from, to);
+          }
+
+          // 处理 avatar_action 事件
+          if (event.event === "avatar_action" && onAvatarAction) {
+            const {
+              action,
+              session_id: _sid,
+              message_id: _mid,
+              ...rest
+            } = event.data;
+            if (action) {
+              onAvatarAction({ action: action as string, ...rest });
+            }
           }
 
           const chunks = convertEventToChunks(event, textPartId, messageId);

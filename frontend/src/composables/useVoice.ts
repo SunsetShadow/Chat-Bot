@@ -23,12 +23,18 @@ export function useVoice() {
   // TTS state
   const ttsStatus = ref<TtsStatus>("idle");
   const ttsSessionId = ref<string | null>(null);
+  const ttsAudioLevel = ref(0);
   let ttsWs: WebSocket | null = null;
   let audioEl: HTMLAudioElement | null = null;
   let ttsMediaSource: MediaSource | null = null;
   let ttsSourceBuffer: SourceBuffer | null = null;
   let ttsPendingBuffers: ArrayBuffer[] = [];
   let ttsStreamFinal = false;
+  // TTS 口型同步
+  let ttsAudioCtx: AudioContext | null = null;
+  let ttsAnalyser: AnalyserNode | null = null;
+  let ttsLevelRaf = 0;
+  let ttsLevelData: Uint8Array | null = null;
 
   // --- ASR ---
 
@@ -64,7 +70,8 @@ export function useVoice() {
 
   async function startRecording(): Promise<void> {
     if (!window.isSecureContext) {
-      asrError.value = "当前环境不支持录音（需要 HTTPS），请使用 https 访问或使用 localhost";
+      asrError.value =
+        "当前环境不支持录音（需要 HTTPS），请使用 https 访问或使用 localhost";
       return;
     }
 
@@ -273,6 +280,37 @@ export function useVoice() {
       ttsSourceBuffer.mode = "sequence";
       ttsSourceBuffer.addEventListener("updateend", flushTtsBufferQueue);
     });
+
+    // 连接 AnalyserNode 提取音量用于口型同步
+    audioEl.addEventListener("playing", () => {
+      if (!audioEl) return;
+      try {
+        ttsAudioCtx = new AudioContext();
+        const source = ttsAudioCtx.createMediaElementSource(audioEl);
+        ttsAnalyser = ttsAudioCtx.createAnalyser();
+        ttsAnalyser.fftSize = 256;
+        source.connect(ttsAnalyser);
+        ttsAnalyser.connect(ttsAudioCtx.destination);
+        updateTtsLevel();
+      } catch {
+        // createMediaElementSource 只能调用一次，忽略重复调用
+      }
+    });
+  }
+
+  function updateTtsLevel(): void {
+    if (!ttsAnalyser) return;
+    if (
+      !ttsLevelData ||
+      ttsLevelData.length !== ttsAnalyser.frequencyBinCount
+    ) {
+      ttsLevelData = new Uint8Array(ttsAnalyser.frequencyBinCount);
+    }
+    ttsAnalyser.getByteFrequencyData(ttsLevelData);
+    let sum = 0;
+    for (let i = 0; i < ttsLevelData.length; i++) sum += ttsLevelData[i];
+    ttsAudioLevel.value = Math.min(1, (sum / ttsLevelData.length / 255) * 3);
+    ttsLevelRaf = requestAnimationFrame(updateTtsLevel);
   }
 
   function flushTtsBufferQueue(): void {
@@ -304,6 +342,17 @@ export function useVoice() {
   }
 
   function cleanupAudioPlayback(): void {
+    if (ttsLevelRaf) {
+      cancelAnimationFrame(ttsLevelRaf);
+      ttsLevelRaf = 0;
+    }
+    ttsAnalyser = null;
+    ttsLevelData = null;
+    if (ttsAudioCtx) {
+      ttsAudioCtx.close().catch(() => {});
+      ttsAudioCtx = null;
+    }
+    ttsAudioLevel.value = 0;
     if (audioEl) {
       audioEl.pause();
       audioEl.src = "";
@@ -337,6 +386,7 @@ export function useVoice() {
     cancelRecording,
     ttsStatus,
     ttsSessionId,
+    ttsAudioLevel,
     connectTts,
     disconnectTts,
     dispose,

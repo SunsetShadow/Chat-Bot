@@ -33,6 +33,7 @@ export type StreamEvent =
   | { type: 'tool_output'; toolCallId: string; output: string }
   | { type: 'step_start' }
   | { type: 'agent_switched'; fromAgent: string; toAgent: string }
+  | { type: 'avatar_action'; payload: { action: string; [key: string]: unknown } }
   | { type: 'finish'; finishReason: string };
 
 @Injectable()
@@ -562,6 +563,16 @@ export class LangGraphService implements OnModuleInit {
           if (tc) tc.outputEmitted = true;
           yield { type: 'tool_output', toolCallId, output: outputStr };
           sawToolOutput = true;
+
+          // Avatar 工具拦截：解析工具输出并发射 avatar_action 事件
+          if (tc && (tc.name === 'express_emotion' || tc.name === 'play_motion')) {
+            try {
+              const payload = JSON.parse(outputStr);
+              yield { type: 'avatar_action', payload };
+            } catch {
+              // 解析失败静默忽略
+            }
+          }
         }
       }
     }
