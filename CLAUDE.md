@@ -77,7 +77,10 @@ Avatar 通道（双通道渲染: 文本 + Live2D 可视化）:
   悬浮窗: ChatContainer 集成 AvatarFloat（可拖拽/最小化/关闭），🎭 按钮切换显隐
   渲染: PixiJS 6 WebGL + pixi-live2d-display (Cubism 4)，HARU_EMOTION_MAP 情绪→表情索引映射
   口型同步: TTS 播放时 AnalyserNode 提取音量 → ttsAudioLevel ref → Live2DAvatar ParamMouthOpenY
-  布局: useAvatarLayout 模块级单例 (float/side/fullscreen)，localStorage 持久化
+  布局: useAvatarLayout 模块级单例，三种模式循环切换（标题栏按钮），localStorage 持久化
+    float: 280x280 可拖拽悬浮窗，模型居中，可最小化为 48px 圆圈
+    side: 左侧固定栏 (40vw)，全高，模型自适应缩放
+    fullscreen: 全屏覆盖，avatar 占上半屏 (50vh)，模型全幅渲染
   独立体验页: AvatarView.vue（角色 + 语音录音 + 表情/动作控制面板）
 ```
 

@@ -89,6 +89,13 @@ watch(
   },
 );
 
+// 响应容器尺寸变化，重设画布并居中模型
+watch([() => props.width, () => props.height], ([w, h]) => {
+  if (!app.value || !model.value || w <= 0 || h <= 0) return;
+  app.value.renderer.resize(w, h);
+  fitModel(model.value);
+});
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function fitModel(m: any) {
   const scale = Math.min(props.width / m.width, props.height / m.height);
