@@ -46,7 +46,7 @@ function agentToFormValues(agent: Agent | AgentTemplate, overrides?: Partial<Age
   return {
     name: agent.name,
     description: agent.description || "",
-    system_prompt: agent.system_prompt || "",
+    system_prompt: stripLegacyToolHints(agent.system_prompt || ""),
     traits: [...(agent.traits || [])],
     tools: [...(agent.tools || [])],
     skills: [...(('skills' in agent ? agent.skills : []) || [])],
@@ -178,13 +178,6 @@ function applyTemplate(template: AgentTemplate) {
 
 const toolHintsPreview = computed(() => getToolHints(formValue.value.tools || []));
 
-const toolHintsLines = computed(() =>
-  toolHintsPreview.value
-    .trim()
-    .split("\n")
-    .filter((l) => l.trim()),
-);
-
 function duplicateAgent(agent: Agent) {
   formValue.value = agentToFormValues(agent, { name: `${agent.name} (副本)` });
   editingAgentId.value = null;
@@ -215,11 +208,28 @@ const toolOptions = computed(() =>
   })),
 );
 
+function stripLegacyToolHints(prompt: string): string {
+  const markers = ["\n\n【可用工具】\n", "\n\n可用工具：\n"];
+  for (const m of markers) {
+    const idx = prompt.lastIndexOf(m);
+    if (idx !== -1) return prompt.slice(0, idx);
+  }
+  return prompt;
+}
+
 function getToolHints(tools: string[]): string {
   const selected = availableTools.value.filter((t) => tools.includes(t.name));
   if (selected.length === 0) return "";
-  const lines = selected.map((t, i) => `${i + 1}. ${t.name}: ${t.description}`);
-  return "\n\n可用工具：\n" + lines.join("\n");
+  const lines = selected.map((t, i) => `(${i + 1}) ${t.name}：${t.description}。`);
+  return "\n\n【可用工具】\n" + lines.join("\n");
+}
+
+function getFullPromptDisplay(agent: Agent): string {
+  const base = stripLegacyToolHints(agent.system_prompt || '');
+  const toolNames = agent.is_system
+    ? availableTools.value.map((t) => t.name)
+    : (agent.tools || []);
+  return base + getToolHints(toolNames);
 }
 
 onMounted(async () => {
@@ -321,10 +331,6 @@ function truncatePrompt(prompt: string, max = 120): string {
 
 <template>
   <div class="agent-config-view" :class="{ embedded }">
-    <!-- Page Header (standalone only) -->
-    <header v-if="!embedded" class="page-header glass-card">
-    </header>
-
     <!-- Tabs -->
     <div class="agent-tab-bar">
       <NTabs v-model:value="activeTab" type="segment" size="small">
@@ -430,10 +436,10 @@ function truncatePrompt(prompt: string, max = 120): string {
                   />
                 </button>
                 <div v-if="expandedAgents.has(agent.id)" class="prompt-content">
-                  {{ agent.system_prompt }}
+                  {{ getFullPromptDisplay(agent) }}
                 </div>
                 <div v-else class="prompt-preview">
-                  {{ truncatePrompt(agent.system_prompt) }}
+                  {{ truncatePrompt(getFullPromptDisplay(agent)) }}
                 </div>
               </div>
 
@@ -508,8 +514,8 @@ function truncatePrompt(prompt: string, max = 120): string {
                   <span>系统提示词</span>
                   <NIcon :component="ChevronDownOutline" :size="14" :class="{ rotated: expandedAgents.has(agent.id) }" />
                 </button>
-                <div v-if="expandedAgents.has(agent.id)" class="prompt-content">{{ agent.system_prompt }}</div>
-                <div v-else class="prompt-preview">{{ truncatePrompt(agent.system_prompt) }}</div>
+                <div v-if="expandedAgents.has(agent.id)" class="prompt-content">{{ getFullPromptDisplay(agent) }}</div>
+                <div v-else class="prompt-preview">{{ truncatePrompt(getFullPromptDisplay(agent)) }}</div>
               </div>
             </div>
           </div>
@@ -548,12 +554,18 @@ function truncatePrompt(prompt: string, max = 120): string {
           />
         </NFormItem>
         <NFormItem label="系统提示词">
-          <NInput
-            v-model:value="formValue.system_prompt"
-            type="textarea"
-            :rows="5"
-            placeholder="# 角色&#10;描述这个 Agent 的身份和能力&#10;&#10;# 核心原则&#10;关键行为准则&#10;&#10;# 输出规范&#10;格式、语言风格、长度要求"
-          />
+          <div class="prompt-editor-area">
+            <NInput
+              v-model:value="formValue.system_prompt"
+              type="textarea"
+              :rows="5"
+              placeholder="# 角色&#10;描述这个 Agent 的身份和能力&#10;&#10;# 核心原则&#10;关键行为准则&#10;&#10;# 输出规范&#10;格式、语言风格、长度要求"
+            />
+            <div v-if="toolHintsPreview" class="prompt-tool-hints">
+              <span class="prompt-tool-hints-label">以上为自定义提示词，以下根据已选工具自动生成</span>
+              <div class="prompt-tool-hints-content">{{ toolHintsPreview.trim() }}</div>
+            </div>
+          </div>
         </NFormItem>
         <NFormItem label="能力描述">
           <NInput
@@ -595,16 +607,6 @@ function truncatePrompt(prompt: string, max = 120): string {
           <NSwitch v-model:value="formValue.enabled" />
         </NFormItem>
       </NForm>
-      <!-- 工具提示预览：默认折叠，用户无需关注 -->
-      <div v-if="toolHintsPreview" class="tool-hints-bar">
-        <NCollapse :default-expanded="false" :arrow-placement="'right'">
-          <NCollapseItem title="工具提示" name="tool-hints">
-            <div class="tool-hints-tags">
-              <span v-for="line in toolHintsLines" :key="line" class="tool-hints-tag">{{ line }}</span>
-            </div>
-          </NCollapseItem>
-        </NCollapse>
-      </div>
       <template #footer>
         <div class="flex justify-end gap-3">
           <button class="modal-btn cancel" @click="showModal = false">
@@ -1226,28 +1228,33 @@ function truncatePrompt(prompt: string, max = 120): string {
   background: rgba(6, 182, 212, 0.06);
 }
 
-.tool-hints-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px;
-  padding: 8px 0 0;
-  border-top: 1px solid var(--border-color);
-  margin-top: 4px;
+.prompt-editor-area {
+  width: 100%;
 }
 
-.tool-hints-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+.prompt-tool-hints {
+  margin-top: 6px;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
 }
 
-.tool-hints-tag {
-  font-size: 11px;
-  color: var(--text-tertiary);
+.prompt-tool-hints-label {
+  display: block;
+  padding: 4px 12px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
   background: var(--bg-tertiary);
-  padding: 2px 8px;
-  border-radius: 4px;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.prompt-tool-hints-content {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  padding: 8px 12px;
+  white-space: pre-wrap;
   font-family: var(--font-mono);
 }
 </style>

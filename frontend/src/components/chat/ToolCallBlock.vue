@@ -17,7 +17,17 @@ type ToolState =
   | "output-error";
 
 const TOOL_DISPLAY_NAMES: Record<string, string> = {
+  web_search: "联网搜索",
+  send_mail: "发送邮件",
+  time_now: "当前时间",
+  execute_command: "执行命令",
+  read_file: "读取文件",
+  write_file: "写入文件",
+  list_directory: "目录列表",
+  search_files: "搜索文件",
   extract_memory: "记忆提取",
+  knowledge_query: "知识查询",
+  cron_job: "定时任务",
 };
 
 const props = defineProps<{

@@ -157,7 +157,18 @@ async function handleToggleRule(id: string) {
         <NTabs v-model:value="activeTab" type="line" animated>
           <!-- Agent 管理 — 嵌入 AgentConfig -->
           <NTabPane name="agents" tab="Agent 管理">
-            <div class="tab-content agent-tab-content">
+            <div class="tab-content">
+              <div class="section-header">
+                <div class="section-title">
+                  <div class="section-icon-wrap">
+                    <NIcon :component="SparklesOutline" :size="18" />
+                  </div>
+                  <div>
+                    <span class="title-mono">AGENTS</span>
+                    <h3>智能体配置</h3>
+                  </div>
+                </div>
+              </div>
               <AgentConfigView embedded />
             </div>
           </NTabPane>
@@ -616,10 +627,6 @@ async function handleToggleRule(id: string) {
 
 .tab-content {
   padding: 20px 0;
-}
-
-.agent-tab-content {
-  padding: 0;
 }
 
 /* === Section Header === */

@@ -11,7 +11,7 @@ import type {
 } from "ai";
 import { renderMarkdownSafe } from "@/utils/markdown";
 import { PersonOutline, SparklesOutline, RefreshOutline } from "@vicons/ionicons5";
-import ToolCallBlock from "./ToolCallBlock.vue";
+import ToolRenderer from "./tools/ToolRenderer.vue";
 
 const props = defineProps<{
   message: UIMessage;
@@ -172,16 +172,15 @@ function getHostname(url: string): string {
               </p>
             </div>
 
-            <template v-else-if="toolInfoMap[idx]">
-              <ToolCallBlock
-                :toolName="toolInfoMap[idx].toolName"
-                :state="toolInfoMap[idx].state"
-                :input="toolInfoMap[idx].input"
-                :output="toolInfoMap[idx].output"
-                :errorText="toolInfoMap[idx].errorText"
-                class="my-2"
-              />
-            </template>
+            <ToolRenderer
+              v-else-if="toolInfoMap[idx]"
+              :toolName="toolInfoMap[idx].toolName"
+              :state="toolInfoMap[idx].state"
+              :input="toolInfoMap[idx].input"
+              :output="toolInfoMap[idx].output"
+              :errorText="toolInfoMap[idx].errorText"
+              class="my-2"
+            />
 
             <div v-else-if="isFilePart(part)" class="my-2">
               <div
