@@ -164,11 +164,12 @@ onUnmounted(() => {
       <span class="float-title">Avatar</span>
       <div class="float-actions">
         <button
-          class="float-btn"
+          class="layout-btn"
           :title="layoutLabel"
           @click.stop="cycleLayout"
         >
           <NIcon :component="layoutIcon" :size="14" />
+          <span>{{ layoutLabel }}</span>
         </button>
         <button class="float-btn" title="关闭" @click.stop="closeAvatar">
           <NIcon :component="CloseOutline" :size="14" />
@@ -192,11 +193,12 @@ onUnmounted(() => {
       <span class="float-title">Avatar</span>
       <div class="float-actions">
         <button
-          class="float-btn"
+          class="layout-btn"
           :title="layoutLabel"
           @click.stop="cycleLayout"
         >
           <NIcon :component="layoutIcon" :size="14" />
+          <span>{{ layoutLabel }}</span>
         </button>
         <button class="float-btn" title="关闭" @click.stop="closeAvatar">
           <NIcon :component="CloseOutline" :size="14" />
@@ -230,11 +232,12 @@ onUnmounted(() => {
       <span class="float-title">Avatar</span>
       <div class="float-actions">
         <button
-          class="float-btn"
+          class="layout-btn"
           :title="layoutLabel"
           @click.stop="cycleLayout"
         >
           <NIcon :component="layoutIcon" :size="14" />
+          <span>{{ layoutLabel }}</span>
         </button>
         <button
           class="float-btn"
@@ -378,6 +381,26 @@ onUnmounted(() => {
 .float-btn:hover {
   background: var(--bg-primary);
   color: var(--text-primary);
+}
+
+.layout-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.15s;
+}
+
+.layout-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .float-body {
