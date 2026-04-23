@@ -134,26 +134,19 @@ async function handleToggleRule(id: string) {
 
 <template>
   <div class="settings-view">
-    <!-- Page Header -->
-    <header class="page-header glass-card">
-      <button class="text-back-btn" @click="goBack">
-        <NIcon :component="ChevronBackOutline" :size="18" />
-        <span>返回</span>
-      </button>
-      <div class="page-title-group">
-        <div class="title-icon-wrap">
-          <NIcon :component="SettingsOutline" :size="22" />
-        </div>
-        <div>
-          <span class="title-mono">SETTINGS</span>
-          <h1 class="page-title">设置中心</h1>
-        </div>
-      </div>
-    </header>
-
     <!-- Content -->
     <div class="settings-content">
       <div class="tabs-wrapper glass-card">
+        <div class="tabs-bar">
+          <button class="back-btn" @click="goBack">
+            <NIcon :component="ChevronBackOutline" :size="18" />
+            <span>返回</span>
+          </button>
+          <div class="tabs-title">
+            <NIcon :component="SettingsOutline" :size="16" />
+            <span>设置</span>
+          </div>
+        </div>
         <NTabs v-model:value="activeTab" type="line" animated>
           <!-- Agent 管理 — 嵌入 AgentConfig -->
           <NTabPane name="agents" tab="Agent 管理">
@@ -538,70 +531,42 @@ async function handleToggleRule(id: string) {
   gap: 16px;
 }
 
-/* === Page Header === */
-.page-header {
+/* === Tabs Bar === */
+.tabs-bar {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 20px 28px;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
 }
 
-.text-back-btn {
+.back-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   background: none;
   border: none;
   color: var(--text-secondary);
-  font-family: var(--font-mono);
   font-size: 13px;
   cursor: pointer;
-  padding: 6px 12px;
+  padding: 4px 8px;
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
 }
 
-.text-back-btn:hover {
+.back-btn:hover {
   color: var(--color-primary);
   background: var(--color-primary-light);
 }
 
-.page-title-group {
+.tabs-title {
   display: flex;
   align-items: center;
-  gap: 14px;
-  flex: 1;
-}
-
-.title-icon-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  background: var(--color-primary-light);
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius-md);
-  color: var(--color-primary);
-  flex-shrink: 0;
-}
-
-.title-mono {
-  display: block;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  margin-bottom: 2px;
-}
-
-.page-title {
-  font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 700;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--text-primary);
-  line-height: 1.2;
 }
 
 /* === Content === */
@@ -647,18 +612,18 @@ async function handleToggleRule(id: string) {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: var(--color-primary-light);
-  border: 1px solid var(--color-primary);
+  width: 32px;
+  height: 32px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  color: var(--color-primary);
+  color: var(--text-secondary);
   flex-shrink: 0;
 }
 
 .section-title h3 {
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text-primary);
 }

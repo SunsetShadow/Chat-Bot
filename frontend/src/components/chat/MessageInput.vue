@@ -20,11 +20,24 @@ import {
 } from "@vicons/ionicons5";
 import ModelSelector from "./ModelSelector.vue";
 
+const props = defineProps<{
+  isEmpty?: boolean;
+}>();
+
 const emit = defineEmits<{
   send: [message: string];
 }>();
 
 const { isLoading: isStreaming, sendMessage, stopStreaming } = useAIChat();
+const { messages } = useAIChat();
+
+const suggestions = [
+  "帮我写一段自我介绍",
+  "解释一下量子计算",
+  "推荐几本好书",
+];
+
+const showSuggestions = computed(() => props.isEmpty !== false && messages.value.length === 0 && !isStreaming.value);
 const { isUploading, attachments, uploadMultiple, remove, clear } =
   useFileUpload({ maxFiles: 5 });
 const chatStore = useChatStore();
@@ -233,11 +246,6 @@ onUnmounted(() => {
 
 <template>
   <div class="message-input-container" :class="{ 'is-focused': isFocused, 'is-recording': isRecording }">
-    <!-- 模型选择器区域 -->
-    <div class="model-selector-bar">
-      <ModelSelector :session-id="chatStore.currentSessionId || undefined" />
-    </div>
-
     <!-- 附件预览区域 -->
     <div v-if="attachments.length > 0" class="attachments-preview">
       <div
@@ -264,6 +272,23 @@ onUnmounted(() => {
           <NIcon :component="CloseOutline" :size="12" />
         </button>
       </div>
+    </div>
+
+    <!-- 快捷提问建议（仅空白态时显示） -->
+    <div v-if="showSuggestions" class="suggestions-row">
+      <button
+        v-for="s in suggestions"
+        :key="s"
+        class="suggestion-pill"
+        @click="inputValue = s; textareaRef?.focus()"
+      >
+        {{ s }}
+      </button>
+    </div>
+
+    <!-- 模型选择器（紧凑独立行） -->
+    <div class="model-bar">
+      <ModelSelector :session-id="chatStore.currentSessionId || undefined" />
     </div>
 
     <!-- 主输入行 -->
@@ -349,77 +374,57 @@ onUnmounted(() => {
           class="action-button"
           :class="{ 'is-active': attachments.length > 0 }"
           :disabled="isStreaming || isRecording"
+          :title="attachments.length > 0 ? `附件 ${attachments.length}/5` : '附件'"
           @click="triggerFileUpload"
         >
-          <NIcon :component="AttachOutline" :size="20" />
-          <span>{{
-            attachments.length > 0 ? `${attachments.length}/5` : "附件"
-          }}</span>
+          <NIcon :component="AttachOutline" :size="18" />
         </button>
 
         <button
           class="action-button"
           :class="{ 'is-active': webSearchEnabled }"
           :disabled="isRecording"
+          title="联网搜索"
           @click="webSearchEnabled = !webSearchEnabled"
         >
-          <NIcon :component="GlobeOutline" :size="20" />
-          <span>联网</span>
+          <NIcon :component="GlobeOutline" :size="18" />
         </button>
 
         <button
           class="action-button"
           :class="{ 'is-active': thinkingEnabled }"
           :disabled="isRecording"
+          title="深度思考"
           @click="thinkingEnabled = !thinkingEnabled"
         >
-          <NIcon :component="BulbOutline" :size="20" />
-          <span>思考</span>
+          <NIcon :component="BulbOutline" :size="18" />
         </button>
 
         <button
           class="action-button"
           :class="{ 'is-active': voiceEnabled, 'is-speaking': isTtsSpeaking }"
           :disabled="isRecognizing || isRecording"
+          :title="voiceEnabled ? (isTtsSpeaking ? '朗读中' : '关闭朗读') : '朗读'"
           @click="toggleTts"
         >
           <NIcon
             :component="voiceEnabled ? VolumeHighOutline : VolumeMuteOutline"
-            :size="20"
+            :size="18"
           />
-          <span>{{
-            voiceEnabled ? (isTtsSpeaking ? "朗读中" : "朗读") : "朗读"
-          }}</span>
         </button>
 
         <button
-          class="action-button voice-button"
+          class="action-button"
           :class="{ 'is-active': isRecording, 'is-recognizing': isRecognizing }"
           :disabled="isStreaming || isRecognizing"
+          :title="isRecording ? '停止录音 (ESC 取消)' : '语音输入 (⌃⇧V)'"
           @click="toggleRecording"
         >
           <NIcon
             :component="isRecording ? MicOffOutline : MicOutline"
-            :size="20"
+            :size="18"
           />
-          <span>{{
-            isRecording ? "停止" : isRecognizing ? "识别中" : "语音"
-          }}</span>
-          <kbd v-if="!isRecording && !isRecognizing" class="shortcut-badge">⌃⇧V</kbd>
         </button>
-      </div>
-
-      <div class="hints">
-        <span
-          v-if="inputValue.length > 0"
-          class="font-mono text-[11px] text-[var(--text-muted)]"
-        >
-          {{ inputValue.length }}
-        </span>
-        <span class="hint-enter">
-          <kbd class="kbd">Enter</kbd>
-          <span>发送</span>
-        </span>
       </div>
     </div>
   </div>
@@ -451,13 +456,49 @@ onUnmounted(() => {
   box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
 }
 
-/* Model Selector Bar */
-.model-selector-bar {
+/* Suggestions */
+.suggestions-row {
   display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border-subtle);
+  gap: 6px;
+  margin-bottom: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.suggestions-row::-webkit-scrollbar {
+  display: none;
+}
+
+.suggestion-pill {
+  padding: 6px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.suggestion-pill:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+/* Model Bar */
+.model-bar {
+  margin-bottom: 6px;
+}
+
+.model-bar :deep(.model-button) {
+  padding: 3px 10px;
+  font-size: 11px;
+}
+
+.model-bar :deep(.model-name) {
+  max-width: 120px;
 }
 
 /* Attachments Preview */
@@ -749,9 +790,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border-color);
+  margin-top: 10px;
 }
 
 .action-buttons {
@@ -762,31 +801,27 @@ onUnmounted(() => {
 }
 
 .action-button {
-  height: 36px;
-  padding: 0 12px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
   border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 600;
   background: transparent;
   border: 1px solid var(--border-color);
-  color: var(--text-primary);
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 @media (min-width: 768px) {
   .action-button {
-    height: 40px;
-    padding: 0 16px;
-    gap: 8px;
-    font-size: 14px;
+    width: 38px;
+    height: 38px;
   }
 
   .action-buttons {
-    gap: 8px;
+    gap: 6px;
   }
 
   .recording-left {
@@ -807,24 +842,8 @@ onUnmounted(() => {
 }
 
 .action-button:disabled {
-  opacity: 0.6;
+  opacity: 0.4;
   cursor: not-allowed;
-}
-
-.action-button:disabled .shortcut-badge {
-  display: none;
-}
-
-.shortcut-badge {
-  padding: 1px 5px;
-  font-size: 9px;
-  font-family: var(--font-mono);
-  line-height: 1.4;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  border-radius: 3px;
-  color: var(--text-muted);
-  white-space: nowrap;
 }
 
 .action-button.is-speaking {

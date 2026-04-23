@@ -143,8 +143,8 @@ const darkThemeOverrides: GlobalThemeOverrides = {
 
     textColorBase: "#eef1f6",
     textColor1: "#eef1f6",
-    textColor2: "#9ca8b8",
-    textColor3: "#6b7b8d",
+    textColor2: "#a8b6c8",
+    textColor3: "#7889a0",
     textColorDisabled: "#4a5568",
 
     placeholderColor: "#6b7b8d",

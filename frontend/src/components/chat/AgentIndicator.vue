@@ -19,7 +19,6 @@ const displayIcon = computed(() => agent.value?.avatar || "✨");
 <template>
   <div v-if="agentId" class="agent-indicator">
     <div class="indicator-dot"></div>
-    <span class="indicator-icon">{{ displayIcon }}</span>
     <span class="indicator-name">{{ displayName }}</span>
   </div>
 </template>

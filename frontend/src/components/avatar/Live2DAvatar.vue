@@ -63,6 +63,8 @@ onMounted(async () => {
     });
 
     pixiApp.stage.addChild(m);
+    // 等一帧确保 PixiJS 渲染后再居中
+    requestAnimationFrame(() => fitModel(m));
     loading.value = false;
     emit("loaded");
   } catch (e: unknown) {
@@ -98,10 +100,19 @@ watch([() => props.width, () => props.height], ([w, h]) => {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function fitModel(m: any) {
-  const scale = Math.min(props.width / m.width, props.height / m.height);
+  if (!m || !m.parent) return;
+  // pixi-live2d-display 模型内部 origin 不在左上角，用 getBounds 获取真实视觉边界
+  m.scale.set(1);
+  m.position.set(0, 0);
+  m.updateTransform();
+  const bounds = m.getBounds();
+  if (bounds.width <= 0 || bounds.height <= 0) return;
+
+  const scale = Math.min(props.width / bounds.width, props.height / bounds.height);
   m.scale.set(scale);
-  m.x = (props.width - m.width * scale) / 2;
-  m.y = (props.height - m.height * scale) / 2;
+  m.x = (props.width - bounds.width * scale) / 2 - bounds.x * scale;
+  m.y = (props.height - bounds.height * scale) / 2 - bounds.y * scale;
+  m.updateTransform();
 }
 
 function setExpression(index: number) {
@@ -153,7 +164,6 @@ defineExpose({ setExpression, startMotion, tap });
 .live2d-avatar {
   position: relative;
   overflow: hidden;
-  border-radius: 12px;
 }
 
 .live2d-avatar canvas {

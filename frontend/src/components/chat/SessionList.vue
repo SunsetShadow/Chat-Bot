@@ -70,30 +70,18 @@ async function confirmDelete() {
 </script>
 
 <template>
-  <div class="flex flex-col h-full p-5 px-4 overflow-hidden">
+  <div class="flex flex-col h-full p-4 px-3 overflow-hidden">
     <!-- 头部 -->
-    <div class="mb-5">
-      <div class="flex flex-col gap-1">
-        <span
-          class="font-mono text-[11px] tracking-wider uppercase text-[var(--text-muted)]"
-          >会话</span
-        >
-        <h2
-          class="text-xl font-semibold text-[var(--text-primary)] tracking-tight"
-        >
-          Conversations
-        </h2>
-      </div>
-    </div>
-
-    <!-- 新建按钮 -->
-    <div class="mb-3 min-w-0">
+    <div class="mb-3 flex items-center justify-between">
+      <h2 class="text-base font-semibold text-[var(--text-primary)] tracking-tight">
+        会话
+      </h2>
       <button
-        class="flex items-center justify-center gap-2 w-full py-3.5 px-4 bg-[var(--color-primary-light)] border border-[var(--color-primary)] rounded-[var(--radius-md)] text-[var(--color-primary)] font-mono text-[13px] font-medium tracking-wide cursor-pointer transition-all duration-150 hover:bg-[var(--color-primary)] hover:text-white box-border"
+        class="flex items-center justify-center w-8 h-8 border-none rounded-[var(--radius-sm)] text-[var(--text-muted)] cursor-pointer transition-all duration-150 hover:bg-[var(--bg-tertiary)] hover:text-[var(--color-primary)]"
+        title="新对话"
         @click="handleNewChat"
       >
         <NIcon :component="AddOutline" :size="18" />
-        <span>新对话</span>
       </button>
     </div>
 
@@ -137,14 +125,15 @@ async function confirmDelete() {
         <div
           v-for="session in filteredSessions"
           :key="session.id"
-          class="group flex items-center gap-3 px-4 py-3.5 rounded-[var(--radius-md)] cursor-pointer transition-all duration-150 border border-transparent"
-          :class="
-            chatStore.currentSessionId === session.id
-              ? 'bg-[var(--color-primary-light)] border-[var(--color-primary)]'
-              : 'hover:bg-[var(--bg-tertiary)]'
-          "
+          class="session-item group relative flex items-center gap-3 pl-4 pr-3 py-3 rounded-[var(--radius-sm)] cursor-pointer transition-all duration-150"
+          :class="chatStore.currentSessionId === session.id ? 'is-active' : ''"
           @click="handleSelectSession(session.id)"
         >
+          <!-- 左侧选中竖条 -->
+          <div
+            v-if="chatStore.currentSessionId === session.id"
+            class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r bg-[var(--color-primary)]"
+          ></div>
           <!-- 置顶图标 -->
           <div
             v-if="session.is_pinned"
@@ -152,26 +141,16 @@ async function confirmDelete() {
           >
             <div class="w-1.5 h-1.5 bg-[var(--color-primary)] rounded-sm"></div>
           </div>
-          <div
-            class="w-9 h-9 rounded-[var(--radius-sm)] flex items-center justify-center shrink-0 transition-all duration-150"
-            :class="
-              chatStore.currentSessionId === session.id
-                ? 'bg-[var(--color-primary)] text-white'
-                : 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]'
-            "
-          >
-            <NIcon :component="ChatbubbleEllipsesOutline" :size="18" />
-          </div>
           <div class="flex-1 min-w-0">
             <div
-              class="text-sm font-medium text-[var(--text-primary)] truncate mb-1"
+              class="text-[13px] font-medium text-[var(--text-primary)] truncate"
             >
               {{ session.title }}
             </div>
             <div
-              class="flex items-center gap-1.5 font-mono text-[11px] text-[var(--text-muted)]"
+              class="flex items-center gap-1.5 font-mono text-[10px] text-[var(--text-muted)] mt-0.5"
             >
-              <span>{{ session.message_count }} 条消息</span>
+              <span>{{ session.message_count }} 条</span>
               <span class="opacity-50">·</span>
               <span>{{ formatRelativeTime(session.updated_at) }}</span>
             </div>
@@ -226,3 +205,13 @@ async function confirmDelete() {
     </NModal>
   </div>
 </template>
+
+<style scoped>
+.session-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.session-item.is-active {
+  background: var(--color-primary-light);
+}
+</style>

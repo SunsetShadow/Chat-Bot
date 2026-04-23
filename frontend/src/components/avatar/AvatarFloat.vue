@@ -66,7 +66,6 @@ function cycleLayout() {
 
 // 布局变化时重新测量容器并更新画布尺寸
 watch(layoutMode, async () => {
-  // 重置旧 observer
   if (resizeObserver) resizeObserver.disconnect();
 
   if (layoutMode.value === "float") {
@@ -76,7 +75,6 @@ watch(layoutMode, async () => {
   }
   await nextTick();
   measureBody();
-  // attach observer 到新 body
   if (bodyRef.value && resizeObserver) {
     resizeObserver.observe(bodyRef.value);
   }
@@ -170,7 +168,6 @@ function closeAvatar() {
 onMounted(() => {
   posX.value = Math.min(posX.value, window.innerWidth - FLOAT_SIZE - 20);
   setupResizeObserver();
-  // 延迟一帧等 DOM 渲染后 attach observer
   nextTick(() => {
     if (bodyRef.value && resizeObserver) {
       resizeObserver.observe(bodyRef.value);
@@ -186,7 +183,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- 最小化圆圈 -->
+  <!-- 最小化圆圈（仅 float） -->
   <div
     v-if="isMinimized && layoutMode === 'float'"
     class="avatar-mini"
@@ -196,21 +193,9 @@ onUnmounted(() => {
     <div class="avatar-mini-inner">🎭</div>
   </div>
 
-  <!-- 全屏模式：Avatar 占上半屏 -->
+  <!-- 全屏模式：文档流，Avatar 占上半 -->
   <div v-else-if="layoutMode === 'fullscreen'" class="avatar-fullscreen">
-    <div class="fs-header">
-      <span class="header-title">Avatar</span>
-      <div class="header-actions">
-        <button class="layout-btn" @click.stop="cycleLayout">
-          <NIcon :component="layoutIcon" :size="14" />
-          <span>{{ layoutLabel }}</span>
-        </button>
-        <button class="icon-btn" title="关闭" @click.stop="closeAvatar">
-          <NIcon :component="CloseOutline" :size="16" />
-        </button>
-      </div>
-    </div>
-    <div ref="bodyRef" class="fs-body">
+    <div ref="bodyRef" class="panel-body">
       <Live2DAvatar
         ref="avatarRef"
         :model-url="MODEL_URL"
@@ -221,21 +206,9 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <!-- 侧栏模式：左侧，宽屏 -->
+  <!-- 侧栏模式：文档流，左侧 50% -->
   <div v-else-if="layoutMode === 'side'" class="avatar-side">
-    <div class="side-header">
-      <span class="header-title">Avatar</span>
-      <div class="header-actions">
-        <button class="layout-btn" @click.stop="cycleLayout">
-          <NIcon :component="layoutIcon" :size="14" />
-          <span>{{ layoutLabel }}</span>
-        </button>
-        <button class="icon-btn" title="关闭" @click.stop="closeAvatar">
-          <NIcon :component="CloseOutline" :size="16" />
-        </button>
-      </div>
-    </div>
-    <div ref="bodyRef" class="side-body">
+    <div ref="bodyRef" class="panel-body">
       <Live2DAvatar
         ref="avatarRef"
         :model-url="MODEL_URL"
@@ -246,7 +219,7 @@ onUnmounted(() => {
     </div>
   </div>
 
-  <!-- 悬浮窗模式（默认） -->
+  <!-- 悬浮窗模式（默认，fixed） -->
   <div
     v-else
     class="avatar-float"
@@ -290,7 +263,7 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* ===== 悬浮窗 ===== */
+/* ===== 悬浮窗（fixed） ===== */
 .avatar-float {
   position: fixed;
   z-index: 1000;
@@ -329,36 +302,29 @@ onUnmounted(() => {
   justify-content: center;
 }
 
-/* ===== 侧栏模式：左侧，占屏幕 40% ===== */
+/* ===== 侧栏模式：文档流，由父容器决定尺寸 ===== */
 .avatar-side {
-  position: fixed;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 40vw;
-  min-width: 320px;
-  max-width: 600px;
-  z-index: 1000;
+  height: 100%;
   background: var(--bg-secondary);
-  border-right: 1px solid var(--border-color);
-  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
   user-select: none;
+  overflow: hidden;
 }
 
-.side-header {
+/* ===== 全屏模式：文档流，由父容器决定尺寸 ===== */
+.avatar-fullscreen {
+  width: 100%;
+  height: 100%;
+  background: var(--bg-primary);
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 40px;
-  padding: 0 12px;
-  background: var(--bg-tertiary);
-  border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0;
+  flex-direction: column;
+  user-select: none;
+  overflow: hidden;
 }
 
-.side-body {
+/* ===== 共用面板结构 ===== */
+.panel-body {
   flex: 1;
   overflow: hidden;
   display: flex;
@@ -366,38 +332,7 @@ onUnmounted(() => {
   justify-content: center;
 }
 
-/* ===== 全屏模式：Avatar 占上半屏 ===== */
-.avatar-fullscreen {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  background: var(--bg-primary);
-  display: flex;
-  flex-direction: column;
-  user-select: none;
-}
-
-.fs-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 44px;
-  padding: 0 16px;
-  background: var(--bg-tertiary);
-  border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0;
-}
-
-.fs-body {
-  height: 50vh;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-bottom: 1px solid var(--border-color);
-}
-
-/* ===== 共用 ===== */
+/* ===== 共用按钮 ===== */
 .header-title {
   font-size: 13px;
   font-weight: 600;
