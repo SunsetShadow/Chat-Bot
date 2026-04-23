@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit, NotFoundException, BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { AgentEntity } from '../../common/entities/agent.entity';
 import { CreateAgentDto } from './dto/create-agent.dto';
 import { UpdateAgentDto } from './dto/update-agent.dto';
@@ -139,6 +139,7 @@ export class AgentService implements OnModuleInit {
   constructor(
     @InjectRepository(AgentEntity)
     private agentRepo: Repository<AgentEntity>,
+    private dataSource: DataSource,
   ) {}
 
   /** 由 LangGraphModule 注册回调，避免循环依赖 */
@@ -191,12 +192,18 @@ export class AgentService implements OnModuleInit {
       }
     }
 
-    // 清理已废弃的 Agent ID
+    // 清理已废弃的 Agent ID（同一事务中迁移 session 引用后再删除）
     const deprecatedIds = ['builtin-general'];
     for (const depId of deprecatedIds) {
       const exists = await this.agentRepo.existsBy({ id: depId });
       if (exists) {
-        await this.agentRepo.delete(depId);
+        await this.dataSource.transaction(async (manager) => {
+          await manager.query(
+            `UPDATE sessions SET agent_id = 'ani' WHERE agent_id = $1`,
+            [depId],
+          );
+          await manager.delete(AgentEntity, { id: depId });
+        });
       }
     }
   }
