@@ -10,7 +10,7 @@ Vue 3 + NestJS 聊天应用，使用 AI SDK 驱动流式聊天，LangGraph Super
 
 Agent 配置中心使用 NTabs segment 分为「自定义 Agent」和「系统 Agent」两个 tab：
 - **自定义 Agent tab**（默认）：展示用户自定义 Agent 和系统示例 Agent，含模板创建/空白创建按钮，支持编辑、复制、删除
-- **系统 Agent tab**：展示系统内置 Agent（超级助手、定时任务执行器），只读，无编辑/删除操作；超级助手和定时任务执行器永久拥有所有工具和所有子 Agent 调用权限
+- **系统 Agent tab**：展示系统内置 Agent（Ani、定时任务执行器），只读，无编辑/删除操作；Ani 和定时任务执行器永久拥有所有工具和所有子 Agent 调用权限
 - 两个 tab 使用 `v-show` 保持 DOM 挂载，切换无抖动
 
 ## 开发命令
@@ -54,8 +54,7 @@ docker compose --env-file .env.mac up -d   # Mac
   → ChatController → ChatService → LangGraphService
   → getGraph(preferredAgent):
       standalone Agent?              → 单 Agent 独立图
-      preferredAgent + 意图关键词命中? → Fast-path 直接路由到该 Agent（跳过 Supervisor，降低 ~30% 延迟）
-      否则?                          → Supervisor 图 (多 Agent 编排，按 capabilities 路由)
+      否则?                          → Supervisor 图 (Ani 为默认路由目标，拥有全部 tools 含 Avatar 表达控制)
   → SSE 流（Supervisor 工具调用/文本/ToolNode 错误均过滤，仅 Worker 结果透传）
        Handoff 计数保护：Agent 切换超过 max_turns（默认 5）时自动终止，防止无限循环
   记忆系统（agent_id 隔离）:
@@ -71,7 +70,7 @@ docker compose --env-file .env.mac up -d   # Mac
        录音面板（波形可视化 + 计时器）通过 Web Audio API AnalyserNode 实时采集音频电平
 
 Avatar 通道（双通道渲染: 文本 + Live2D 可视化）:
-  驱动方式: LLM 调用 express_emotion / play_motion 工具 → langgraph.service 拦截工具输出 → SSE avatar_action 事件
+  驱动方式: Ani（默认 Agent）调用 express_emotion / play_motion 工具 → langgraph.service 拦截工具输出 → SSE avatar_action 事件
   后端: avatar.tool.ts (safeTool) → ToolRegistryService (category: 'avatar') → langgraph.service 拦截 yield → chat.service SSE
   前端: useChatTransport 解析 avatar_action → useAIChat avatarAction ref (3s 自动清除) → AvatarFloat 组件驱动表情/动作
   悬浮窗: ChatContainer 集成 AvatarFloat（可拖拽/最小化/关闭），🎭 按钮切换显隐
