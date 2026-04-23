@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import type {
   UIMessage,
   TextUIPart,
@@ -10,17 +10,34 @@ import type {
   StepStartUIPart,
 } from "ai";
 import { renderMarkdownSafe } from "@/utils/markdown";
-import { PersonOutline, SparklesOutline, RefreshOutline } from "@vicons/ionicons5";
+import {
+  PersonOutline,
+  SparklesOutline,
+  RefreshOutline,
+  ChevronDownOutline,
+  ChevronUpOutline,
+} from "@vicons/ionicons5";
 import ToolRenderer from "./tools/ToolRenderer.vue";
 
 const props = defineProps<{
   message: UIMessage;
+  agentName?: string;
   isStreaming?: boolean;
   isLast?: boolean;
   onRetry?: () => void;
 }>();
 
 const isUser = computed(() => props.message.role === "user");
+
+const reasoningExpanded = ref(false);
+
+// 流式输出结束后自动折叠
+watch(
+  () => props.isStreaming,
+  (streaming) => {
+    if (!streaming) reasoningExpanded.value = false;
+  },
+);
 
 const textContent = computed(() => {
   return (
@@ -137,7 +154,7 @@ function getHostname(url: string): string {
         <span
           class="font-mono text-xs font-medium tracking-wide text-[var(--text-secondary)]"
         >
-          {{ isUser ? "你" : "AI 助手" }}
+          {{ isUser ? "你" : props.agentName || "AI 助手" }}
         </span>
       </div>
 
@@ -158,18 +175,34 @@ function getHostname(url: string): string {
 
             <div
               v-else-if="part.type === 'reasoning'"
-              class="mb-3 px-3 py-2 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-color)]"
+              class="mb-3 rounded-lg bg-[var(--bg-tertiary)] border border-[var(--border-color)] overflow-hidden"
             >
-              <div class="flex items-center gap-2 mb-1">
+              <div
+                class="flex items-center gap-1.5 px-3 py-1.5 cursor-pointer select-none hover:bg-[var(--bg-secondary)] transition-colors"
+                @click="reasoningExpanded = !reasoningExpanded"
+              >
+                <NIcon
+                  :component="
+                    reasoningExpanded ? ChevronDownOutline : ChevronUpOutline
+                  "
+                  :size="12"
+                  class="text-[var(--text-muted)] transition-transform"
+                  :class="reasoningExpanded ? '' : '-rotate-90'"
+                />
                 <span class="text-[11px] font-mono text-[var(--color-primary)]"
                   >思考过程</span
                 >
               </div>
-              <p
-                class="text-[13px] text-[var(--text-secondary)] whitespace-pre-wrap"
+              <div
+                v-if="reasoningExpanded"
+                class="px-3 pb-2 border-t border-[var(--border-color)]"
               >
-                {{ (part as ReasoningUIPart).text }}
-              </p>
+                <p
+                  class="text-[13px] text-[var(--text-secondary)] whitespace-pre-wrap pt-2"
+                >
+                  {{ (part as ReasoningUIPart).text }}
+                </p>
+              </div>
             </div>
 
             <ToolRenderer
@@ -246,10 +279,14 @@ function getHostname(url: string): string {
               </div>
 
               <div
-                v-else-if="!isStreaming && !textContent && !hasToolParts && isLast"
+                v-else-if="
+                  !isStreaming && !textContent && !hasToolParts && isLast
+                "
                 class="flex items-center gap-3"
               >
-                <span class="text-[13px] text-[var(--color-error)]">暂无回复</span>
+                <span class="text-[13px] text-[var(--color-error)]"
+                  >暂无回复</span
+                >
                 <button
                   v-if="onRetry"
                   class="flex items-center gap-1 text-[12px] text-[var(--color-primary)] hover:underline cursor-pointer"

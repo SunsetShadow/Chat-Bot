@@ -394,7 +394,6 @@ export class LangGraphService implements OnModuleInit {
         const agentName = (aiMsg as any).name || '';
         if (
           agentName &&
-          currentAgent &&
           agentName !== currentAgent &&
           agentName !== 'supervisor'
         ) {
