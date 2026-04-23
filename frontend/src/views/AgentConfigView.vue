@@ -481,7 +481,7 @@ function truncatePrompt(prompt: string, max = 120): string {
                 <h4>
                   {{ agent.name }}
                   <span class="builtin-badge">系统</span>
-                  <span v-if="agent.id === 'builtin-general'" class="role-badge supervisor-badge">Supervisor</span>
+                  <span v-if="agent.id === 'ani'" class="role-badge supervisor-badge">Supervisor</span>
                   <span v-else class="role-badge sub-agent-badge">子Agent</span>
                 </h4>
                 <span class="agent-desc">{{ agent.description }}</span>
@@ -489,7 +489,7 @@ function truncatePrompt(prompt: string, max = 120): string {
             </div>
             <div class="card-body">
               <div
-                v-if="agent.id === 'builtin-general' || agent.id === 'builtin-job-executor'"
+                v-if="agent.id === 'ani' || agent.id === 'builtin-job-executor'"
                 class="system-note"
               >
                 永久拥有所有工具和所有子 Agent 的调用权限，不可修改。

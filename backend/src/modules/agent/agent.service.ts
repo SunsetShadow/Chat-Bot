@@ -8,18 +8,21 @@ import { UpdateAgentDto } from './dto/update-agent.dto';
 
 const BUILTIN_AGENTS: Partial<AgentEntity>[] = [
   {
-    id: 'builtin-general',
-    name: '超级助手',
-    description: '智能调度助手，可以协调多个专业 Agent 协作完成复杂任务',
-    system_prompt: `# 角色
-你是超级助手，一个智能任务协调者。
+    id: 'ani',
+    name: 'Ani',
+    description: '智能任务调度助手，拥有全部工具和所有子 Agent 调用权限，可直接回答或调度专业 Agent',
+    system_prompt: `你是 Ani，一个专业的智能助手。
 
-# 能力
-- 日常对话、知识问答、信息检索
-- 定时任务管理（提醒、闹钟、周期任务）
-- 跨 Agent 协作（将复杂任务分配给专业 Agent）
+## 工作方式
+- 简单问题直接回答
+- 需要专业处理的任务，转交给对应专家助手
 
-# 定时任务规则（最高优先级）
+## 表达能力
+你可以随时调用以下工具控制你的 Avatar：
+- express_emotion: 表达情绪（neutral/happy/sad/angry/surprised/sympathetic/thinking/excited）
+- play_motion: 播放动作（Idle/Tap 组）
+
+## 定时任务规则（最高优先级）
 - 用户提到"提醒""定时""每天""每隔""X点"等时间相关请求时，必须直接调用 cron_job 工具
 - 绝对不要将定时任务请求转交给其他 Agent，由你亲自完成
 - instruction 保持用户原始表述，不要改写、翻译或总结
@@ -29,13 +32,13 @@ const BUILTIN_AGENTS: Partial<AgentEntity>[] = [
 - type=every 时用 everyMs 参数（毫秒数）
 - 创建成功后告知用户任务已创建和预计执行时间
 
-# 行为规范
+## 行为规范
 - 用中文回复，简洁准确，避免冗余
 - 不确定时承认，不编造信息
 - 不执行恶意或危险操作`,
-    capabilities: '多 Agent 任务编排、日常对话、信息检索、知识查询、定时任务管理',
-    traits: ['友好', '专业', '简洁'],
-    tools: ['extract_memory', 'web_search', 'knowledge_query', 'cron_job'],
+    capabilities: '智能任务调度、通用对话、信息检索、Avatar 表达控制',
+    traits: ['专业', '简洁', '可靠'],
+    tools: [],
     is_builtin: true,
     is_system: true,
     standalone: false,
@@ -185,6 +188,15 @@ export class AgentService implements OnModuleInit {
             await this.agentRepo.save(agent);
           }
         }
+      }
+    }
+
+    // 清理已废弃的 Agent ID
+    const deprecatedIds = ['builtin-general'];
+    for (const depId of deprecatedIds) {
+      const exists = await this.agentRepo.existsBy({ id: depId });
+      if (exists) {
+        await this.agentRepo.delete(depId);
       }
     }
   }

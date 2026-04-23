@@ -11,7 +11,7 @@ import { useRulesStore } from "./rules";
 
 export const useAgentStore = defineStore("agent", () => {
   const agents = ref<Agent[]>([]);
-  const currentAgentId = ref<string | null>("builtin-general");
+  const currentAgentId = ref<string | null>("ani");
   const isLoading = ref(false);
   const error = ref<string | null>(null);
 
@@ -78,7 +78,7 @@ export const useAgentStore = defineStore("agent", () => {
       await apiDeleteAgent(id);
       agents.value = agents.value.filter((a) => a.id !== id);
       if (currentAgentId.value === id) {
-        currentAgentId.value = "builtin-general";
+        currentAgentId.value = "ani";
       }
     } catch (e) {
       error.value = e instanceof Error ? e.message : "删除 Agent 失败";

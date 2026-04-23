@@ -67,9 +67,9 @@ export const useChatStore = defineStore("chat", () => {
       const agentStore = useAgentStore();
       if (session.agent_id) {
         const exists = agentStore.agents.some((a) => a.id === session.agent_id);
-        agentStore.setCurrentAgent(exists ? session.agent_id : "builtin-general");
+        agentStore.setCurrentAgent(exists ? session.agent_id : "ani");
       } else {
-        agentStore.setCurrentAgent("builtin-general");
+        agentStore.setCurrentAgent("ani");
       }
 
       return session;

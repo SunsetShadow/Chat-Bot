@@ -49,6 +49,9 @@ export class LangGraphService implements OnModuleInit {
   /** 不参与 supervisor 路由的 agent ID（仅供内部执行调用） */
   private static readonly HIDDEN_AGENTS = ['builtin-job-executor'];
 
+  /** Ani 超级助手的固定 ID */
+  private static readonly ANI_ID = 'ani';
+
   /** 默认最大 handoff 次数，防止 Agent 间无限乒乓 */
   private static readonly DEFAULT_MAX_HANDOFFS = 5;
 
@@ -82,6 +85,8 @@ export class LangGraphService implements OnModuleInit {
       return;
     }
 
+    const allTools = this.toolRegistry.getAll();
+
     const definitions: AgentDefinition[] = agents
       .filter((a) => !LangGraphService.HIDDEN_AGENTS.includes(a.id))
       .map((a) => {
@@ -95,6 +100,7 @@ export class LangGraphService implements OnModuleInit {
           model_name: a.model_name || undefined,
           temperature: a.temperature ?? undefined,
           enabled: a.enabled !== false,
+          is_system: a.is_system,
         };
       });
 
@@ -103,6 +109,7 @@ export class LangGraphService implements OnModuleInit {
       definitions,
       (name) => this.toolRegistry.get(name),
       (modelName) => this.createModel(modelName),
+      allTools,
     );
     this.graphVersion++;
   }
@@ -238,7 +245,6 @@ export class LangGraphService implements OnModuleInit {
    */
   private async getGraph(
     preferredAgent?: string,
-    messages?: { role: string; content: string }[],
   ): Promise<CompiledStateGraph<any, any, any>> {
     if (this.rebuildNeeded) {
       this.rebuildNeeded = false;
@@ -251,53 +257,12 @@ export class LangGraphService implements OnModuleInit {
         if (agent.standalone) {
           return this.buildStandaloneGraph(agent);
         }
-        // Fast-path：意图明确匹配 Agent 能力时跳过 Supervisor
-        if (messages && this.isIntentMatchForAgent(messages, agent)) {
-          return this.buildStandaloneGraph(agent);
-        }
       } catch {
         // Agent 不存在，回退到默认逻辑
       }
     }
 
     return this.supervisorGraph || this.singleAgentGraph;
-  }
-
-  /** 工具名 → 关联意图关键词的静态映射 */
-  private static readonly TOOL_KEYWORDS: Record<string, string[]> = {
-    cron_job: ['定时', '提醒', '闹钟', '每天', '每小时', '周期', 'schedule', 'remind'],
-    web_search: ['搜索', '查找', '最新', '新闻', 'search', '查一下'],
-    extract_memory: ['记住', '记下', '别忘了'],
-    knowledge_query: ['我的偏好', '我之前说过', '你应该知道'],
-    send_mail: ['发邮件', '发送邮件', '邮件', 'mail'],
-    execute_command: ['执行命令', '运行', '终端'],
-  };
-
-  /** 轻量意图匹配：基于关键词判断用户消息是否明确属于某 Agent 的能力范围 */
-  private isIntentMatchForAgent(
-    messages: { role: string; content: string }[],
-    agent: AgentEntity,
-  ): boolean {
-    const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
-    if (!lastUserMsg) return false;
-
-    const text = lastUserMsg.content.toLowerCase();
-
-    const capKeywords = (agent.capabilities || '')
-      .split(/[、,，;；\s]+/)
-      .filter((k) => k.length >= 2)
-      .map((k) => k.toLowerCase());
-
-    const toolKws = (agent.tools || []).flatMap(
-      (t) => LangGraphService.TOOL_KEYWORDS[t] || [],
-    );
-
-    for (const keyword of [...capKeywords, ...toolKws]) {
-      if (keyword.length >= 2 && text.includes(keyword)) {
-        return true;
-      }
-    }
-    return false;
   }
 
   /**
@@ -353,7 +318,7 @@ export class LangGraphService implements OnModuleInit {
     preferredAgent?: string,
   ): Promise<{ content: string; finish_reason: string }> {
     const langchainMessages = this.buildMessages(messages, systemPrompt, preferredAgent);
-    const graph = await this.getGraph(preferredAgent, messages);
+    const graph = await this.getGraph(preferredAgent);
 
     const result = (await graph.invoke(
       { messages: langchainMessages },
@@ -374,7 +339,7 @@ export class LangGraphService implements OnModuleInit {
     preferredAgent?: string,
   ): AsyncGenerator<StreamEvent> {
     const langchainMessages = this.buildMessages(messages, systemPrompt, preferredAgent);
-    const graph = await this.getGraph(preferredAgent, messages);
+    const graph = await this.getGraph(preferredAgent);
 
     // 确定 handoff 上限
     let maxHandoffs = LangGraphService.DEFAULT_MAX_HANDOFFS;

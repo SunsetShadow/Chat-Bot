@@ -266,7 +266,7 @@ export class ChatService {
   private async buildSystemPrompt(agentId?: string, ruleIds?: string[], webSearch?: boolean): Promise<string> {
     const parts: string[] = [];
 
-    const resolvedAgentId = agentId || 'builtin-general';
+    const resolvedAgentId = (agentId === 'builtin-general' ? 'ani' : agentId) || 'ani';
     try {
       const agent = await this.agentService.findOne(resolvedAgentId);
       if (agent.system_prompt) parts.push(agent.system_prompt);
