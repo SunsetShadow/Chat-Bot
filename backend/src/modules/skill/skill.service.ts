@@ -1,7 +1,6 @@
 import { Injectable, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { Skill, scanSkillsDir } from './skill.types';
 import { SettingsService } from '../settings/settings.service';
-import { resolve } from 'node:path';
 import { homedir } from 'node:os';
 
 const DEFAULT_SKILLS_DIR = process.env.SKILLS_DIR || homedir() + '/.aniclaw/skills';
@@ -9,6 +8,7 @@ const DEFAULT_SKILLS_DIR = process.env.SKILLS_DIR || homedir() + '/.aniclaw/skil
 @Injectable()
 export class SkillService implements OnModuleInit {
   private skills: Skill[] = [];
+  private cachedIndex = '';
 
   constructor(
     @Inject(forwardRef(() => SettingsService))
@@ -38,6 +38,7 @@ export class SkillService implements OnModuleInit {
         }
       }
     }
+    this.cachedIndex = '';
   }
 
   /** 列表（metadata only，progressive disclosure stage 1） */
@@ -76,20 +77,22 @@ export class SkillService implements OnModuleInit {
     return { instructions: s.instructions, dirPath: s.dirPath };
   }
 
-  /** 构建全局 skill 索引，注入 system prompt（XML 格式，token 友好） */
+  /** 构建全局 skill 索引（缓存，refresh 时清除） */
   async buildSkillIndex(): Promise<string> {
+    if (this.cachedIndex) return this.cachedIndex;
     if (this.skills.length === 0) return '';
 
     const entries = this.skills
       .map(s => `  <skill>\n    <name>${s.name}</name>\n    <description>${s.description}</description>\n  </skill>`)
       .join('\n');
 
-    return `<available_skills>
+    this.cachedIndex = `<available_skills>
 ${entries}
 </available_skills>
 
 Use the lookup_skill tool to load a skill's full instructions when the task matches its description.
 Use the read_skill_reference tool to read referenced files within a skill's directory.`;
+    return this.cachedIndex;
   }
 
   /** 删除 skill（移除目录） */
@@ -100,6 +103,7 @@ Use the read_skill_reference tool to read referenced files within a skill's dire
       const { rmSync } = await import('node:fs');
       rmSync(s.dirPath, { recursive: true, force: true });
       this.skills = this.skills.filter(sk => sk.id !== id);
+      this.cachedIndex = '';
       return true;
     } catch {
       return false;

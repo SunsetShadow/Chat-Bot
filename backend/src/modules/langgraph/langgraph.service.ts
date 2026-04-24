@@ -99,21 +99,19 @@ export class LangGraphService implements OnModuleInit {
     }
 
     const allTools = this.toolRegistry.getAll();
+    const skillIndex = await this.skillService.buildSkillIndex();
 
     const definitions: AgentDefinition[] = await Promise.all(
       agents
         .filter((a) => !LangGraphService.HIDDEN_AGENTS.includes(a.id))
         .map(async (a) => {
           const hintTools = await this.getHintTools(a);
-          const effectiveTools = [...(a.tools || [])];
-          if (!a.is_system) {
-            if (!effectiveTools.includes('lookup_skill')) effectiveTools.push('lookup_skill');
-            if (!effectiveTools.includes('read_skill_reference')) effectiveTools.push('read_skill_reference');
-          }
+          const effectiveTools = this.ensureSkillTools(a.tools || [], a.is_system);
+          const prompt = await this.resolveAgentPrompt(a, skillIndex);
           return {
             id: a.id,
             name: a.name,
-            system_prompt: this.buildPromptWithToolHints(await this.resolveAgentPrompt(a), hintTools),
+            system_prompt: this.buildPromptWithToolHints(prompt, hintTools),
             capabilities: a.capabilities || a.description,
             tools: effectiveTools,
             model_name: a.model_name || undefined,
@@ -234,15 +232,21 @@ export class LangGraphService implements OnModuleInit {
 
   private async getHintTools(agent: AgentEntity): Promise<string[]> {
     if (agent.is_system) return this.toolRegistry.getAllNames();
-    const result = [...(agent.tools || [])];
+    return this.ensureSkillTools(agent.tools || [], false);
+  }
+
+  /** 确保非系统 agent 的工具列表包含 skill 工具 */
+  private ensureSkillTools(tools: string[], isSystem: boolean): string[] {
+    if (isSystem) return [...tools];
+    const result = [...tools];
     if (!result.includes('lookup_skill')) result.push('lookup_skill');
     if (!result.includes('read_skill_reference')) result.push('read_skill_reference');
     return result;
   }
 
-  private async resolveAgentPrompt(agent: AgentEntity): Promise<string> {
+  private async resolveAgentPrompt(agent: AgentEntity, precomputedIndex?: string): Promise<string> {
     let prompt = agent.system_prompt || '';
-    const skillIndex = await this.skillService.buildSkillIndex();
+    const skillIndex = precomputedIndex ?? await this.skillService.buildSkillIndex();
     if (skillIndex) prompt += '\n\n' + skillIndex;
     return prompt;
   }
