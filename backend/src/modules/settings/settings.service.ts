@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import path from 'node:path';
 import { SettingEntity } from '../../common/entities/setting.entity';
+import { DEFAULT_SKILLS_DIR } from '../skill/skill.types';
 
 const DEFAULT_SETTINGS: Partial<SettingEntity>[] = [
   {
@@ -12,7 +13,7 @@ const DEFAULT_SETTINGS: Partial<SettingEntity>[] = [
   },
   {
     key: 'skills_dirs',
-    value: process.env.SKILLS_DIR || require('os').homedir() + '/.aniclaw/skills',
+    value: DEFAULT_SKILLS_DIR,
     description: 'Skills 目录 — 存放 SKILL.md 技能包的目录（逗号分隔）',
   },
 ];

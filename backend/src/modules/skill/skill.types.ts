@@ -1,5 +1,8 @@
-import { readdirSync, readFileSync, existsSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
+import { homedir } from 'node:os';
+
+export const DEFAULT_SKILLS_DIR = process.env.SKILLS_DIR || homedir() + '/.aniclaw/skills';
 
 /** Skill（SKILL.md 格式，兼容 agentskills.io 标准） */
 export interface Skill {
@@ -92,21 +95,17 @@ export function parseSkillMd(filePath: string): Skill | null {
 
 /** 扫描目录下所有包含 SKILL.md 的子目录 */
 export function scanSkillsDir(baseDir: string): Skill[] {
-  if (!existsSync(baseDir)) return [];
-
   const skills: Skill[] = [];
   try {
     const entries = readdirSync(baseDir, { withFileTypes: true });
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
       const skillMdPath = join(baseDir, entry.name, 'SKILL.md');
-      if (existsSync(skillMdPath)) {
-        const skill = parseSkillMd(skillMdPath);
-        if (skill) skills.push(skill);
-      }
+      const skill = parseSkillMd(skillMdPath);
+      if (skill) skills.push(skill);
     }
   } catch {
-    // 权限或 IO 错误，跳过
+    // 目录不存在或权限错误，跳过
   }
   return skills;
 }

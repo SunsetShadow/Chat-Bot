@@ -1,9 +1,12 @@
 import { Injectable, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
-import { Skill, scanSkillsDir } from './skill.types';
+import { Skill, scanSkillsDir, DEFAULT_SKILLS_DIR } from './skill.types';
 import { SettingsService } from '../settings/settings.service';
-import { homedir } from 'node:os';
+import { resolve } from 'node:path';
+import { rm } from 'node:fs/promises';
 
-const DEFAULT_SKILLS_DIR = process.env.SKILLS_DIR || homedir() + '/.aniclaw/skills';
+function escapeXml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 
 @Injectable()
 export class SkillService implements OnModuleInit {
@@ -21,7 +24,7 @@ export class SkillService implements OnModuleInit {
 
   private async getSkillsDirs(): Promise<string[]> {
     const configured = await this.settingsService.getValue('skills_dirs').catch(() => '');
-    if (configured) return configured.split(',').map(d => d.trim()).filter(Boolean);
+    if (configured) return configured.split(',').map(d => resolve(d.trim())).filter(Boolean);
     return [DEFAULT_SKILLS_DIR];
   }
 
@@ -41,38 +44,28 @@ export class SkillService implements OnModuleInit {
     this.cachedIndex = '';
   }
 
+  private findById(id: string): Skill | undefined {
+    return this.skills.find(s => s.id === id);
+  }
+
   /** 列表（metadata only，progressive disclosure stage 1） */
   async findAllSummary() {
-    return this.skills.map(s => ({
-      id: s.id,
-      name: s.name,
-      description: s.description,
-      license: s.license,
-      compatibility: s.compatibility,
+    return this.skills.map(({ id, name, description, license, compatibility }) => ({
+      id, name, description, license, compatibility,
     }));
   }
 
   /** 详情（含 instructions，stage 2） */
   async findOneSummary(id: string) {
-    const s = this.skills.find(s => s.id === id);
+    const s = this.findById(id);
     if (!s) return undefined;
-    return {
-      id: s.id,
-      name: s.name,
-      description: s.description,
-      license: s.license,
-      compatibility: s.compatibility,
-      metadata: s.metadata,
-      allowedTools: s.allowedTools,
-      requires: s.requires,
-      instructions: s.instructions,
-      dirPath: s.dirPath,
-    };
+    const { dirPath, ...rest } = s;
+    return rest;
   }
 
   /** 供 lookup_skill 工具调用 */
   async findSkillForLookup(id: string): Promise<{ instructions: string; dirPath: string } | null> {
-    const s = this.skills.find(s => s.id === id);
+    const s = this.findById(id);
     if (!s) return null;
     return { instructions: s.instructions, dirPath: s.dirPath };
   }
@@ -83,7 +76,7 @@ export class SkillService implements OnModuleInit {
     if (this.skills.length === 0) return '';
 
     const entries = this.skills
-      .map(s => `  <skill>\n    <name>${s.name}</name>\n    <description>${s.description}</description>\n  </skill>`)
+      .map(s => `  <skill>\n    <name>${escapeXml(s.name)}</name>\n    <description>${escapeXml(s.description)}</description>\n  </skill>`)
       .join('\n');
 
     this.cachedIndex = `<available_skills>
@@ -97,11 +90,10 @@ Use the read_skill_reference tool to read referenced files within a skill's dire
 
   /** 删除 skill（移除目录） */
   async delete(id: string): Promise<boolean> {
-    const s = this.skills.find(s => s.id === id);
+    const s = this.findById(id);
     if (!s) return false;
     try {
-      const { rmSync } = await import('node:fs');
-      rmSync(s.dirPath, { recursive: true, force: true });
+      await rm(s.dirPath, { recursive: true, force: true });
       this.skills = this.skills.filter(sk => sk.id !== id);
       this.cachedIndex = '';
       return true;

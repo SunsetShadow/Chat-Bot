@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { safeTool } from './base/tool.helper';
-import { resolve, dirname } from 'node:path';
+import { resolve } from 'node:path';
 
 const MAX_INSTRUCTIONS_SIZE = 256 * 1024; // 256KB
 const MAX_REFERENCE_SIZE = 1024 * 1024;   // 1MB
@@ -37,25 +37,25 @@ export function createReadSkillReferenceTool(
       const skill = await findSkill(skill_name);
       if (!skill) return `未找到名为 "${skill_name}" 的 skill。`;
 
-      // 路径安全：禁止 .. 和绝对路径
-      if (reference_path.includes('..') || resolve('/', reference_path) !== resolve('/', reference_path.replace(/^[./]+/, ''))) {
-        return `非法路径: ${reference_path}。不允许使用 ".." 或绝对路径。`;
+      // 路径安全：resolve 后确保仍在 skill 目录内
+      if (reference_path.includes('..')) {
+        return `非法路径: ${reference_path}。不允许使用 ".."。`;
       }
 
-      const { readFile, stat } = await import('node:fs/promises');
-      const fullPath = resolve(skill.dirPath, reference_path);
+      const { readFile } = await import('node:fs/promises');
+      const skillDir = resolve(skill.dirPath);
+      const fullPath = resolve(skillDir, reference_path);
 
-      // 确保解析后的路径仍在 skill 目录内
-      if (!fullPath.startsWith(resolve(skill.dirPath) + '/') && fullPath !== resolve(skill.dirPath)) {
+      if (!fullPath.startsWith(skillDir + '/') && fullPath !== skillDir) {
         return `路径越权: ${reference_path}。只允许访问 skill 目录内的文件。`;
       }
 
       try {
-        const fileStat = await stat(fullPath);
-        if (fileStat.size > MAX_REFERENCE_SIZE) {
-          return `文件过大 (${Math.round(fileStat.size / 1024)}KB)，最大支持 1MB。`;
+        const content = await readFile(fullPath, 'utf-8');
+        if (content.length > MAX_REFERENCE_SIZE) {
+          return `文件过大 (${Math.round(content.length / 1024)}KB)，最大支持 1MB。`;
         }
-        return await readFile(fullPath, 'utf-8');
+        return content;
       } catch {
         return `无法读取文件: ${reference_path}。请确认路径正确。`;
       }
