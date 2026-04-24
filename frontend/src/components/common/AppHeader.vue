@@ -7,6 +7,7 @@ import {
   ChatbubblesOutline,
   SparklesOutline,
   PersonOutline,
+  ExtensionPuzzleOutline,
 } from "@vicons/ionicons5";
 import ThemeToggle from "./ThemeToggle.vue";
 import NotificationBell from "./NotificationBell.vue";
@@ -24,6 +25,10 @@ function goToAgentConfig() {
 
 function goToAvatar() {
   router.push("/avatar");
+}
+
+function goToSkills() {
+  router.push("/skills");
 }
 </script>
 
@@ -61,6 +66,15 @@ function goToAvatar() {
       >
         <template #icon>
           <NIcon :component="PersonOutline" size="20" />
+        </template>
+      </NButton>
+      <NButton
+        text
+        class="text-[var(--text-secondary)] hover:text-[var(--color-primary)]"
+        @click="goToSkills"
+      >
+        <template #icon>
+          <NIcon :component="ExtensionPuzzleOutline" size="20" />
         </template>
       </NButton>
       <NButton

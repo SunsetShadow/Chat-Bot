@@ -15,6 +15,7 @@ import { ModelModule } from './modules/model/model.module';
 import { CronJobModule } from './modules/cron-job/cron-job.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { SpeechModule } from './modules/speech/speech.module';
+import { SkillModule } from './modules/skill/skill.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { SpeechModule } from './modules/speech/speech.module';
     CronJobModule,
     SettingsModule,
     SpeechModule,
+    SkillModule,
   ],
   controllers: [AppController],
   providers: [ModelService],

@@ -20,6 +20,7 @@ import {
   SettingsOutline,
   ReorderTwoOutline,
   EllipsisVerticalOutline,
+  ExtensionPuzzleOutline,
   TabletLandscapeOutline,
   ExpandOutline,
   ContractOutline,
@@ -143,6 +144,13 @@ watch(
                   </button>
                 </div>
               </NPopover>
+              <button
+                class="flex items-center justify-center w-8 h-8 bg-transparent border border-[var(--border-color)] rounded-[var(--radius-sm)] text-[var(--text-muted)] cursor-pointer transition-all duration-150 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                title="技能管理"
+                @click="router.push('/skills')"
+              >
+                <NIcon :component="ExtensionPuzzleOutline" :size="16" />
+              </button>
               <button
                 class="flex items-center justify-center w-9 h-9 bg-transparent border border-[var(--border-color)] rounded-[var(--radius-sm)] text-[var(--text-muted)] cursor-pointer transition-all duration-150 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
                 title="设置"

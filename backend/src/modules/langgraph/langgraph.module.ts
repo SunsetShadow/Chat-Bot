@@ -6,6 +6,7 @@ import { MemoryModule } from '../memory/memory.module';
 import { AgentModule } from '../agent/agent.module';
 import { CronJobModule } from '../cron-job/cron-job.module';
 import { SettingsModule } from '../settings/settings.module';
+import { SkillModule } from '../skill/skill.module';
 import { SettingsService } from '../settings/settings.service';
 import { AgentService } from '../agent/agent.service';
 import { AppConfigService } from '../../config/config.service';
@@ -21,7 +22,7 @@ import { MemoryService } from '../memory/memory.service';
 import { JobService } from '../cron-job/job.service';
 
 @Module({
-  imports: [ConfigModule, MemoryModule, AgentModule, forwardRef(() => CronJobModule), SettingsModule],
+  imports: [ConfigModule, MemoryModule, AgentModule, forwardRef(() => CronJobModule), SettingsModule, SkillModule],
   controllers: [ToolController],
   providers: [LangGraphService, AppConfigService, ToolRegistryService],
   exports: [LangGraphService],

@@ -13,9 +13,11 @@ import { AppConfigService } from '../../config/config.service';
 import { ToolRegistryService } from './tools/tool-registry.service';
 import { AgentService } from '../agent/agent.service';
 import { AgentEntity } from '../../common/entities/agent.entity';
+import { SkillService } from '../skill/skill.service';
 import { buildGraph } from './graph/graph.builder';
 import { buildSupervisorGraph, AgentDefinition } from './graph/supervisor.builder';
 import { CompiledStateGraph } from '@langchain/langgraph';
+import { createSkillLookupTool, createReadSkillReferenceTool } from './tools/skill-lookup.tool';
 
 /**
  * 流式事件类型：文本内容、工具调用各阶段、步骤边界、完成信号
@@ -59,6 +61,7 @@ export class LangGraphService implements OnModuleInit {
     private configService: AppConfigService,
     private toolRegistry: ToolRegistryService,
     private agentService: AgentService,
+    private skillService: SkillService,
   ) {}
 
   async onModuleInit() {
@@ -68,6 +71,16 @@ export class LangGraphService implements OnModuleInit {
 
   /** 由 LangGraphModule.onModuleInit 在工具注册完成后调用 */
   async initGraph() {
+    // 注册 skill lookup 工具
+    this.toolRegistry.register(
+      createSkillLookupTool((id) => this.skillService.findSkillForLookup(id)),
+      { permission_level: 'read', category: 'system', description: '加载指定 skill 的完整执行指令' },
+    );
+    this.toolRegistry.register(
+      createReadSkillReferenceTool((id) => this.skillService.findSkillForLookup(id)),
+      { permission_level: 'read', category: 'file', description: '读取 skill 目录下的引用文件' },
+    );
+
     const tools = this.toolRegistry.getAll();
     console.log(`[LangGraphService] initGraph: ${tools.length} tools registered: ${tools.map(t => t.name)}`);
     this.singleAgentGraph = buildGraph(this.model, tools);
@@ -87,22 +100,29 @@ export class LangGraphService implements OnModuleInit {
 
     const allTools = this.toolRegistry.getAll();
 
-    const definitions: AgentDefinition[] = agents
-      .filter((a) => !LangGraphService.HIDDEN_AGENTS.includes(a.id))
-      .map((a) => {
-        const hintTools = this.getHintTools(a);
-        return {
-          id: a.id,
-          name: a.name,
-          system_prompt: this.buildPromptWithToolHints(a.system_prompt, hintTools),
-          capabilities: a.capabilities || a.description,
-          tools: a.tools || [],
-          model_name: a.model_name || undefined,
-          temperature: a.temperature ?? undefined,
-          enabled: a.enabled !== false,
-          is_system: a.is_system,
-        };
-      });
+    const definitions: AgentDefinition[] = await Promise.all(
+      agents
+        .filter((a) => !LangGraphService.HIDDEN_AGENTS.includes(a.id))
+        .map(async (a) => {
+          const hintTools = await this.getHintTools(a);
+          const effectiveTools = [...(a.tools || [])];
+          if (!a.is_system) {
+            if (!effectiveTools.includes('lookup_skill')) effectiveTools.push('lookup_skill');
+            if (!effectiveTools.includes('read_skill_reference')) effectiveTools.push('read_skill_reference');
+          }
+          return {
+            id: a.id,
+            name: a.name,
+            system_prompt: this.buildPromptWithToolHints(await this.resolveAgentPrompt(a), hintTools),
+            capabilities: a.capabilities || a.description,
+            tools: effectiveTools,
+            model_name: a.model_name || undefined,
+            temperature: a.temperature ?? undefined,
+            enabled: a.enabled !== false,
+            is_system: a.is_system,
+          };
+        }),
+    );
 
     this.supervisorGraph = buildSupervisorGraph(
       this.model,
@@ -126,7 +146,7 @@ export class LangGraphService implements OnModuleInit {
       .map((name) => this.toolRegistry.get(name))
       .filter((t): t is DynamicStructuredTool => t !== undefined);
 
-    const hintTools = this.getHintTools(executorDef);
+    const hintTools = await this.getHintTools(executorDef);
     const agent = createReactAgent({
       llm: this.model as any,
       tools: agentTools as any,
@@ -212,8 +232,19 @@ export class LangGraphService implements OnModuleInit {
     return prompt + '\n\n【可用工具】\n' + lines.join('\n');
   }
 
-  private getHintTools(agent: AgentEntity): string[] {
-    return agent.is_system ? this.toolRegistry.getAllNames() : (agent.tools || []);
+  private async getHintTools(agent: AgentEntity): Promise<string[]> {
+    if (agent.is_system) return this.toolRegistry.getAllNames();
+    const result = [...(agent.tools || [])];
+    if (!result.includes('lookup_skill')) result.push('lookup_skill');
+    if (!result.includes('read_skill_reference')) result.push('read_skill_reference');
+    return result;
+  }
+
+  private async resolveAgentPrompt(agent: AgentEntity): Promise<string> {
+    let prompt = agent.system_prompt || '';
+    const skillIndex = await this.skillService.buildSkillIndex();
+    if (skillIndex) prompt += '\n\n' + skillIndex;
+    return prompt;
   }
 
   /**
@@ -255,7 +286,7 @@ export class LangGraphService implements OnModuleInit {
       try {
         const agent = await this.agentService.findOne(preferredAgent);
         if (agent.standalone) {
-          return this.buildStandaloneGraph(agent);
+          return await this.buildStandaloneGraph(agent);
         }
       } catch {
         // Agent 不存在，回退到默认逻辑
@@ -268,11 +299,12 @@ export class LangGraphService implements OnModuleInit {
   /**
    * 为指定 Agent 构建独立图（不经过 Supervisor）
    */
-  private buildStandaloneGraph(agent: AgentEntity): CompiledStateGraph<any, any, any> {
+  private async buildStandaloneGraph(agent: AgentEntity): Promise<CompiledStateGraph<any, any, any>> {
     const cached = this.standaloneGraphs.get(agent.id);
     if (cached) return cached;
 
-    const agentTools = (agent.tools || [])
+    const allToolNames = [...(agent.tools || [])];
+    const agentTools = allToolNames
       .map((name) => this.toolRegistry.get(name))
       .filter((t): t is DynamicStructuredTool => t !== undefined);
 
@@ -295,7 +327,7 @@ export class LangGraphService implements OnModuleInit {
     const graph = createReactAgent({
       llm: agentModel,
       tools: agentTools,
-      prompt: this.buildPromptWithToolHints(agent.system_prompt, agent.tools) + agentIdHint,
+      prompt: this.buildPromptWithToolHints(await this.resolveAgentPrompt(agent), allToolNames) + agentIdHint,
       name: agent.id,
       checkpointer: new MemorySaver(),
     }) as unknown as CompiledStateGraph<any, any, any>;
@@ -379,7 +411,7 @@ export class LangGraphService implements OnModuleInit {
       },
     );
 
-    for await (const [message] of stream) {
+    for await (const [message, metadata] of stream) {
       const msgType =
         (message as any)?._getType?.() ||
         (message as any)?.constructor?.name ||
@@ -390,8 +422,12 @@ export class LangGraphService implements OnModuleInit {
       if (isAI) {
         const aiMsg = message as AIMessageChunk;
 
-        // 检测 agent 切换（supervisor 模式下通过 message name 判断）
-        const agentName = (aiMsg as any).name || '';
+        // stream chunk 的 message.name 在流式阶段可能为 undefined（createReactAgent
+        // 在 invoke 完成后才设置 response.name），需要从 metadata.langgraph_node 获取节点名
+        const agentName =
+          (message as any)?.name ||
+          (metadata as any)?.langgraph_node ||
+          '';
         if (
           agentName &&
           agentName !== currentAgent &&

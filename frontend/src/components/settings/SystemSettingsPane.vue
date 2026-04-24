@@ -21,9 +21,7 @@ onMounted(async () => {
   loading.value = true;
   try {
     const settings = await getSettings();
-    const sandboxSetting = settings.find(
-      (s) => s.key === "sandbox_allowed_dirs",
-    );
+    const sandboxSetting = settings.find((s) => s.key === "sandbox_allowed_dirs");
     if (sandboxSetting?.value) {
       sandboxDirs.value = sandboxSetting.value.split(",").filter(Boolean);
       if (sandboxDirs.value.length === 0) sandboxDirs.value = [""];
@@ -71,7 +69,6 @@ async function save() {
 
 <template>
   <div class="system-settings-pane">
-    <!-- 沙箱路径配置 -->
     <div class="section-header">
       <div class="section-title">
         <div class="section-icon-wrap">
@@ -90,16 +87,8 @@ async function save() {
 
     <NSpin :show="loading">
       <div class="path-list">
-        <div
-          v-for="(dir, index) in sandboxDirs"
-          :key="index"
-          class="path-row"
-        >
-          <NInput
-            v-model:value="sandboxDirs[index]"
-            placeholder="输入目录路径，如 /app/data"
-            class="path-input"
-          />
+        <div v-for="(dir, index) in sandboxDirs" :key="'sb-' + index" class="path-row">
+          <NInput v-model:value="sandboxDirs[index]" placeholder="输入目录路径，如 /app/data" class="path-input" />
           <button class="row-action-btn browse" title="浏览" @click="openBrowser(index)">
             <NIcon :component="FolderOpenOutline" :size="16" />
           </button>
@@ -129,7 +118,6 @@ async function save() {
       </div>
     </div>
 
-    <!-- 目录浏览器 -->
     <DirectoryBrowser
       :show="showBrowser"
       :initial-path="sandboxDirs[browseTargetIndex] || undefined"
@@ -254,17 +242,7 @@ async function save() {
   transition: all var(--transition-fast);
 }
 
-.btn-primary:hover {
-  opacity: 0.9;
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-sm {
-  padding: 7px 14px;
-  font-size: 12px;
-}
+.btn-primary:hover { opacity: 0.9; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-sm { padding: 7px 14px; font-size: 12px; }
 </style>

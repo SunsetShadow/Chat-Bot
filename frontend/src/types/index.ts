@@ -229,6 +229,21 @@ export interface AgentTemplate {
   icon: string;
 }
 
+// Skill 技能包
+export interface SkillInfo {
+  id: string;
+  name: string;
+  description: string;
+  license?: string;
+  compatibility?: string;
+  allowedTools?: string[];
+  requires?: {
+    bins?: string[];
+    env?: string[];
+  };
+  instructions?: string;
+}
+
 // 系统设置相关类型
 export interface Setting {
   key: string;

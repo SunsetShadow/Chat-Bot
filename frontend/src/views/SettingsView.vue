@@ -18,8 +18,10 @@ import {
   AddOutline,
   OptionsOutline,
   BookmarkOutline,
+  ExtensionPuzzleOutline,
 } from "@vicons/ionicons5";
 import SystemSettingsPane from "@/components/settings/SystemSettingsPane.vue";
+import SkillsView from "./SkillsView.vue";
 
 const router = useRouter();
 const memoryStore = useMemoryStore();
@@ -460,6 +462,13 @@ async function handleToggleRule(id: string) {
                   </NRadioGroup>
                 </div>
               </div>
+            </div>
+          </NTabPane>
+
+          <!-- 技能管理 -->
+          <NTabPane name="skills" tab="技能管理">
+            <div class="tab-content">
+              <SkillsView embedded />
             </div>
           </NTabPane>
 

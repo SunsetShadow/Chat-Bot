@@ -10,6 +10,11 @@ const DEFAULT_SETTINGS: Partial<SettingEntity>[] = [
     value: process.cwd(),
     description: '路径沙箱 — 工具可访问的目录（逗号分隔）',
   },
+  {
+    key: 'skills_dirs',
+    value: process.env.SKILLS_DIR || require('os').homedir() + '/.aniclaw/skills',
+    description: 'Skills 目录 — 存放 SKILL.md 技能包的目录（逗号分隔）',
+  },
 ];
 
 @Injectable()

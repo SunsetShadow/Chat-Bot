@@ -3,12 +3,14 @@ import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAgentStore } from "@/stores/agent";
 import { getTools } from "@/api/chat";
+import { getSkills } from "@/api/chat";
 import type {
   Agent,
   AgentCreate,
   AgentUpdate,
   ToolInfo,
   AgentTemplate,
+  SkillInfo,
 } from "@/types";
 import {
   ChevronBackOutline,
@@ -59,6 +61,7 @@ function agentToFormValues(agent: Agent | AgentTemplate, overrides?: Partial<Age
 }
 
 const availableTools = ref<ToolInfo[]>([]);
+const availableSkills = ref<SkillInfo[]>([]);
 
 const showModal = ref(false);
 const editingAgentId = ref<string | null>(null);
@@ -208,6 +211,13 @@ const toolOptions = computed(() =>
   })),
 );
 
+const skillOptions = computed(() => {
+  return availableSkills.value.map((s) => ({
+    label: `${s.name} — ${s.description}`,
+    value: s.id,
+  }));
+});
+
 function stripLegacyToolHints(prompt: string): string {
   const markers = ["\n\n【可用工具】\n", "\n\n可用工具：\n"];
   for (const m of markers) {
@@ -242,6 +252,11 @@ onMounted(async () => {
     availableTools.value = await getTools();
   } catch {
     console.warn("获取工具列表失败");
+  }
+  try {
+    availableSkills.value = await getSkills();
+  } catch {
+    console.warn("获取技能列表失败");
   }
 });
 
@@ -410,6 +425,19 @@ function truncatePrompt(prompt: string, max = 120): string {
                     {{ tool }}
                   </span>
                   <span v-if="!agent.tools?.length" class="muted">无</span>
+                </div>
+              </div>
+
+              <div v-if="agent.skills?.length" class="info-row">
+                <span class="info-label">技能</span>
+                <div class="info-value">
+                  <span
+                    v-for="skillId in agent.skills"
+                    :key="skillId"
+                    class="skill-tag"
+                  >
+                    {{ availableSkills.find(s => s.id === skillId)?.name || skillId }}
+                  </span>
                 </div>
               </div>
 
@@ -582,6 +610,15 @@ function truncatePrompt(prompt: string, max = 120): string {
             multiple
             placeholder="选择可用工具"
             :disabled="!availableTools.length"
+          />
+        </NFormItem>
+        <NFormItem label="技能包">
+          <NSelect
+            v-model:value="formValue.skills"
+            :options="skillOptions"
+            multiple
+            placeholder="选择技能包，自动合并工具和提示词"
+            :disabled="!availableSkills.length"
           />
         </NFormItem>
         <NFormItem label="特征标签">
@@ -987,6 +1024,17 @@ function truncatePrompt(prompt: string, max = 120): string {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--neon-cyan);
+}
+
+.skill-tag {
+  padding: 2px 10px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #f59e0b;
+  white-space: nowrap;
 }
 
 .trait-tag {

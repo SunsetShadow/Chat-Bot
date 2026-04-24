@@ -16,6 +16,7 @@ import type {
   SessionDetailResponse,
   SessionResponse,
   Setting,
+  SkillInfo,
   ToolInfo,
 } from "@/types";
 import { API_BASE_URL, del, get, post, put } from "./request";
@@ -143,6 +144,26 @@ export async function deleteAgent(id: string): Promise<void> {
 export async function getTools(): Promise<ToolInfo[]> {
   const response = await get<DataResponse<ToolInfo[]>>("/api/v1/tools");
   return response.data;
+}
+
+// ============ Skills API ============
+
+export async function getSkills(): Promise<SkillInfo[]> {
+  const response = await get<DataResponse<SkillInfo[]>>("/api/v1/skills");
+  return response.data;
+}
+
+export async function getSkillDetail(id: string): Promise<SkillInfo> {
+  const response = await get<DataResponse<SkillInfo>>(`/api/v1/skills/${id}`);
+  return response.data;
+}
+
+export async function refreshSkills(): Promise<void> {
+  await post("/api/v1/skills/refresh");
+}
+
+export async function deleteSkill(id: string): Promise<void> {
+  await del(`/api/v1/skills/${id}`);
 }
 
 // ============ 规则相关 API ============
