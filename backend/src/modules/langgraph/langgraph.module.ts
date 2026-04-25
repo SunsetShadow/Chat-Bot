@@ -5,6 +5,7 @@ import { LangGraphService } from './langgraph.service';
 import { MemoryModule } from '../memory/memory.module';
 import { AgentModule } from '../agent/agent.module';
 import { CronJobModule } from '../cron-job/cron-job.module';
+import { CalendarModule } from '../calendar/calendar.module';
 import { SettingsModule } from '../settings/settings.module';
 import { SkillModule } from '../skill/skill.module';
 import { SettingsService } from '../settings/settings.service';
@@ -17,12 +18,14 @@ import { registerAllTools } from './tools/tool.loader';
 import { createMemoryExtractTool } from './tools/memory-extract.tool';
 import { createKnowledgeQueryTool } from './tools/knowledge-query.tool';
 import { createCronJobTool } from './tools/cron-job.tool';
+import { createCalendarTool } from './tools/calendar.tool';
 import { createExpressEmotionTool, createPlayMotionTool } from './tools/avatar.tool';
 import { MemoryService } from '../memory/memory.service';
 import { JobService } from '../cron-job/job.service';
+import { CalendarService } from '../calendar/calendar.service';
 
 @Module({
-  imports: [ConfigModule, MemoryModule, AgentModule, forwardRef(() => CronJobModule), SettingsModule, SkillModule],
+  imports: [ConfigModule, MemoryModule, AgentModule, forwardRef(() => CronJobModule), forwardRef(() => CalendarModule), SettingsModule, SkillModule],
   controllers: [ToolController],
   providers: [LangGraphService, AppConfigService, ToolRegistryService],
   exports: [LangGraphService],
@@ -64,6 +67,16 @@ export class LangGraphModule implements OnModuleInit {
         permission_level: 'write',
         category: 'orchestration',
         description: '创建和管理 AI 定时任务',
+      },
+    );
+
+    // 注册日历日程工具
+    this.toolRegistry.register(
+      createCalendarTool(this.moduleRef.get(CalendarService, { strict: false })),
+      {
+        permission_level: 'write',
+        category: 'productivity',
+        description: '创建和管理日历日程事件',
       },
     );
 

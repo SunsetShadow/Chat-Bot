@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DynamicStructuredTool } from '@langchain/core/tools';
 
 export type ToolPermission = 'read' | 'write' | 'confirm';
-export type ToolCategory = 'search' | 'communication' | 'system' | 'file' | 'memory' | 'orchestration' | 'general' | 'avatar';
+export type ToolCategory = 'search' | 'communication' | 'system' | 'file' | 'memory' | 'orchestration' | 'productivity' | 'general' | 'avatar';
 
 export interface ToolMetadata {
   name: string;

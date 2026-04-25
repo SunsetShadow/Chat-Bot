@@ -20,6 +20,8 @@ declare module 'vue' {
     CommandCard: typeof import('./components/chat/tools/CommandCard.vue')['default']
     CronJobCard: typeof import('./components/chat/tools/CronJobCard.vue')['default']
     DirectoryBrowser: typeof import('./components/settings/DirectoryBrowser.vue')['default']
+    EventDetailModal: typeof import('./components/calendar/EventDetailModal.vue')['default']
+    EventFormModal: typeof import('./components/calendar/EventFormModal.vue')['default']
     ExecutionHistory: typeof import('./components/cron-job/ExecutionHistory.vue')['default']
     HelloWorld: typeof import('./components/HelloWorld.vue')['default']
     JobForm: typeof import('./components/cron-job/JobForm.vue')['default']

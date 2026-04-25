@@ -1,13 +1,13 @@
 import { Entity, PrimaryColumn, Column, CreateDateColumn } from 'typeorm';
 
-export type NotificationType = 'cron_job';
+export type NotificationType = 'cron_job' | 'calendar_reminder';
 
 @Entity('notifications')
 export class NotificationEntity {
   @PrimaryColumn('uuid')
   id: string;
 
-  @Column('varchar', { length: 20, default: 'cron_job' })
+  @Column('varchar', { length: 30, default: 'cron_job' })
   type: NotificationType;
 
   @Column('varchar', { length: 200 })

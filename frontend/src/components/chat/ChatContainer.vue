@@ -29,6 +29,7 @@ import {
   SunnyOutline,
   MoonOutline,
   DesktopOutline,
+  CalendarOutline,
 } from "@vicons/ionicons5";
 
 const router = useRouter();
@@ -146,6 +147,13 @@ watch(
               </NPopover>
               <button
                 class="flex items-center justify-center w-8 h-8 bg-transparent border border-[var(--border-color)] rounded-[var(--radius-sm)] text-[var(--text-muted)] cursor-pointer transition-all duration-150 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                title="日历"
+                @click="router.push('/calendar')"
+              >
+                <NIcon :component="CalendarOutline" :size="16" />
+              </button>
+              <button
+                class="flex items-center justify-center w-8 h-8 bg-transparent border border-[var(--border-color)] rounded-[var(--radius-sm)] text-[var(--text-muted)] cursor-pointer transition-all duration-150 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
                 title="技能管理"
                 @click="router.push('/skills')"
               >
@@ -223,6 +231,16 @@ watch(
                 >
                   <NIcon :component="SettingsOutline" :size="16" />
                   设置
+                </button>
+                <button
+                  class="flex items-center gap-3 w-full py-3 text-[13px] text-[var(--text-secondary)] cursor-pointer"
+                  @click="
+                    mobileActionsOpen = false;
+                    router.push('/calendar');
+                  "
+                >
+                  <NIcon :component="CalendarOutline" :size="16" />
+                  日历
                 </button>
                 <div class="h-px bg-[var(--border-color)] my-1"></div>
                 <div class="flex items-center justify-between py-3">

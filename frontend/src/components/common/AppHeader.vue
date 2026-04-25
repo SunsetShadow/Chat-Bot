@@ -8,6 +8,7 @@ import {
   SparklesOutline,
   PersonOutline,
   ExtensionPuzzleOutline,
+  CalendarOutline,
 } from "@vicons/ionicons5";
 import ThemeToggle from "./ThemeToggle.vue";
 import NotificationBell from "./NotificationBell.vue";
@@ -29,6 +30,10 @@ function goToAvatar() {
 
 function goToSkills() {
   router.push("/skills");
+}
+
+function goToCalendar() {
+  router.push("/calendar");
 }
 </script>
 
@@ -58,6 +63,15 @@ function goToSkills() {
     </div>
     <div class="flex items-center gap-2">
       <NotificationBell />
+      <NButton
+        text
+        class="text-[var(--text-secondary)] hover:text-[var(--color-primary)]"
+        @click="goToCalendar"
+      >
+        <template #icon>
+          <NIcon :component="CalendarOutline" size="20" />
+        </template>
+      </NButton>
       <ThemeToggle />
       <NButton
         text
