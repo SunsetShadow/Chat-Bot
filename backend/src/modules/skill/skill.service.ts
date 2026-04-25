@@ -3,10 +3,23 @@ import { Skill, scanSkillsDir, DEFAULT_SKILLS_DIR } from './skill.types';
 import { SettingsService } from '../settings/settings.service';
 import { resolve } from 'node:path';
 import { rm } from 'node:fs/promises';
+import { homedir } from 'node:os';
 
 function escapeXml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+
+/** 路径压缩：将 home 目录替换为 ~ */
+function compactHomePath(filePath: string): string {
+  const home = homedir();
+  if (filePath.startsWith(home + '/')) {
+    return '~' + filePath.slice(home.length);
+  }
+  return filePath;
+}
+
+/** Skill 索引字符预算上限 */
+const MAX_SKILL_INDEX_CHARS = 18000;
 
 @Injectable()
 export class SkillService implements OnModuleInit {
@@ -28,19 +41,19 @@ export class SkillService implements OnModuleInit {
     return [DEFAULT_SKILLS_DIR];
   }
 
-  /** 重新扫描所有目录 */
+  /** 重新扫描所有目录（多源优先级：后者覆盖前者同名 skill） */
   async refresh(): Promise<void> {
     const dirs = await this.getSkillsDirs();
-    const seen = new Set<string>();
-    this.skills = [];
+    // 使用 Map 实现优先级合并：后扫描的目录覆盖先扫描的
+    const merged = new Map<string, Skill>();
     for (const dir of dirs) {
       for (const skill of scanSkillsDir(dir)) {
-        if (!seen.has(skill.id)) {
-          seen.add(skill.id);
-          this.skills.push(skill);
-        }
+        merged.set(skill.id, skill);
       }
     }
+    // 确定性排序
+    this.skills = Array.from(merged.values())
+      .sort((a, b) => a.name.localeCompare(b.name, 'en'));
     this.cachedIndex = '';
   }
 
@@ -59,7 +72,8 @@ export class SkillService implements OnModuleInit {
   async findOneSummary(id: string) {
     const s = this.findById(id);
     if (!s) return undefined;
-    const { dirPath, ...rest } = s;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { dirPath, source, ...rest } = s;
     return rest;
   }
 
@@ -70,21 +84,31 @@ export class SkillService implements OnModuleInit {
     return { instructions: s.instructions, dirPath: s.dirPath };
   }
 
-  /** 构建全局 skill 索引（缓存，refresh 时清除） */
+  /** 构建全局 skill 索引（缓存，refresh 时清除），带 Token 预算管理 */
   async buildSkillIndex(): Promise<string> {
     if (this.cachedIndex) return this.cachedIndex;
     if (this.skills.length === 0) return '';
 
-    const entries = this.skills
-      .map(s => `  <skill>\n    <name>${escapeXml(s.name)}</name>\n    <description>${escapeXml(s.description)}</description>\n  </skill>`)
-      .join('\n');
+    const entries = this.skills.map(s => {
+      const location = compactHomePath(s.dirPath);
+      return `  <skill>\n    <name>${escapeXml(s.name)}</name>\n    <description>${escapeXml(s.description)}</description>\n    <location>${escapeXml(location)}</location>\n  </skill>`;
+    });
 
-    this.cachedIndex = `<available_skills>
-${entries}
-</available_skills>
+    const header = '<available_skills>';
+    const footer = `</available_skills>\n\nUse the lookup_skill tool to load a skill's full instructions when the task matches its description.\nUse the read_skill_reference tool to read referenced files within a skill's directory.`;
+    const separator = '\n';
 
-Use the lookup_skill tool to load a skill's full instructions when the task matches its description.
-Use the read_skill_reference tool to read referenced files within a skill's directory.`;
+    // 检查是否超出预算
+    let index = `${header}\n${entries.join(separator)}\n${footer}`;
+    if (index.length > MAX_SKILL_INDEX_CHARS) {
+      // compact 模式：省略 description 和 location
+      const compactEntries = this.skills.map(s =>
+        `  <skill>\n    <name>${escapeXml(s.name)}</name>\n  </skill>`
+      );
+      index = `${header}\n${compactEntries.join(separator)}\n${footer}`;
+    }
+
+    this.cachedIndex = index;
     return this.cachedIndex;
   }
 

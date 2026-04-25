@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { safeTool } from './base/tool.helper';
 import { resolve } from 'node:path';
+import { realpathSync } from 'node:fs';
 
 const MAX_INSTRUCTIONS_SIZE = 256 * 1024; // 256KB
 const MAX_REFERENCE_SIZE = 1024 * 1024;   // 1MB
@@ -37,14 +38,14 @@ export function createReadSkillReferenceTool(
       const skill = await findSkill(skill_name);
       if (!skill) return `未找到名为 "${skill_name}" 的 skill。`;
 
-      // 路径安全：resolve 后确保仍在 skill 目录内
+      // 路径安全：先 resolve，再用 realpath 解析符号链接
       if (reference_path.includes('..')) {
         return `非法路径: ${reference_path}。不允许使用 ".."。`;
       }
 
       const { readFile } = await import('node:fs/promises');
-      const skillDir = resolve(skill.dirPath);
-      const fullPath = resolve(skillDir, reference_path);
+      const skillDir = realpathSync(resolve(skill.dirPath));
+      const fullPath = realpathSync(resolve(skillDir, reference_path));
 
       if (!fullPath.startsWith(skillDir + '/') && fullPath !== skillDir) {
         return `路径越权: ${reference_path}。只允许访问 skill 目录内的文件。`;
