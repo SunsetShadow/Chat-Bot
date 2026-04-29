@@ -74,7 +74,9 @@ export function useAvatarModel(config: AvatarModelConfig) {
 
   function playRandomIdleMotion(): void {
     const { idle } = config.motions;
-    const idx = Math.floor(Math.random() * idle.count);
+    const indices =
+      idle.availableIndices ?? Array.from({ length: idle.count }, (_, i) => i);
+    const idx = indices[Math.floor(Math.random() * indices.length)];
     playMotion("Idle", idx);
   }
 

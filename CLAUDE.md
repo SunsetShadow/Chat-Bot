@@ -73,13 +73,18 @@ docker compose --env-file .env.mac up -d   # Mac
   ASR: MediaRecorder 录音 → Blob → POST /api/v1/speech/asr → 腾讯云 ASR → 识别文本
        录音面板（波形可视化 + 计时器）通过 Web Audio API AnalyserNode 实时采集音频电平
 
-Avatar 通道（双通道渲染: 文本 + Live2D 可视化）:
-  驱动方式: Ani（默认 Agent）调用 express_emotion / play_motion 工具 → langgraph.service 拦截工具输出 → SSE avatar_action 事件
+Avatar 通道（Ani 专属身体，行为状态机驱动）:
+  架构: Avatar 是 Ani Agent 的视觉身体，通过 useAniBehavior 状态机（idle/speaking/listening/reacting）统一管理
+  驱动方式: Ani 调用 express_emotion / play_motion 工具 → SSE avatar_action → reacting 状态（高优先级）
   后端: avatar.tool.ts (safeTool) → ToolRegistryService (category: 'avatar') → langgraph.service 拦截 yield → chat.service SSE
-  前端: useChatTransport 解析 avatar_action → useAIChat avatarAction ref (3s 自动清除) → AvatarFloat 组件驱动表情/动作
+  前端: useChatTransport 解析 avatar_action → useAIChat avatarAction ref → AniAvatar 组件 → useAniBehavior 状态机
+  自动行为: useAniBehavior 调度呼吸（正弦波 ParamBreath）、眨眼（随机 2-7s）、头部微动（speaking）、idle 动作（随机 10-20s）
+  情绪联动: LLM 工具指令优先（30s TTL），前端 useEmotionDetector 关键词检测作为 fallback
+  口型同步: useLipSync（Phase 1 音量驱动：噪声门限 + 指数平滑 + 非对称速度 + 微抖）→ TTS AnalyserNode → ParamMouthOpenY
+  SSE 文本流 → onTextDelta 回调 → useEmotionDetector.feedText() → 情绪基线更新
+  模型配置: AvatarModelConfig 抽象（haru.ts 默认），支持多模型扩展，useAvatarModel 统一参数映射
   悬浮窗: ChatContainer 集成 AvatarFloat（可拖拽/最小化/关闭），🎭 按钮切换显隐
-  渲染: PixiJS 6 WebGL + pixi-live2d-display (Cubism 4)，HARU_EMOTION_MAP 情绪→表情索引映射
-  口型同步: TTS 播放时 AnalyserNode 提取音量 → ttsAudioLevel ref → Live2DAvatar ParamMouthOpenY
+  渲染: PixiJS 6 WebGL + pixi-live2d-display (Cubism 4)，AniAvatar 组合 useAvatarModel + useLipSync + useEmotionDetector + useAniBehavior
   布局: useAvatarLayout 模块级单例，三种模式循环切换（标题栏按钮），localStorage 持久化
     float: 280x280 可拖拽悬浮窗，模型居中，可最小化为 48px 圆圈
     side: 左侧固定栏 (40vw)，全高，模型自适应缩放
@@ -99,6 +104,7 @@ Avatar 通道（双通道渲染: 文本 + Live2D 可视化）:
 | [docs/specs/core-features](docs/specs/core-features/spec.md) | 聊天/Agent/工具/规则/记忆/定时任务/通知系统详细规范（数据模型、API、约束） |
 | [docs/superpowers/specs/agent-skills-system.md](docs/superpowers/specs/agent-skills-system.md) | Skills 系统设计与实现参考（Agent Skills 标准、加载管线、门控、安全扫描） |
 | [docs/specs/message-rendering](docs/specs/message-rendering/spec.md) | 消息渲染规范 |
+| [docs/superpowers/specs/2026-04-29-ani-avatar-voice-design.md](docs/superpowers/specs/2026-04-29-ani-avatar-voice-design.md) | Ani Avatar + Voice 联动设计（行为状态机、情绪联动、口型同步、多模型支持） |
 | [docs/specs/security](docs/specs/security/spec.md) | 安全规范（输入验证、安全头、速率限制、路径沙箱） |
 | [docs/plans/](docs/plans/) | 未来演进计划 |
 

@@ -14,6 +14,7 @@ declare module 'vue' {
     AgentEditor: typeof import('./components/agent/AgentEditor.vue')['default']
     AgentIndicator: typeof import('./components/chat/AgentIndicator.vue')['default']
     AgentSelector: typeof import('./components/agent/AgentSelector.vue')['default']
+    AniAvatar: typeof import('./components/avatar/AniAvatar.vue')['default']
     AppHeader: typeof import('./components/common/AppHeader.vue')['default']
     AvatarFloat: typeof import('./components/avatar/AvatarFloat.vue')['default']
     ChatContainer: typeof import('./components/chat/ChatContainer.vue')['default']

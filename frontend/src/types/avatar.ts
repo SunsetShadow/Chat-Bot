@@ -34,6 +34,7 @@ export type EmotionType =
 /** 动作组配置 */
 export interface MotionGroupConfig {
   count: number;
+  availableIndices?: number[]; // 实际可用的索引（跳过加载失败的 motion）
   randomInterval?: [number, number]; // [min, max] ms，仅 idle 组使用
 }
 

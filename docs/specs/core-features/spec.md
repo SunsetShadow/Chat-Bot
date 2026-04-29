@@ -36,6 +36,7 @@
 | `step_start` | — | 新步骤开始（不生成 chunk） |
 | `done` | — | 会话完成（不生成 chunk） |
 | `error` | `error` | 错误事件 |
+| `avatar_action` | — | Avatar 行为指令（express_emotion/play_motion 工具输出），前端 useAniBehavior 消费 |
 
 ### API 端点
 

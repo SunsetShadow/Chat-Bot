@@ -25,7 +25,11 @@ export const haruConfig: AvatarModelConfig = {
     excited: 7,
   },
   motions: {
-    idle: { count: 3, randomInterval: [10000, 20000] },
-    tap: { count: 5 },
+    idle: {
+      count: 3,
+      availableIndices: [1, 2],
+      randomInterval: [10000, 20000],
+    },
+    tap: { count: 2, availableIndices: [0] },
   },
 };
