@@ -53,9 +53,8 @@ export function useLipSync() {
     const alpha = gated > smoothedValue ? SMOOTH_UP : SMOOTH_DOWN;
     smoothedValue += (gated - smoothedValue) * alpha;
 
-    const jitter = smoothedValue > NOISE_GATE
-      ? (Math.random() - 0.5) * JITTER_AMOUNT
-      : 0;
+    const jitter =
+      smoothedValue > NOISE_GATE ? (Math.random() - 0.5) * JITTER_AMOUNT : 0;
 
     mouthOpenY.value = isEnabled.value
       ? Math.max(0, Math.min(1, smoothedValue + jitter))

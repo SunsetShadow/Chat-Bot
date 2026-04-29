@@ -1,16 +1,44 @@
 import type { EmotionKeywordRule, EmotionType } from "@/types/avatar";
 
 export const emotionRules: EmotionKeywordRule[] = [
-  { keywords: ["哈哈", "开心", "太好了", "不错", "很棒"], emotion: "happy", weight: 1 },
-  { keywords: ["抱歉", "不好意思", "遗憾", "可惜", "难过"], emotion: "sad", weight: 1 },
-  { keywords: ["嗯", "让我想想", "这个问题", "分析", "考虑"], emotion: "thinking", weight: 1 },
-  { keywords: ["太棒了", "哇", "厉害", "厉害了", "太牛"], emotion: "excited", weight: 2 },
+  {
+    keywords: ["哈哈", "开心", "太好了", "不错", "很棒"],
+    emotion: "happy",
+    weight: 1,
+  },
+  {
+    keywords: ["抱歉", "不好意思", "遗憾", "可惜", "难过"],
+    emotion: "sad",
+    weight: 1,
+  },
+  {
+    keywords: ["嗯", "让我想想", "这个问题", "分析", "考虑"],
+    emotion: "thinking",
+    weight: 1,
+  },
+  {
+    keywords: ["太棒了", "哇", "厉害", "厉害了", "太牛"],
+    emotion: "excited",
+    weight: 2,
+  },
   { keywords: ["生气", "过分", "不可接受"], emotion: "angry", weight: 1 },
-  { keywords: ["没想到", "出乎意料", "居然", "竟然"], emotion: "surprised", weight: 1 },
-  { keywords: ["理解", "辛苦了", "不容易", "心疼"], emotion: "sympathetic", weight: 1 },
+  {
+    keywords: ["没想到", "出乎意料", "居然", "竟然"],
+    emotion: "surprised",
+    weight: 1,
+  },
+  {
+    keywords: ["理解", "辛苦了", "不容易", "心疼"],
+    emotion: "sympathetic",
+    weight: 1,
+  },
 ];
 
-const punctuationBoosts: Array<{ pattern: RegExp; emotion: EmotionType; boost: number }> = [
+const punctuationBoosts: Array<{
+  pattern: RegExp;
+  emotion: EmotionType;
+  boost: number;
+}> = [
   { pattern: /！{2,}/, emotion: "excited", boost: 1 },
   { pattern: /？{2,}/, emotion: "surprised", boost: 1 },
 ];

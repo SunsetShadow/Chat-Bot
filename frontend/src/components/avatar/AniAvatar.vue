@@ -20,7 +20,11 @@ const avatarModel = useAvatarModel(modelConfig);
 const lipSync = useLipSync();
 const emotionDetector = useEmotionDetector();
 
-const { avatarAction, isLoading: isStreaming, setEmotionTextCallback } = useAIChat();
+const {
+  avatarAction,
+  isLoading: isStreaming,
+  setEmotionTextCallback,
+} = useAIChat();
 const { ttsStatus, isRecording } = useVoice();
 
 useAniBehavior({

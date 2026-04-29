@@ -97,7 +97,11 @@ export function useAniBehavior(deps: {
     const delay = minMs + Math.random() * (maxMs - minMs);
     blinkTimer = setTimeout(() => {
       doBlink();
-      if (state.value === "idle" || state.value === "speaking" || state.value === "listening") {
+      if (
+        state.value === "idle" ||
+        state.value === "speaking" ||
+        state.value === "listening"
+      ) {
         scheduleBlink(minMs, maxMs);
       }
     }, delay);
@@ -181,11 +185,26 @@ export function useAniBehavior(deps: {
   // === Cleanup ===
 
   function clearAutoBehaviors(): void {
-    if (breathRaf) { cancelAnimationFrame(breathRaf); breathRaf = 0; }
-    if (blinkTimer) { clearTimeout(blinkTimer); blinkTimer = null; }
-    if (idleMotionTimer) { clearTimeout(idleMotionTimer); idleMotionTimer = null; }
-    if (headSwayRaf) { cancelAnimationFrame(headSwayRaf); headSwayRaf = 0; }
-    if (idleDelayTimer) { clearTimeout(idleDelayTimer); idleDelayTimer = null; }
+    if (breathRaf) {
+      cancelAnimationFrame(breathRaf);
+      breathRaf = 0;
+    }
+    if (blinkTimer) {
+      clearTimeout(blinkTimer);
+      blinkTimer = null;
+    }
+    if (idleMotionTimer) {
+      clearTimeout(idleMotionTimer);
+      idleMotionTimer = null;
+    }
+    if (headSwayRaf) {
+      cancelAnimationFrame(headSwayRaf);
+      headSwayRaf = 0;
+    }
+    if (idleDelayTimer) {
+      clearTimeout(idleDelayTimer);
+      idleDelayTimer = null;
+    }
     avatarModel.setParam("angleX", 0);
     avatarModel.setParam("angleY", 0);
     avatarModel.setParam("breath", 0);
@@ -205,49 +224,77 @@ export function useAniBehavior(deps: {
     if (action.action === "motion" && action.group) {
       avatarModel.playMotion(action.group, action.index);
     }
-    setTimeout(() => { transitionTo(prevState.value); }, 2000);
+    setTimeout(() => {
+      transitionTo(prevState.value);
+    }, 2000);
   }
 
   // === Watch external state ===
 
-  watch(() => deps.getTtsStatus(), (status) => {
-    if (idleDelayTimer) { clearTimeout(idleDelayTimer); idleDelayTimer = null; }
-    if (status === "speaking") {
-      transitionTo("speaking");
-    } else if (state.value === "speaking") {
-      idleDelayTimer = setTimeout(() => { transitionTo("idle"); idleDelayTimer = null; }, IDLE_DELAY);
-    }
-  });
+  watch(
+    () => deps.getTtsStatus(),
+    (status) => {
+      if (idleDelayTimer) {
+        clearTimeout(idleDelayTimer);
+        idleDelayTimer = null;
+      }
+      if (status === "speaking") {
+        transitionTo("speaking");
+      } else if (state.value === "speaking") {
+        idleDelayTimer = setTimeout(() => {
+          transitionTo("idle");
+          idleDelayTimer = null;
+        }, IDLE_DELAY);
+      }
+    },
+  );
 
-  watch(() => deps.getIsRecording(), (recording) => {
-    if (recording && state.value !== "reacting") {
-      transitionTo("listening");
-    } else if (!recording && state.value === "listening") {
-      transitionTo("idle");
-    }
-  });
+  watch(
+    () => deps.getIsRecording(),
+    (recording) => {
+      if (recording && state.value !== "reacting") {
+        transitionTo("listening");
+      } else if (!recording && state.value === "listening") {
+        transitionTo("idle");
+      }
+    },
+  );
 
-  watch(() => deps.getIsStreaming(), (streaming) => {
-    if (!streaming) emotionDetector.resetBuffer();
-  });
+  watch(
+    () => deps.getIsStreaming(),
+    (streaming) => {
+      if (!streaming) emotionDetector.resetBuffer();
+    },
+  );
 
-  watch(() => emotionDetector.emotionBaseline.value.emotion, (emotion) => {
-    applyEmotionBaseline(emotion);
-  });
+  watch(
+    () => emotionDetector.emotionBaseline.value.emotion,
+    (emotion) => {
+      applyEmotionBaseline(emotion);
+    },
+  );
 
-  watch(() => deps.getAvatarAction(), (action) => {
-    handleAvatarAction(action);
-  });
+  watch(
+    () => deps.getAvatarAction(),
+    (action) => {
+      handleAvatarAction(action);
+    },
+  );
 
   // Lip sync bridge
-  watch(() => lipSync.mouthOpenY.value, (v) => {
-    if (state.value === "speaking") avatarModel.setParam("mouthOpenY", v);
-  });
+  watch(
+    () => lipSync.mouthOpenY.value,
+    (v) => {
+      if (state.value === "speaking") avatarModel.setParam("mouthOpenY", v);
+    },
+  );
 
   // === Lifecycle ===
   startIdleBehaviors();
 
-  onUnmounted(() => { clearAutoBehaviors(); });
+  onUnmounted(() => {
+    clearAutoBehaviors();
+  });
 
   return { state };
 }

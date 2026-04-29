@@ -22,7 +22,10 @@ export function useAvatarModel(config: AvatarModelConfig) {
     return avatarRef.value?.model;
   }
 
-  function setParam(paramKey: keyof AvatarModelConfig["params"], value: number): void {
+  function setParam(
+    paramKey: keyof AvatarModelConfig["params"],
+    value: number,
+  ): void {
     const paramId = config.params[paramKey];
     if (!paramId) return;
     try {
