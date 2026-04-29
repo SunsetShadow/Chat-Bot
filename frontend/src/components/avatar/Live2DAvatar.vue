@@ -7,9 +7,8 @@ const props = withDefaults(
     modelUrl: string;
     width?: number;
     height?: number;
-    volume?: number;
   }>(),
-  { width: 400, height: 600, volume: 0 },
+  { width: 400, height: 600 },
 );
 
 const emit = defineEmits<{
@@ -80,17 +79,6 @@ onUnmounted(() => {
   app.value?.destroy(true);
 });
 
-watch(
-  () => props.volume,
-  (v) => {
-    try {
-      coreModel.value?.setParameterValueById("ParamMouthOpenY", v);
-    } catch {
-      // coreModel may be unavailable during model transitions
-    }
-  },
-);
-
 // 响应容器尺寸变化，重设画布并居中模型
 watch([() => props.width, () => props.height], ([w, h]) => {
   if (!app.value || !model.value || w <= 0 || h <= 0) return;
@@ -139,7 +127,22 @@ function tap() {
   }
 }
 
-defineExpose({ setExpression, startMotion, tap });
+function setParam(paramId: string, value: number): void {
+  try {
+    coreModel.value?.setParameterValueById(paramId, value);
+  } catch {
+    // coreModel may be unavailable during model transitions
+  }
+}
+
+defineExpose({
+  setExpression,
+  startMotion,
+  tap,
+  setParam,
+  get model() { return model.value; },
+  get coreModel() { return coreModel.value; },
+});
 </script>
 
 <template>
