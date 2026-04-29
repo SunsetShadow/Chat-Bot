@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import AniAvatar from "./AniAvatar.vue";
 import { useAIChat } from "@/composables/useAIChat";
 import { useAvatarLayout } from "@/composables/useAvatarLayout";
+import { useVoice } from "@/composables/useVoice";
 import type { AvatarLayoutMode } from "@/types/avatar";
 import { NIcon } from "naive-ui";
 import {
@@ -19,6 +20,12 @@ const aniAvatarRef = ref<InstanceType<typeof AniAvatar>>();
 const bodyRef = ref<HTMLElement>();
 const { isLoading: isStreaming } = useAIChat();
 const { layoutMode, setLayout, setVisible } = useAvatarLayout();
+const { setOnAudioPlaying } = useVoice();
+
+// TTS 播放时将 audio 元素连接到 lipSync
+setOnAudioPlaying((audioEl) => {
+  aniAvatarRef.value?.connectAudioElement(audioEl);
+});
 
 // 悬浮窗位置（仅 float 模式）
 const posX = ref(window.innerWidth - FLOAT_SIZE - 20);
