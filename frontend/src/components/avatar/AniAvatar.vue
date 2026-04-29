@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onMounted } from "vue";
 import Live2DAvatar from "./Live2DAvatar.vue";
 import { useAvatarModel } from "@/composables/avatar/useAvatarModel";
 import { useLipSync } from "@/composables/avatar/useLipSync";
@@ -19,7 +20,7 @@ const avatarModel = useAvatarModel(modelConfig);
 const lipSync = useLipSync();
 const emotionDetector = useEmotionDetector();
 
-const { avatarAction, isLoading: isStreaming } = useAIChat();
+const { avatarAction, isLoading: isStreaming, setEmotionTextCallback } = useAIChat();
 const { ttsStatus, isRecording } = useVoice();
 
 useAniBehavior({
@@ -30,6 +31,10 @@ useAniBehavior({
   getIsRecording: () => isRecording.value,
   getIsStreaming: () => isStreaming.value,
   getAvatarAction: () => avatarAction.value,
+});
+
+onMounted(() => {
+  setEmotionTextCallback(emotionDetector.feedText);
 });
 
 defineExpose({

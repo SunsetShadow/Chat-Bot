@@ -32,6 +32,7 @@ export function createChatTransport(
   onAgentSwitched?: (from: string, to: string) => void,
   getTtsSessionId?: () => string | null,
   onAvatarAction?: (payload: AvatarActionPayload) => void,
+  onTextDelta?: (text: string) => void,
 ): ChatTransport<UIMessage> {
   return {
     async sendMessages({
@@ -88,6 +89,7 @@ export function createChatTransport(
         onSessionCreated,
         onAgentSwitched,
         onAvatarAction,
+        onTextDelta,
       );
     },
 
@@ -105,6 +107,7 @@ function convertSSEStream(
   onSessionCreated?: (sessionId: string) => void,
   onAgentSwitched?: (from: string, to: string) => void,
   onAvatarAction?: (payload: AvatarActionPayload) => void,
+  onTextDelta?: (text: string) => void,
 ): ReadableStream<UIMessageChunk> {
   const reader = rawStream.getReader();
   const decoder = new TextDecoder();
@@ -155,6 +158,12 @@ function convertSSEStream(
             if (action) {
               onAvatarAction({ action: action as string, ...rest });
             }
+          }
+
+          // 将文本增量转发给情绪检测
+          if (event.event === "content_delta" && onTextDelta) {
+            const content = (event.data.content as string) || "";
+            if (content) onTextDelta(content);
           }
 
           const chunks = convertEventToChunks(event, textPartId, messageId);

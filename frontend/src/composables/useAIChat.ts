@@ -18,6 +18,8 @@ const activeAgent = ref<string | null>(null);
 const avatarAction = ref<AvatarActionPayload | null>(null);
 let avatarActionTimer: ReturnType<typeof setTimeout> | null = null;
 
+let emotionTextCallback: ((text: string) => void) | null = null;
+
 function getChatInstance(): Chat<UIMessage> {
   if (!chatInstance) {
     const chatStore = useChatStore();
@@ -55,6 +57,7 @@ function getChatInstance(): Chat<UIMessage> {
             avatarAction.value = null;
           }, 3000);
         },
+        (text) => { if (emotionTextCallback) emotionTextCallback(text); },
       ),
       onError: (err) => {
         console.error("[AIChat] error:", err.message);
@@ -211,5 +214,8 @@ export function useAIChat() {
     loadMessages,
     clearMessages,
     resetChat,
+    setEmotionTextCallback(cb: (text: string) => void) {
+      emotionTextCallback = cb;
+    },
   };
 }
