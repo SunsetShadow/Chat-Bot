@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
-import Live2DAvatar from "./Live2DAvatar.vue";
+import AniAvatar from "./AniAvatar.vue";
 import { useAIChat } from "@/composables/useAIChat";
 import { useAvatarLayout } from "@/composables/useAvatarLayout";
-import { useVoice } from "@/composables/useVoice";
-import { HARU_EMOTION_MAP } from "@/config/emotion-map";
-import type { AvatarActionPayload, AvatarLayoutMode } from "@/types/avatar";
+import type { AvatarLayoutMode } from "@/types/avatar";
 import { NIcon } from "naive-ui";
 import {
   CloseOutline,
@@ -15,14 +13,12 @@ import {
   TabletLandscapeOutline,
 } from "@vicons/ionicons5";
 
-const MODEL_URL = "/live2d/haru_greeter_t03.model3.json";
 const FLOAT_SIZE = 280;
 
-const avatarRef = ref<InstanceType<typeof Live2DAvatar>>();
+const aniAvatarRef = ref<InstanceType<typeof AniAvatar>>();
 const bodyRef = ref<HTMLElement>();
-const { avatarAction, isLoading: isStreaming } = useAIChat();
+const { isLoading: isStreaming } = useAIChat();
 const { layoutMode, setLayout, setVisible } = useAvatarLayout();
-const { ttsAudioLevel, ttsStatus } = useVoice();
 
 // 悬浮窗位置（仅 float 模式）
 const posX = ref(window.innerWidth - FLOAT_SIZE - 20);
@@ -137,30 +133,6 @@ function onDragEnd() {
   document.removeEventListener("mouseup", onDragEnd);
 }
 
-// TTS 口型同步
-const avatarVolume = computed(() =>
-  ttsStatus.value === "speaking" ? ttsAudioLevel.value : 0,
-);
-
-// 驱动表情/动作
-watch(avatarAction, (action: AvatarActionPayload | null) => {
-  if (!action || !avatarRef.value) return;
-  if (action.action === "expression" && action.emotion) {
-    const idx = HARU_EMOTION_MAP[action.emotion];
-    if (idx !== undefined) avatarRef.value.setExpression(idx);
-  }
-  if (action.action === "motion" && action.group) {
-    avatarRef.value.startMotion(action.group, action.index ?? 0);
-  }
-});
-
-// 流式结束后回到 neutral
-watch(isStreaming, (s) => {
-  if (!s && avatarRef.value) {
-    avatarRef.value.setExpression(HARU_EMOTION_MAP.neutral);
-  }
-});
-
 function closeAvatar() {
   setVisible(false);
 }
@@ -196,12 +168,10 @@ onUnmounted(() => {
   <!-- 全屏模式：文档流，Avatar 占上半 -->
   <div v-else-if="layoutMode === 'fullscreen'" class="avatar-fullscreen">
     <div ref="bodyRef" class="panel-body">
-      <Live2DAvatar
-        ref="avatarRef"
-        :model-url="MODEL_URL"
+      <AniAvatar
+        ref="aniAvatarRef"
         :width="canvasW"
         :height="canvasH"
-        :volume="avatarVolume"
       />
     </div>
   </div>
@@ -209,12 +179,10 @@ onUnmounted(() => {
   <!-- 侧栏模式：文档流，左侧 50% -->
   <div v-else-if="layoutMode === 'side'" class="avatar-side">
     <div ref="bodyRef" class="panel-body">
-      <Live2DAvatar
-        ref="avatarRef"
-        :model-url="MODEL_URL"
+      <AniAvatar
+        ref="aniAvatarRef"
         :width="canvasW"
         :height="canvasH"
-        :volume="avatarVolume"
       />
     </div>
   </div>
@@ -251,12 +219,10 @@ onUnmounted(() => {
       </div>
     </div>
     <div class="float-body">
-      <Live2DAvatar
-        ref="avatarRef"
-        :model-url="MODEL_URL"
+      <AniAvatar
+        ref="aniAvatarRef"
         :width="canvasW"
         :height="canvasH"
-        :volume="avatarVolume"
       />
     </div>
   </div>
