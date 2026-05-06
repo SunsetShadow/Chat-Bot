@@ -14,6 +14,7 @@ import { ToolRegistryService } from './tools/tool-registry.service';
 import { AgentService } from '../agent/agent.service';
 import { AgentEntity } from '../../common/entities/agent.entity';
 import { SkillService } from '../skill/skill.service';
+import { SkillApprovalService } from '../skill/skill-approval.service';
 import { buildGraph } from './graph/graph.builder';
 import { buildSupervisorGraph, AgentDefinition } from './graph/supervisor.builder';
 import { CompiledStateGraph } from '@langchain/langgraph';
@@ -36,6 +37,8 @@ export type StreamEvent =
   | { type: 'step_start' }
   | { type: 'agent_switched'; fromAgent: string; toAgent: string }
   | { type: 'avatar_action'; payload: { action: string; [key: string]: unknown } }
+  | { type: 'skill_approval'; payload: { approvalId: string; skillName: string; type: string; description: string } }
+  | { type: 'skill_proposal'; payload: { name: string; description: string; reason: string } }
   | { type: 'finish'; finishReason: string };
 
 @Injectable()
@@ -62,6 +65,7 @@ export class LangGraphService implements OnModuleInit {
     private toolRegistry: ToolRegistryService,
     private agentService: AgentService,
     private skillService: SkillService,
+    private skillApprovalService: SkillApprovalService,
   ) {}
 
   async onModuleInit() {
@@ -575,6 +579,45 @@ export class LangGraphService implements OnModuleInit {
               yield { type: 'avatar_action', payload };
             } catch {
               // 解析失败静默忽略
+            }
+          }
+
+          // Skill 工具拦截：create_skill / update_skill → skill_approval 事件
+          if (tc && (tc.name === 'create_skill' || tc.name === 'update_skill')) {
+            try {
+              const pending = this.skillApprovalService.listPending();
+              if (pending.length > 0) {
+                const latest = pending[0];
+                const descMatch = latest.contentSnapshot.match(/^description:\s*(.+)$/m);
+                yield {
+                  type: 'skill_approval',
+                  payload: {
+                    approvalId: latest.id,
+                    skillName: latest.skillName,
+                    type: latest.type,
+                    description: descMatch?.[1] || '',
+                  },
+                };
+              }
+            } catch {
+              // 静默忽略
+            }
+          }
+
+          // Skill 工具拦截：propose_skill → skill_proposal 事件
+          if (tc && tc.name === 'propose_skill') {
+            try {
+              const payload = JSON.parse(outputStr);
+              yield {
+                type: 'skill_proposal',
+                payload: {
+                  name: payload.name,
+                  description: payload.description,
+                  reason: payload.reason,
+                },
+              };
+            } catch {
+              // 静默忽略
             }
           }
         }

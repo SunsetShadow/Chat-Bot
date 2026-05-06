@@ -164,6 +164,20 @@ export class ChatService {
             };
             break;
 
+          case 'skill_approval':
+            yield {
+              event: 'skill_approval',
+              data: { ...base, ...event.payload },
+            };
+            break;
+
+          case 'skill_proposal':
+            yield {
+              event: 'skill_proposal',
+              data: { ...base, ...event.payload },
+            };
+            break;
+
           case 'finish':
             yield { event: 'message_done', data: { ...base, finish_reason: event.finishReason } };
             break;

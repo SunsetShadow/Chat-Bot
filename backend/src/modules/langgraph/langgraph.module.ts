@@ -23,6 +23,11 @@ import { createExpressEmotionTool, createPlayMotionTool } from './tools/avatar.t
 import { MemoryService } from '../memory/memory.service';
 import { JobService } from '../cron-job/job.service';
 import { CalendarService } from '../calendar/calendar.service';
+import { SkillApprovalService } from '../skill/skill-approval.service';
+import { SkillService } from '../skill/skill.service';
+import { createCreateSkillTool } from '../skill/tools/create-skill.tool';
+import { createUpdateSkillTool } from '../skill/tools/update-skill.tool';
+import { createProposeSkillTool } from '../skill/tools/propose-skill.tool';
 
 @Module({
   imports: [ConfigModule, MemoryModule, AgentModule, forwardRef(() => CronJobModule), forwardRef(() => CalendarModule), SettingsModule, SkillModule],
@@ -39,6 +44,8 @@ export class LangGraphModule implements OnModuleInit {
     private agentService: AgentService,
     private configService: AppConfigService,
     private settingsService: SettingsService,
+    private skillService: SkillService,
+    private skillApprovalService: SkillApprovalService,
   ) {}
 
   async onModuleInit() {
@@ -90,6 +97,29 @@ export class LangGraphModule implements OnModuleInit {
       permission_level: 'write',
       category: 'avatar',
       description: '播放虚拟角色动作',
+    });
+
+    // 注册 Skill 创建/修改工具
+    this.toolRegistry.register(
+      createCreateSkillTool(this.skillApprovalService, this.skillService),
+      {
+        permission_level: 'write',
+        category: 'skill',
+        description: 'Agent 创建新的可复用 Skill',
+      },
+    );
+    this.toolRegistry.register(
+      createUpdateSkillTool(this.skillApprovalService, this.skillService),
+      {
+        permission_level: 'write',
+        category: 'skill',
+        description: 'Agent 修改已有 Skill 的指令内容',
+      },
+    );
+    this.toolRegistry.register(createProposeSkillTool(), {
+      permission_level: 'write',
+      category: 'skill',
+      description: 'Agent 推荐创建新 Skill',
     });
 
     // 所有工具注册完成后，构建 LangGraph
