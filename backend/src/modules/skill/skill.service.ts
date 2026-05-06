@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { Skill, scanSkillsDir, DEFAULT_SKILLS_DIR } from './skill.types';
 import { SettingsService } from '../settings/settings.service';
 import { SkillUsageService } from './skill-usage.service';
+import { SkillCache } from './skill-cache';
 import { filterActiveSkills } from './skill-filter';
 import { resolve } from 'node:path';
 import { rm } from 'node:fs/promises';
@@ -27,6 +28,7 @@ const MAX_SKILL_INDEX_CHARS = 18000;
 export class SkillService implements OnModuleInit {
   private skills: Skill[] = [];
   private cachedIndex = '';
+  private cache = new SkillCache();
 
   constructor(
     @Inject(forwardRef(() => SettingsService))
@@ -35,6 +37,7 @@ export class SkillService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    await this.cache.loadManifest();
     await this.refresh();
   }
 
@@ -58,6 +61,8 @@ export class SkillService implements OnModuleInit {
     this.skills = Array.from(merged.values())
       .sort((a, b) => a.name.localeCompare(b.name, 'en'));
     this.cachedIndex = '';
+    this.cache.invalidateAll();
+    await this.cache.saveManifest();
   }
 
   private findById(id: string): Skill | undefined {
@@ -81,11 +86,18 @@ export class SkillService implements OnModuleInit {
     return rest;
   }
 
-  /** 供 lookup_skill 工具调用 */
+  /** 供 lookup_skill 工具调用（L1 缓存） */
   async findSkillForLookup(id: string): Promise<{ instructions: string; dirPath: string } | null> {
     const s = this.findById(id);
     if (!s) return null;
     this.usageService.trackUse(id);
+
+    const cached = this.cache.get(id);
+    if (cached) {
+      return { instructions: cached, dirPath: s.dirPath };
+    }
+
+    this.cache.set(id, s.instructions);
     return { instructions: s.instructions, dirPath: s.dirPath };
   }
 
@@ -133,6 +145,7 @@ export class SkillService implements OnModuleInit {
     try {
       await rm(s.dirPath, { recursive: true, force: true });
       this.skills = this.skills.filter(sk => sk.id !== id);
+      this.cache.invalidate(id);
       this.cachedIndex = '';
       return true;
     } catch {
