@@ -159,3 +159,43 @@ export function scanSkillsDir(baseDir: string): Skill[] {
   }
   return skills;
 }
+
+/** 安全扫描结果 */
+export interface ScanThreat {
+  type: 'path_traversal' | 'code_injection' | 'size_exceeded' | 'invalid_yaml' | 'suspicious_command';
+  severity: 'error' | 'warning';
+  message: string;
+}
+
+export interface ScanResult {
+  safe: boolean;
+  threats: ScanThreat[];
+}
+
+/** 审批记录 */
+export interface SkillApproval {
+  id: string;
+  skillName: string;
+  type: 'create' | 'update';
+  status: 'pending' | 'approved' | 'rejected';
+  submittedAt: string;
+  reviewedAt?: string;
+  contentSnapshot: string;
+  oldContentSnapshot?: string;
+  patchDescription?: string;
+  agentId?: string;
+}
+
+/** 使用量统计 */
+export interface SkillUsageRecord {
+  useCount: number;
+  viewCount: number;
+  patchCount: number;
+  lastUsedAt: string | null;
+  createdAt: string;
+}
+
+/** name 字段格式校验：kebab-case，3-64 字符 */
+export function isValidSkillName(name: string): boolean {
+  return /^[a-z][a-z0-9-]{1,62}[a-z0-9]$/.test(name) && name.length >= 3 && name.length <= 64;
+}
