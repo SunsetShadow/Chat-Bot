@@ -1,12 +1,14 @@
 import { Controller, Get, Post, Param, Body, NotFoundException, BadRequestException, Delete } from '@nestjs/common';
 import { SkillService } from './skill.service';
 import { SkillApprovalService } from './skill-approval.service';
+import { SkillExperienceService } from './skill-experience.service';
 
 @Controller('api/v1/skills')
 export class SkillController {
   constructor(
     private readonly skillService: SkillService,
     private readonly approvalService: SkillApprovalService,
+    private readonly experienceService: SkillExperienceService,
   ) {}
 
   @Get()
@@ -18,6 +20,12 @@ export class SkillController {
   @Get('approvals/pending')
   async listPendingApprovals() {
     const data = this.approvalService.listPending();
+    return { success: true, data };
+  }
+
+  @Get('experience/summary')
+  async getExperienceSummary() {
+    const data = this.experienceService.getExperienceSummary();
     return { success: true, data };
   }
 

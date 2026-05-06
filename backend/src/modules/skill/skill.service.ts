@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { Skill, scanSkillsDir, DEFAULT_SKILLS_DIR } from './skill.types';
 import { SettingsService } from '../settings/settings.service';
 import { SkillUsageService } from './skill-usage.service';
+import { SkillExperienceService } from './skill-experience.service';
 import { SkillCache } from './skill-cache';
 import { filterActiveSkills } from './skill-filter';
 import { resolve } from 'node:path';
@@ -34,6 +35,7 @@ export class SkillService implements OnModuleInit {
     @Inject(forwardRef(() => SettingsService))
     private settingsService: SettingsService,
     private readonly usageService: SkillUsageService,
+    private readonly experienceService: SkillExperienceService,
   ) {}
 
   async onModuleInit() {
@@ -151,5 +153,26 @@ export class SkillService implements OnModuleInit {
     } catch {
       return false;
     }
+  }
+
+  /** 记录 Skill 使用经验 */
+  async recordExperience(params: {
+    skillId: string;
+    conversationId: string;
+    outcome: 'success' | 'failure' | 'partial';
+    failureReason?: string;
+    userFeedback?: string;
+  }) {
+    this.experienceService.record(params);
+  }
+
+  /** 获取 Skill 经验统计 */
+  async getExperienceSummary() {
+    return this.experienceService.getExperienceSummary();
+  }
+
+  /** 检查是否应建议 Patch */
+  async shouldSuggestPatch(skillId: string): Promise<boolean> {
+    return this.experienceService.shouldSuggestPatch(skillId);
   }
 }

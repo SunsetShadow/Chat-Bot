@@ -227,6 +227,19 @@ export interface SkillUsageRecord {
   createdAt: string;
 }
 
+/** Skill 使用经验记录 */
+export interface SkillExperience {
+  skillId: string;
+  conversationId: string;
+  outcome: 'success' | 'failure' | 'partial';
+  failureReason?: string;
+  userFeedback?: string;
+  timestamp: string;
+}
+
+/** Skill 生命周期状态 */
+export type SkillLifecycleState = 'active' | 'stale' | 'archived';
+
 /** name 字段格式校验：kebab-case，3-64 字符 */
 export function isValidSkillName(name: string): boolean {
   return /^[a-z][a-z0-9-]{1,62}[a-z0-9]$/.test(name) && name.length >= 3 && name.length <= 64;
