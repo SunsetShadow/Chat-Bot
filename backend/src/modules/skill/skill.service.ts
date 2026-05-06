@@ -65,8 +65,8 @@ export class SkillService implements OnModuleInit {
 
   /** 列表（metadata only，progressive disclosure stage 1） */
   async findAllSummary() {
-    return this.skills.map(({ id, name, description, license, compatibility }) => ({
-      id, name, description, license, compatibility,
+    return this.skills.map(({ id, name, description, license, compatibility, aliases }) => ({
+      id, name, description, license, compatibility, aliases,
     }));
   }
 

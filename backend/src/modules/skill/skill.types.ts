@@ -17,10 +17,14 @@ export interface Skill {
   compatibility?: string;
   metadata?: Record<string, string>;
   allowedTools?: string[];
+  aliases?: string[];
   requires?: {
     bins?: string[];
     env?: string[];
+    tools?: string[];
+    platforms?: string[];
   };
+  fallbackFor?: string[];
   /** SKILL.md 中 --- 之后的 markdown 正文 */
   instructions: string;
 }
@@ -114,6 +118,29 @@ export function parseSkillMd(filePath: string, sourceDir: string): Skill | null 
         ? [fm['allowed-tools'] as string]
         : undefined;
 
+    const aliases = Array.isArray(fm['aliases'])
+      ? fm['aliases'] as string[]
+      : typeof fm['aliases'] === 'string'
+        ? [fm['aliases'] as string]
+        : undefined;
+
+    const fallbackFor = Array.isArray(fm['fallback_for'] || fm['fallback-for'])
+      ? (fm['fallback_for'] || fm['fallback-for']) as string[]
+      : typeof (fm['fallback_for'] || fm['fallback-for']) === 'string'
+        ? [(fm['fallback_for'] || fm['fallback-for']) as string]
+        : undefined;
+
+    const requiresTools = Array.isArray((requires as any)?.['tools'])
+      ? (requires as any)['tools'] as string[]
+      : typeof (requires as any)?.['tools'] === 'string'
+        ? [(requires as any)['tools']]
+        : undefined;
+    const requiresPlatforms = Array.isArray((requires as any)?.['platforms'])
+      ? (requires as any)['platforms'] as string[]
+      : typeof (requires as any)?.['platforms'] === 'string'
+        ? [(requires as any)['platforms']]
+        : undefined;
+
     return {
       id: effectiveName,
       name: effectiveName,
@@ -124,7 +151,11 @@ export function parseSkillMd(filePath: string, sourceDir: string): Skill | null 
       compatibility: (fm['compatibility'] as string) || undefined,
       metadata: metadata && Object.keys(metadata).length > 0 ? metadata : undefined,
       allowedTools,
-      requires: (requiresBins || requiresEnv) ? { bins: requiresBins, env: requiresEnv } : undefined,
+      aliases,
+      requires: (requiresBins || requiresEnv || requiresTools || requiresPlatforms)
+        ? { bins: requiresBins, env: requiresEnv, tools: requiresTools, platforms: requiresPlatforms }
+        : undefined,
+      fallbackFor,
       instructions: body,
     };
   } catch {

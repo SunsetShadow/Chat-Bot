@@ -237,6 +237,8 @@ export interface SkillInfo {
   license?: string;
   compatibility?: string;
   allowedTools?: string[];
+  aliases?: string[];
+  fallbackFor?: string[];
   requires?: {
     bins?: string[];
     env?: string[];

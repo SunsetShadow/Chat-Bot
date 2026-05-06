@@ -77,7 +77,10 @@ export class LangGraphService implements OnModuleInit {
   async initGraph() {
     // 注册 skill lookup 工具
     this.toolRegistry.register(
-      createSkillLookupTool((id) => this.skillService.findSkillForLookup(id)),
+      createSkillLookupTool(
+        (id) => this.skillService.findSkillForLookup(id),
+        async () => this.skillService.findAllSummary(),
+      ),
       { permission_level: 'read', category: 'system', description: '加载指定 skill 的完整执行指令' },
     );
     this.toolRegistry.register(

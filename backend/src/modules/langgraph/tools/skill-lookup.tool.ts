@@ -2,12 +2,14 @@ import { z } from 'zod';
 import { safeTool } from './base/tool.helper';
 import { resolve } from 'node:path';
 import { realpathSync } from 'node:fs';
+import { fuzzyMatch } from '../../skill/skill-fuzzy';
 
 const MAX_INSTRUCTIONS_SIZE = 256 * 1024; // 256KB
 const MAX_REFERENCE_SIZE = 1024 * 1024;   // 1MB
 
 export function createSkillLookupTool(
   findSkill: (id: string) => Promise<{ instructions: string; dirPath: string } | null>,
+  getAllSkills: () => Promise<{ id: string; name: string; description: string; aliases?: string[] }[]>,
 ) {
   return safeTool(
     'lookup_skill',
@@ -15,11 +17,22 @@ export function createSkillLookupTool(
     z.object({ skill_name: z.string().describe('要加载的 skill 名称') }),
     async ({ skill_name }) => {
       const skill = await findSkill(skill_name);
-      if (!skill) return `未找到名为 "${skill_name}" 的 skill。请检查 available_skills 列表中的名称。`;
-      if (skill.instructions.length > MAX_INSTRUCTIONS_SIZE) {
-        return skill.instructions.slice(0, MAX_INSTRUCTIONS_SIZE) + '\n\n[内容过长，已截断]';
+      if (skill) {
+        if (skill.instructions.length > MAX_INSTRUCTIONS_SIZE) {
+          return skill.instructions.slice(0, MAX_INSTRUCTIONS_SIZE) + '\n\n[内容过长，已截断]';
+        }
+        return skill.instructions;
       }
-      return skill.instructions;
+
+      // 精确匹配失败 → 模糊匹配
+      const allSkills = await getAllSkills();
+      const candidates = fuzzyMatch(skill_name, allSkills as any);
+      if (candidates.length > 0) {
+        const suggestions = candidates.map(c => `  - ${c.skill.name}: ${c.skill.description}`).join('\n');
+        return `未找到名为 "${skill_name}" 的 skill。\n\n你可能想要:\n${suggestions}\n\n请使用上述名称重新调用 lookup_skill。`;
+      }
+
+      return `未找到名为 "${skill_name}" 的 skill。请检查 available_skills 列表中的名称。`;
     },
   );
 }
