@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { Skill, scanSkillsDir, DEFAULT_SKILLS_DIR } from './skill.types';
 import { SettingsService } from '../settings/settings.service';
+import { SkillUsageService } from './skill-usage.service';
 import { resolve } from 'node:path';
 import { rm } from 'node:fs/promises';
 import { homedir } from 'node:os';
@@ -29,6 +30,7 @@ export class SkillService implements OnModuleInit {
   constructor(
     @Inject(forwardRef(() => SettingsService))
     private settingsService: SettingsService,
+    private readonly usageService: SkillUsageService,
   ) {}
 
   async onModuleInit() {
@@ -72,6 +74,7 @@ export class SkillService implements OnModuleInit {
   async findOneSummary(id: string) {
     const s = this.findById(id);
     if (!s) return undefined;
+    this.usageService.trackView(id);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { dirPath, source, ...rest } = s;
     return rest;
@@ -81,6 +84,7 @@ export class SkillService implements OnModuleInit {
   async findSkillForLookup(id: string): Promise<{ instructions: string; dirPath: string } | null> {
     const s = this.findById(id);
     if (!s) return null;
+    this.usageService.trackUse(id);
     return { instructions: s.instructions, dirPath: s.dirPath };
   }
 
@@ -110,6 +114,10 @@ export class SkillService implements OnModuleInit {
 
     this.cachedIndex = index;
     return this.cachedIndex;
+  }
+
+  async getUsage(skillId: string) {
+    return this.usageService.getUsage(skillId);
   }
 
   /** 删除 skill（移除目录） */
