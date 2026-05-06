@@ -244,6 +244,28 @@ export interface SkillInfo {
   instructions?: string;
 }
 
+// Skill 审批相关类型
+export interface SkillApproval {
+  id: string;
+  skillName: string;
+  type: 'create' | 'update';
+  status: 'pending' | 'approved' | 'rejected';
+  submittedAt: string;
+  reviewedAt?: string;
+  contentSnapshot: string;
+  oldContentSnapshot?: string;
+  patchDescription?: string;
+  agentId?: string;
+}
+
+export interface SkillUsageRecord {
+  useCount: number;
+  viewCount: number;
+  patchCount: number;
+  lastUsedAt: string | null;
+  createdAt: string;
+}
+
 // 系统设置相关类型
 export interface Setting {
   key: string;

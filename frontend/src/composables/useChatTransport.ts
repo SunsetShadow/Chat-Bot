@@ -160,6 +160,12 @@ function convertSSEStream(
             }
           }
 
+          // Skill 审批/推荐事件透传（Phase 1：仅触发 useSkillApproval 刷新）
+          if (event.event === "skill_approval" || event.event === "skill_proposal") {
+            // 事件数据不需要传递给 UI，只需要触发审批列表刷新
+            // useSkillApproval.notifyFromSSE 由 useAIChat 调用
+          }
+
           // 将文本增量转发给情绪检测
           if (event.event === "content_delta" && onTextDelta) {
             const content = (event.data.content as string) || "";

@@ -2,7 +2,12 @@
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { getSkills, refreshSkills, deleteSkill, getSettings, updateSetting } from "@/api/chat";
-import type { SkillInfo } from "@/types";
+import {
+  getPendingApprovals,
+  approveSkill,
+  rejectSkill,
+} from "@/api/skill-approval";
+import type { SkillInfo, SkillApproval } from "@/types";
 import DirectoryBrowser from "@/components/settings/DirectoryBrowser.vue";
 import {
   NIcon,
@@ -22,6 +27,9 @@ import {
   SearchOutline,
   InformationCircleOutline,
   SettingsOutline,
+  CheckmarkCircleOutline,
+  CloseCircleOutline,
+  TimeOutline,
 } from "@vicons/ionicons5";
 
 defineProps<{ embedded?: boolean }>();
@@ -41,6 +49,10 @@ const showBrowser = ref(false);
 const browseIndex = ref(0);
 const saving = ref(false);
 const saved = ref(false);
+
+const activeTab = ref<"skills" | "approvals">("skills");
+const approvals = ref<SkillApproval[]>([]);
+const loadingApprovals = ref(false);
 
 onMounted(async () => {
   await Promise.all([loadSkills(), loadSettings()]);
@@ -135,6 +147,50 @@ function handleBrowseSelect(path: string) {
   skillsDirs.value[browseIndex.value] = path;
 }
 
+async function loadApprovals() {
+  loadingApprovals.value = true;
+  try {
+    approvals.value = await getPendingApprovals();
+  } catch {
+    approvals.value = [];
+  } finally {
+    loadingApprovals.value = false;
+  }
+}
+
+async function handleApprove(approval: SkillApproval) {
+  try {
+    await approveSkill(approval.id);
+    await Promise.all([loadApprovals(), loadSkills()]);
+    message.success(`"${approval.skillName}" 已通过`);
+  } catch {
+    message.error("审批失败");
+  }
+}
+
+async function handleReject(approval: SkillApproval) {
+  dialog.warning({
+    title: "拒绝 Skill",
+    content: `确定要拒绝 "${approval.skillName}" 吗？`,
+    positiveText: "拒绝",
+    negativeText: "取消",
+    onPositiveClick: async () => {
+      try {
+        await rejectSkill(approval.id);
+        await loadApprovals();
+        message.success(`"${approval.skillName}" 已拒绝`);
+      } catch {
+        message.error("操作失败");
+      }
+    },
+  });
+}
+
+function switchTab(tab: "skills" | "approvals") {
+  activeTab.value = tab;
+  if (tab === "approvals") loadApprovals();
+}
+
 const filteredSkills = computed(() => {
   if (!searchQuery.value) return skills.value;
   const q = searchQuery.value.toLowerCase();
@@ -184,83 +240,143 @@ function goBack() {
           </div>
         </div>
 
-        <!-- 说明 -->
-        <div class="info-banner">
-          <NIcon :component="InformationCircleOutline" :size="16" />
-          <span>
-            Skills 是基于
-            <a href="https://agentskills.io/specification" target="_blank">Agent Skills 标准</a>
-            的模块化能力包。Agent 通过 <code>lookup_skill</code> 按需加载。
-            <template v-if="!showSettings">
-              点击 <NIcon :component="SettingsOutline" :size="12" style="vertical-align: middle" /> 配置目录。
-            </template>
-          </span>
+        <!-- Tab 切换 -->
+        <div class="tab-bar">
+          <button
+            class="tab-btn"
+            :class="{ active: activeTab === 'skills' }"
+            @click="switchTab('skills')"
+          >
+            <NIcon :component="ExtensionPuzzleOutline" :size="14" />
+            <span>全部技能</span>
+          </button>
+          <button
+            class="tab-btn"
+            :class="{ active: activeTab === 'approvals' }"
+            @click="switchTab('approvals')"
+          >
+            <NIcon :component="TimeOutline" :size="14" />
+            <span>待审批</span>
+            <span v-if="approvals.length" class="tab-badge">{{ approvals.length }}</span>
+          </button>
         </div>
 
-        <!-- 目录配置（可折叠） -->
-        <div v-if="showSettings" class="config-section">
-          <div class="path-list">
-            <div v-for="(dir, index) in skillsDirs" :key="index" class="path-row">
-              <NInput v-model:value="skillsDirs[index]" placeholder="如 ~/.aniclaw/skills" size="small" />
-              <button class="icon-btn" title="浏览" @click="openBrowser(index)">
-                <NIcon :component="FolderOpenOutline" :size="16" />
-              </button>
-              <button class="icon-btn danger" title="删除" :disabled="skillsDirs.length <= 1" @click="removeDir(index)">
-                <NIcon :component="TrashOutline" :size="16" />
-              </button>
-            </div>
+        <!-- 技能管理 Tab -->
+        <div v-if="activeTab === 'skills'">
+          <!-- 说明 -->
+          <div class="info-banner">
+            <NIcon :component="InformationCircleOutline" :size="16" />
+            <span>
+              Skills 是基于
+              <a href="https://agentskills.io/specification" target="_blank">Agent Skills 标准</a>
+              的模块化能力包。Agent 通过 <code>lookup_skill</code> 按需加载。
+              <template v-if="!showSettings">
+                点击 <NIcon :component="SettingsOutline" :size="12" style="vertical-align: middle" /> 配置目录。
+              </template>
+            </span>
           </div>
-          <div class="path-actions">
-            <button class="btn-secondary btn-sm" @click="addDir">
-              <NIcon :component="AddOutline" :size="14" />
-              <span>添加</span>
-            </button>
-            <div class="save-area">
-              <span v-if="saved" class="save-hint">已保存</span>
-              <button class="btn-primary btn-sm" :disabled="saving" @click="saveDirs">
-                <NIcon :component="SaveOutline" :size="14" />
-                <span>{{ saving ? "保存中..." : "保存" }}</span>
-              </button>
-            </div>
-          </div>
-          <p class="install-hint">
-            使用 <code>npx skills add &lt;owner/repo@skill&gt; -g</code> 安装，
-            或浏览 <a href="https://skills.sh/" target="_blank">skills.sh</a>
-          </p>
-          <div class="section-divider"></div>
-        </div>
 
-        <!-- 技能列表 -->
-        <NSpin :show="loading">
-          <div v-if="filteredSkills.length > 0" class="skill-grid">
-            <div v-for="skill in filteredSkills" :key="skill.id" class="skill-card">
-              <div class="skill-card-header">
-                <span class="skill-name">{{ skill.name }}</span>
-                <span v-if="skill.license" class="skill-badge">{{ skill.license }}</span>
-              </div>
-              <p class="skill-desc">{{ skill.description }}</p>
-              <div class="skill-card-actions">
-                <button class="icon-btn danger" title="删除" @click="handleDelete(skill)">
-                  <NIcon :component="TrashOutline" :size="14" />
+          <!-- 目录配置（可折叠） -->
+          <div v-if="showSettings" class="config-section">
+            <div class="path-list">
+              <div v-for="(dir, index) in skillsDirs" :key="index" class="path-row">
+                <NInput v-model:value="skillsDirs[index]" placeholder="如 ~/.aniclaw/skills" size="small" />
+                <button class="icon-btn" title="浏览" @click="openBrowser(index)">
+                  <NIcon :component="FolderOpenOutline" :size="16" />
+                </button>
+                <button class="icon-btn danger" title="删除" :disabled="skillsDirs.length <= 1" @click="removeDir(index)">
+                  <NIcon :component="TrashOutline" :size="16" />
                 </button>
               </div>
             </div>
+            <div class="path-actions">
+              <button class="btn-secondary btn-sm" @click="addDir">
+                <NIcon :component="AddOutline" :size="14" />
+                <span>添加</span>
+              </button>
+              <div class="save-area">
+                <span v-if="saved" class="save-hint">已保存</span>
+                <button class="btn-primary btn-sm" :disabled="saving" @click="saveDirs">
+                  <NIcon :component="SaveOutline" :size="14" />
+                  <span>{{ saving ? "保存中..." : "保存" }}</span>
+                </button>
+              </div>
+            </div>
+            <p class="install-hint">
+              使用 <code>npx skills add &lt;owner/repo@skill&gt; -g</code> 安装，
+              或浏览 <a href="https://skills.sh/" target="_blank">skills.sh</a>
+            </p>
+            <div class="section-divider"></div>
           </div>
 
-          <div v-else-if="!loading" class="empty-state">
-            <NIcon :component="ExtensionPuzzleOutline" :size="48" />
-            <p>暂无技能</p>
-            <span>配置目录后点击「刷新」</span>
-          </div>
-        </NSpin>
+          <!-- 技能列表 -->
+          <NSpin :show="loading">
+            <div v-if="filteredSkills.length > 0" class="skill-grid">
+              <div v-for="skill in filteredSkills" :key="skill.id" class="skill-card">
+                <div class="skill-card-header">
+                  <span class="skill-name">{{ skill.name }}</span>
+                  <span v-if="skill.license" class="skill-badge">{{ skill.license }}</span>
+                </div>
+                <p class="skill-desc">{{ skill.description }}</p>
+                <div class="skill-card-actions">
+                  <button class="icon-btn danger" title="删除" @click="handleDelete(skill)">
+                    <NIcon :component="TrashOutline" :size="14" />
+                  </button>
+                </div>
+              </div>
+            </div>
 
-        <!-- 目录浏览器 -->
-        <DirectoryBrowser
-          :show="showBrowser"
-          :initial-path="skillsDirs[browseIndex] || undefined"
-          @update:show="showBrowser = $event"
-          @select="handleBrowseSelect"
-        />
+            <div v-else-if="!loading" class="empty-state">
+              <NIcon :component="ExtensionPuzzleOutline" :size="48" />
+              <p>暂无技能</p>
+              <span>配置目录后点击「刷新」</span>
+            </div>
+          </NSpin>
+
+          <!-- 目录浏览器 -->
+          <DirectoryBrowser
+            :show="showBrowser"
+            :initial-path="skillsDirs[browseIndex] || undefined"
+            @update:show="showBrowser = $event"
+            @select="handleBrowseSelect"
+          />
+        </div>
+
+        <!-- 审批列表 -->
+        <div v-if="activeTab === 'approvals'" class="approval-section">
+          <NSpin :show="loadingApprovals">
+            <div v-if="approvals.length === 0" class="empty-state">
+              <NIcon :component="TimeOutline" :size="48" />
+              <p>暂无待审批</p>
+              <span>Agent 创建的 Skill 会在这里等待审批</span>
+            </div>
+            <div v-else class="approval-cards">
+              <div v-for="approval in approvals" :key="approval.id" class="approval-card">
+                <div class="approval-header">
+                  <span class="skill-name">{{ approval.skillName }}</span>
+                  <span class="approval-type-badge">{{ approval.type === 'create' ? '新建' : '更新' }}</span>
+                </div>
+                <p class="approval-desc">
+                  {{ approval.contentSnapshot.match(/^description:\s*(.+)$/m)?.[1] || '无描述' }}
+                </p>
+                <div class="approval-meta">
+                  <span v-if="approval.patchDescription" class="patch-desc">{{ approval.patchDescription }}</span>
+                  <span class="approval-time">{{ new Date(approval.submittedAt).toLocaleString() }}</span>
+                </div>
+                <div class="approval-actions">
+                  <button class="btn-approve" @click="handleApprove(approval)">
+                    <NIcon :component="CheckmarkCircleOutline" :size="14" />
+                    <span>通过</span>
+                  </button>
+                  <button class="btn-reject" @click="handleReject(approval)">
+                    <NIcon :component="CloseCircleOutline" :size="14" />
+                    <span>拒绝</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </NSpin>
+        </div>
       </div>
     </div>
   </div>
@@ -583,4 +699,150 @@ function goBack() {
 }
 
 .icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* Tab bar */
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.tab-btn:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.tab-btn.active {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.tab-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--color-primary);
+  color: #fff;
+  min-width: 16px;
+  text-align: center;
+  line-height: 16px;
+}
+
+/* Approval */
+.approval-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.approval-card {
+  padding: 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.approval-card:hover {
+  border-color: var(--border-color);
+}
+
+.approval-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.approval-type-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border: 1px solid var(--border-subtle);
+}
+
+.approval-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.approval-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.patch-desc {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.approval-time {
+  font-family: var(--font-mono);
+}
+
+.approval-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btn-approve {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid #10b981;
+  border-radius: var(--radius-sm);
+  color: #10b981;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-approve:hover {
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.btn-reject {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid #f72585;
+  border-radius: var(--radius-sm);
+  color: #f72585;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-reject:hover {
+  background: rgba(247, 37, 133, 0.1);
+}
 </style>
