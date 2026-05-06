@@ -257,6 +257,11 @@ export class LangGraphService implements OnModuleInit {
     let prompt = agent.system_prompt || '';
     const skillIndex = precomputedIndex ?? await this.skillService.buildSkillIndex();
     if (skillIndex) prompt += '\n\n' + skillIndex;
+
+    // Phase 3: 注入 Patch 建议
+    const patchSuggestions = await this.skillService.buildPatchSuggestions();
+    if (patchSuggestions) prompt += '\n\n' + patchSuggestions;
+
     return prompt;
   }
 

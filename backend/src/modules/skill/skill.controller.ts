@@ -29,6 +29,35 @@ export class SkillController {
     return { success: true, data };
   }
 
+  @Get(':id/changelog')
+  async getChangelog(@Param('id') id: string) {
+    const skill = await this.skillService.findOneSummary(id);
+    if (!skill || !skill.instructions) throw new NotFoundException(`Skill ${id} not found`);
+
+    // 从 instructions 中提取 changelog（在 <!-- changelog ... changelog --> 注释中）
+    const changelogMatch = skill.instructions.match(/<!--\s*changelog\s*([\s\S]*?)\s*changelog\s*-->/);
+    return {
+      success: true,
+      data: {
+        skillId: id,
+        changelog: changelogMatch ? changelogMatch[1].trim() : null,
+      },
+    };
+  }
+
+  @Post(':id/rollback')
+  async rollbackVersion(@Param('id') id: string, @Body() body: { version: string }) {
+    if (!body.version) throw new BadRequestException('version is required');
+
+    const skill = await this.skillService.findOneSummary(id);
+    if (!skill) throw new NotFoundException(`Skill ${id} not found`);
+
+    // 版本快照通过 approval service 处理
+    const result = await this.approvalService.rollbackToVersion(id, body.version);
+    if (!result.success) throw new BadRequestException(result.message);
+    return { success: true, data: { message: result.message } };
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string) {
     const skill = await this.skillService.findOneSummary(id);

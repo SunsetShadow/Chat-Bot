@@ -175,4 +175,25 @@ export class SkillService implements OnModuleInit {
   async shouldSuggestPatch(skillId: string): Promise<boolean> {
     return this.experienceService.shouldSuggestPatch(skillId);
   }
+
+  /** 生成 Skill Patch 建议（供 Agent prompt 注入） */
+  async buildPatchSuggestions(): Promise<string> {
+    const summary = this.experienceService.getExperienceSummary();
+    const suggestions: string[] = [];
+
+    for (const [skillId, stats] of Object.entries(summary)) {
+      if (this.experienceService.shouldSuggestPatch(skillId)) {
+        const failures = this.experienceService.getRecentFailures(skillId, 3);
+        const reasons = failures
+          .map(f => f.failureReason || '未知原因')
+          .join('; ');
+        suggestions.push(
+          `Skill "${skillId}" 已累计 ${stats.failure} 次失败经验。最近失败原因: ${reasons}。建议使用 update_skill 改进此 Skill。`,
+        );
+      }
+    }
+
+    if (suggestions.length === 0) return '';
+    return '<skill_patch_suggestions>\n' + suggestions.join('\n') + '\n</skill_patch_suggestions>';
+  }
 }

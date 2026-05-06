@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { join, resolve } from 'node:path';
-import { readFile, writeFile, mkdir, rm, rename } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { readFile, writeFile, mkdir, rm, rename, unlink } from 'node:fs/promises';
+import { existsSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { SkillApproval, ScanResult } from './skill.types';
 import { SkillService } from './skill.service';
@@ -115,6 +115,10 @@ export class SkillApprovalService {
 
     try {
       if (!existsSync(targetDir)) await mkdir(targetDir, { recursive: true });
+      else {
+        // 保存旧版本快照
+        await this.saveVersionSnapshot(approval.skillName, baseDir);
+      }
       const targetFile = resolve(targetDir, 'SKILL.md');
       const tmp = targetFile + '.tmp';
       const content = await readFile(pendingFile, 'utf-8');
@@ -167,5 +171,70 @@ export class SkillApprovalService {
     return Array.from(this.approvals.values())
       .filter(a => a.skillName === skillName)
       .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
+  }
+
+  /** 保存版本快照（approve 前调用） */
+  private async saveVersionSnapshot(skillName: string, baseDir: string): Promise<void> {
+    const skillDir = resolve(baseDir, skillName);
+    const skillMdPath = resolve(skillDir, 'SKILL.md');
+    if (!existsSync(skillMdPath)) return;
+
+    try {
+      const content = await readFile(skillMdPath, 'utf-8');
+      const versionMatch = content.match(/^version:\s*(.+)$/m);
+      const version = versionMatch ? versionMatch[1].trim() : 'unknown';
+
+      const versionsDir = resolve(skillDir, '.versions');
+      if (!existsSync(versionsDir)) await mkdir(versionsDir, { recursive: true });
+
+      const snapshotPath = resolve(versionsDir, `v${version}.md`);
+      if (!existsSync(snapshotPath)) {
+        const tmp = snapshotPath + '.tmp';
+        await writeFile(tmp, content, 'utf-8');
+        await rename(tmp, snapshotPath);
+      }
+
+      // 最多保留 10 个版本快照
+      const files = readdirSync(versionsDir)
+        .filter(f => f.endsWith('.md'))
+        .sort();
+      while (files.length > 10) {
+        const oldest = files.shift();
+        if (oldest) {
+          await unlink(resolve(versionsDir, oldest));
+        }
+      }
+    } catch {
+      // 版本快照失败不影响审批流程
+    }
+  }
+
+  /** 回滚到指定版本 */
+  async rollbackToVersion(skillName: string, version: string): Promise<{ success: boolean; message: string }> {
+    const baseDir = await this.getSkillsBaseDir();
+    const snapshotPath = resolve(baseDir, skillName, '.versions', `v${version}.md`);
+
+    if (!existsSync(snapshotPath)) {
+      return { success: false, message: `版本 v${version} 快照不存在` };
+    }
+
+    try {
+      // 保存当前版本快照
+      await this.saveVersionSnapshot(skillName, baseDir);
+
+      // 读取快照内容，直接覆盖当前 SKILL.md
+      const content = await readFile(snapshotPath, 'utf-8');
+      const targetFile = resolve(baseDir, skillName, 'SKILL.md');
+      const tmp = targetFile + '.tmp';
+      await writeFile(tmp, content, 'utf-8');
+      await rename(tmp, targetFile);
+
+      // 刷新索引
+      await this.skillService.refresh();
+
+      return { success: true, message: `Skill "${skillName}" 已回滚到版本 ${version}` };
+    } catch (err) {
+      return { success: false, message: `回滚失败: ${(err as Error).message}` };
+    }
   }
 }
