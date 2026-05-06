@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { Skill, scanSkillsDir, DEFAULT_SKILLS_DIR } from './skill.types';
 import { SettingsService } from '../settings/settings.service';
 import { SkillUsageService } from './skill-usage.service';
+import { filterActiveSkills } from './skill-filter';
 import { resolve } from 'node:path';
 import { rm } from 'node:fs/promises';
 import { homedir } from 'node:os';
@@ -65,8 +66,8 @@ export class SkillService implements OnModuleInit {
 
   /** 列表（metadata only，progressive disclosure stage 1） */
   async findAllSummary() {
-    return this.skills.map(({ id, name, description, license, compatibility, aliases }) => ({
-      id, name, description, license, compatibility, aliases,
+    return this.skills.map(({ id, name, description, license, compatibility, aliases, active }) => ({
+      id, name, description, license, compatibility, aliases, active,
     }));
   }
 
@@ -88,12 +89,19 @@ export class SkillService implements OnModuleInit {
     return { instructions: s.instructions, dirPath: s.dirPath };
   }
 
-  /** 构建全局 skill 索引（缓存，refresh 时清除），带 Token 预算管理 */
-  async buildSkillIndex(): Promise<string> {
+  /** 构建全局 skill 索引（缓存，refresh 时清除），带 Token 预算管理 + 条件激活 */
+  async buildSkillIndex(availableToolNames?: Set<string>): Promise<string> {
     if (this.cachedIndex) return this.cachedIndex;
     if (this.skills.length === 0) return '';
 
-    const entries = this.skills.map(s => {
+    // 条件激活过滤
+    const activeSkills = availableToolNames
+      ? filterActiveSkills(this.skills, availableToolNames)
+      : this.skills;
+
+    if (activeSkills.length === 0) return '';
+
+    const entries = activeSkills.map(s => {
       const location = compactHomePath(s.dirPath);
       return `  <skill>\n    <name>${escapeXml(s.name)}</name>\n    <description>${escapeXml(s.description)}</description>\n    <location>${escapeXml(location)}</location>\n  </skill>`;
     });
@@ -102,11 +110,9 @@ export class SkillService implements OnModuleInit {
     const footer = `</available_skills>\n\nUse the lookup_skill tool to load a skill's full instructions when the task matches its description.\nUse the read_skill_reference tool to read referenced files within a skill's directory.`;
     const separator = '\n';
 
-    // 检查是否超出预算
     let index = `${header}\n${entries.join(separator)}\n${footer}`;
     if (index.length > MAX_SKILL_INDEX_CHARS) {
-      // compact 模式：省略 description 和 location
-      const compactEntries = this.skills.map(s =>
+      const compactEntries = activeSkills.map(s =>
         `  <skill>\n    <name>${escapeXml(s.name)}</name>\n  </skill>`
       );
       index = `${header}\n${compactEntries.join(separator)}\n${footer}`;

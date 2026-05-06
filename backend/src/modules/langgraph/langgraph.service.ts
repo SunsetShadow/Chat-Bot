@@ -106,7 +106,9 @@ export class LangGraphService implements OnModuleInit {
     }
 
     const allTools = this.toolRegistry.getAll();
-    const skillIndex = await this.skillService.buildSkillIndex();
+    const skillIndex = await this.skillService.buildSkillIndex(
+      new Set(this.toolRegistry.getAllNames()),
+    );
 
     const definitions: AgentDefinition[] = await Promise.all(
       agents

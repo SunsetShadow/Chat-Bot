@@ -25,6 +25,7 @@ export interface Skill {
     platforms?: string[];
   };
   fallbackFor?: string[];
+  active?: boolean;
   /** SKILL.md 中 --- 之后的 markdown 正文 */
   instructions: string;
 }
