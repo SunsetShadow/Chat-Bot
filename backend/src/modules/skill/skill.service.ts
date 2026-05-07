@@ -1,8 +1,9 @@
-import { Injectable, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, OnModuleInit, Inject, forwardRef, Optional } from '@nestjs/common';
 import { Skill, scanSkillsDir, DEFAULT_SKILLS_DIR } from './skill.types';
 import { SettingsService } from '../settings/settings.service';
 import { SkillUsageService } from './skill-usage.service';
 import { SkillExperienceService } from './skill-experience.service';
+import { SkillCuratorService } from './skill-curator.service';
 import { SkillCache } from './skill-cache';
 import { filterActiveSkills } from './skill-filter';
 import { resolve } from 'node:path';
@@ -36,6 +37,7 @@ export class SkillService implements OnModuleInit {
     private settingsService: SettingsService,
     private readonly usageService: SkillUsageService,
     private readonly experienceService: SkillExperienceService,
+    @Optional() private readonly curatorService: SkillCuratorService | null,
   ) {}
 
   async onModuleInit() {
@@ -108,10 +110,17 @@ export class SkillService implements OnModuleInit {
     if (this.cachedIndex) return this.cachedIndex;
     if (this.skills.length === 0) return '';
 
+    const curator = this.curatorService;
+    const nonArchived = curator
+      ? this.skills.filter(s => curator.getLifecycleState(s.id) !== 'archived')
+      : this.skills;
+
+    if (nonArchived.length === 0) return '';
+
     // 条件激活过滤
     const activeSkills = availableToolNames
-      ? filterActiveSkills(this.skills, availableToolNames)
-      : this.skills;
+      ? filterActiveSkills(nonArchived, availableToolNames)
+      : nonArchived;
 
     if (activeSkills.length === 0) return '';
 

@@ -4,7 +4,7 @@
 
 ## 项目概述
 
-Vue 3 + NestJS 聊天应用，使用 AI SDK 驱动流式聊天，LangGraph Supervisor 模式编排多 Agent 工作流。支持多 Agent 协作编排（Supervisor 多步路由）、standalone 模式（自定义 Agent 独立运行）、Agent 权限分级（系统内置/系统示例/用户自定义）、工具权限分级、**路径沙箱**（限制工具可访问的目录范围，通过设置中心 UI 配置）、**规则系统**（全局规则强制生效 + 通用规则按需启用，支持按 Agent 分别配置）、**语音系统**（ASR 语音识别 + TTS 文本朗读，腾讯云 API）、AI 记忆提取与语义检索、定时任务系统（含全局通知）、联网搜索意图判断（默认开启，按需调用 web_search）、文件搜索工具（按文件名/内容搜索）、**Avatar 系统**（Live2D 角色交互，PixiJS 6 + Cubism 4，Agent 工具驱动表情/动作，ChatView 悬浮窗集成，TTS 口型同步）、**Skills 系统**（基于 Agent Skills 标准的模块化能力包，SKILL.md 声明式定义，`lookup_skill` 渐进式加载，`read_skill_reference` 读取引用文件，设置页技能管理 tab + 独立 /skills 页面）。UI 主题：暗色/亮色双主题，简约清晰风格。
+Vue 3 + NestJS 聊天应用，使用 AI SDK 驱动流式聊天，LangGraph Supervisor 模式编排多 Agent 工作流。支持多 Agent 协作编排（Supervisor 多步路由）、standalone 模式（自定义 Agent 独立运行）、Agent 权限分级（系统内置/系统示例/用户自定义）、工具权限分级、**路径沙箱**（限制工具可访问的目录范围，通过设置中心 UI 配置）、**规则系统**（全局规则强制生效 + 通用规则按需启用，支持按 Agent 分别配置）、**语音系统**（ASR 语音识别 + TTS 文本朗读，腾讯云 API）、AI 记忆提取与语义检索、定时任务系统（含全局通知）、联网搜索意图判断（默认开启，按需调用 web_search）、文件搜索工具（按文件名/内容搜索）、**Avatar 系统**（Live2D 角色交互，PixiJS 6 + Cubism 4，Agent 工具驱动表情/动作，ChatView 悬浮窗集成，TTS 口型同步）、**Skills 系统**（基于 Agent Skills 标准的模块化能力包，SKILL.md 声明式定义，`lookup_skill` 渐进式加载，`read_skill_reference` 读取引用文件，设置页技能管理 tab + 独立 /skills 页面，**闭环自进化**：Agent 通过 `create_skill`/`update_skill`/`propose_skill` 工具创建修改 Skill → 用户审批生效 → 使用量统计 → 经验提取 → 自动 Patch 建议 → 版本回滚，Fuzzy Match 模糊匹配 + 条件激活 + 二层缓存，Curator 生命周期管理 active→stale→archived，85+ 模式安全扫描覆盖 10 个威胁类别）。UI 主题：暗色/亮色双主题，简约清晰风格。
 
 ### Agent 管理页（AgentConfigView）
 
@@ -58,8 +58,10 @@ docker compose --env-file .env.mac up -d   # Mac
   → system prompt 注入:
       skillIndex = SkillService.buildSkillIndex() → <available_skills> XML 注入每个 Agent 的 prompt
       非系统 Agent 自动附加 lookup_skill + read_skill_reference 工具
-      LLM 识别任务匹配 → 调用 lookup_skill(name) → 按需加载完整 SKILL.md 指令
+      LLM 识别任务匹配 → 调用 lookup_skill(name) → 精确匹配 → Fuzzy Match 模糊匹配(top-3)
+      buildSkillIndex() 条件激活: requires.tools/env/platforms + fallback_for + 排除 archived Skill
   → SSE 流（Supervisor 工具调用/文本/ToolNode 错误均过滤，仅 Worker 结果透传）
+       skill_approval / skill_proposal SSE 事件: Agent 创建/推荐 Skill → 前端审批通知
        Handoff 计数保护：Agent 切换超过 max_turns（默认 5）时自动终止，防止无限循环
   记忆系统（agent_id 隔离）:
       全局记忆（agent_id=NULL）→ 所有 Agent 可见
@@ -103,6 +105,7 @@ Avatar 通道（Ani 专属身体，行为状态机驱动）:
 | [docs/specs/development](docs/specs/development/spec.md) | 技术栈版本、目录结构、命名规范、代码风格、关键文件索引 |
 | [docs/specs/core-features](docs/specs/core-features/spec.md) | 聊天/Agent/工具/规则/记忆/定时任务/通知系统详细规范（数据模型、API、约束） |
 | [docs/superpowers/specs/agent-skills-system.md](docs/superpowers/specs/agent-skills-system.md) | Skills 系统设计与实现参考（Agent Skills 标准、加载管线、门控、安全扫描） |
+| [docs/superpowers/specs/2026-05-06-skills-closed-loop-design.md](docs/superpowers/specs/2026-05-06-skills-closed-loop-design.md) | Skills 闭环自进化设计（Phase 1-3：创建审批、模糊匹配、经验提取、Curator 生命周期） |
 | [docs/specs/message-rendering](docs/specs/message-rendering/spec.md) | 消息渲染规范 |
 | [docs/superpowers/specs/2026-04-29-ani-avatar-voice-design.md](docs/superpowers/specs/2026-04-29-ani-avatar-voice-design.md) | Ani Avatar + Voice 联动设计（行为状态机、情绪联动、口型同步、多模型支持） |
 | [docs/specs/security](docs/specs/security/spec.md) | 安全规范（输入验证、安全头、速率限制、路径沙箱） |

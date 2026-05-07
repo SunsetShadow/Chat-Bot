@@ -6,8 +6,11 @@ import {
   getPendingApprovals,
   approveSkill,
   rejectSkill,
+  getLifecycleStates,
+  restoreSkill,
+  purgeSkill,
 } from "@/api/skill-approval";
-import type { SkillInfo, SkillApproval } from "@/types";
+import type { SkillInfo, SkillApproval, LifecycleRecord } from "@/types";
 import DirectoryBrowser from "@/components/settings/DirectoryBrowser.vue";
 import {
   NIcon,
@@ -53,9 +56,10 @@ const saved = ref(false);
 const activeTab = ref<"skills" | "approvals">("skills");
 const approvals = ref<SkillApproval[]>([]);
 const loadingApprovals = ref(false);
+const lifecycleStates = ref<Record<string, LifecycleRecord>>({});
 
 onMounted(async () => {
-  await Promise.all([loadSkills(), loadSettings()]);
+  await Promise.all([loadSkills(), loadSettings(), loadLifecycleStates()]);
 });
 
 async function loadSkills() {
@@ -191,6 +195,48 @@ function switchTab(tab: "skills" | "approvals") {
   if (tab === "approvals") loadApprovals();
 }
 
+async function loadLifecycleStates() {
+  try {
+    lifecycleStates.value = await getLifecycleStates();
+  } catch {
+    lifecycleStates.value = {};
+  }
+}
+
+function getLifecycleLabel(skillId: string): string {
+  const state = lifecycleStates.value[skillId]?.state;
+  if (!state || state === "active") return "";
+  return state === "stale" ? "过时" : "已归档";
+}
+
+async function handleRestore(skill: SkillInfo) {
+  try {
+    await restoreSkill(skill.id);
+    await Promise.all([loadSkills(), loadLifecycleStates()]);
+    message.success(`"${skill.name}" 已恢复`);
+  } catch {
+    message.error("恢复失败");
+  }
+}
+
+async function handlePurge(skill: SkillInfo) {
+  dialog.warning({
+    title: "彻底删除",
+    content: `确定要永久删除已归档的 "${skill.name}" 吗？此操作不可撤销。`,
+    positiveText: "永久删除",
+    negativeText: "取消",
+    onPositiveClick: async () => {
+      try {
+        await purgeSkill(skill.id);
+        await Promise.all([loadSkills(), loadLifecycleStates()]);
+        message.success(`"${skill.name}" 已永久删除`);
+      } catch {
+        message.error("操作失败");
+      }
+    },
+  });
+}
+
 const filteredSkills = computed(() => {
   if (!searchQuery.value) return skills.value;
   const q = searchQuery.value.toLowerCase();
@@ -312,16 +358,27 @@ function goBack() {
           <!-- 技能列表 -->
           <NSpin :show="loading">
             <div v-if="filteredSkills.length > 0" class="skill-grid">
-              <div v-for="skill in filteredSkills" :key="skill.id" class="skill-card">
+              <div v-for="skill in filteredSkills" :key="skill.id" class="skill-card" :class="{ 'skill-archived': lifecycleStates[skill.id]?.state === 'archived', 'skill-stale': lifecycleStates[skill.id]?.state === 'stale' }">
                 <div class="skill-card-header">
                   <span class="skill-name">{{ skill.name }}</span>
+                  <span v-if="getLifecycleLabel(skill.id)" class="lifecycle-badge" :class="lifecycleStates[skill.id]?.state">{{ getLifecycleLabel(skill.id) }}</span>
                   <span v-if="skill.license" class="skill-badge">{{ skill.license }}</span>
                 </div>
                 <p class="skill-desc">{{ skill.description }}</p>
                 <div class="skill-card-actions">
-                  <button class="icon-btn danger" title="删除" @click="handleDelete(skill)">
-                    <NIcon :component="TrashOutline" :size="14" />
-                  </button>
+                  <template v-if="lifecycleStates[skill.id]?.state === 'archived'">
+                    <button class="icon-btn" title="恢复" @click="handleRestore(skill)">
+                      <NIcon :component="CheckmarkCircleOutline" :size="14" />
+                    </button>
+                    <button class="icon-btn danger" title="永久删除" @click="handlePurge(skill)">
+                      <NIcon :component="TrashOutline" :size="14" />
+                    </button>
+                  </template>
+                  <template v-else>
+                    <button class="icon-btn danger" title="删除" @click="handleDelete(skill)">
+                      <NIcon :component="TrashOutline" :size="14" />
+                    </button>
+                  </template>
                 </div>
               </div>
             </div>
@@ -587,6 +644,34 @@ function goBack() {
   color: var(--text-muted);
   background: var(--bg-tertiary);
   border: 1px solid var(--border-subtle);
+}
+
+.lifecycle-badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid;
+}
+
+.lifecycle-badge.stale {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.lifecycle-badge.archived {
+  color: var(--text-muted);
+  background: var(--bg-tertiary);
+  border-color: var(--border-subtle);
+}
+
+.skill-archived {
+  opacity: 0.5;
+}
+
+.skill-stale {
+  opacity: 0.8;
 }
 
 .skill-desc {

@@ -194,7 +194,7 @@ export function scanSkillsDir(baseDir: string): Skill[] {
 
 /** 安全扫描结果 */
 export interface ScanThreat {
-  type: 'path_traversal' | 'code_injection' | 'size_exceeded' | 'invalid_yaml' | 'suspicious_command';
+  type: 'path_traversal' | 'code_injection' | 'size_exceeded' | 'invalid_yaml' | 'suspicious_command' | 'env_leak' | 'network_request' | 'filesystem_op' | 'symlink_escape' | 'c2_activity' | 'privilege_escalation';
   severity: 'error' | 'warning';
   message: string;
 }
@@ -239,6 +239,13 @@ export interface SkillExperience {
 
 /** Skill 生命周期状态 */
 export type SkillLifecycleState = 'active' | 'stale' | 'archived';
+
+/** 生命周期记录 */
+export interface LifecycleRecord {
+  state: SkillLifecycleState;
+  staleAt: string | null;
+  archivedAt: string | null;
+}
 
 /** name 字段格式校验：kebab-case，3-64 字符 */
 export function isValidSkillName(name: string): boolean {

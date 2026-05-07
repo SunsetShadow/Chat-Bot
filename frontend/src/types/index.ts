@@ -268,6 +268,14 @@ export interface SkillUsageRecord {
   createdAt: string;
 }
 
+export type SkillLifecycleState = 'active' | 'stale' | 'archived';
+
+export interface LifecycleRecord {
+  state: SkillLifecycleState;
+  staleAt: string | null;
+  archivedAt: string | null;
+}
+
 // 系统设置相关类型
 export interface Setting {
   key: string;

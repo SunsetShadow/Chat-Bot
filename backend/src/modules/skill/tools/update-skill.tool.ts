@@ -21,15 +21,18 @@ export function createUpdateSkillTool(
         return `Skill "${skill_id}" 不存在。请先使用 create_skill 创建。`;
       }
 
-      const fullSkill = await skillService.findSkillForLookup(skill_id);
-      if (!fullSkill) {
+      const full = await skillService.findSkillForLookup(skill_id);
+      if (!full) {
         return `Skill "${skill_id}" 无法读取。`;
       }
 
       const { readFile } = await import('node:fs/promises');
-      const oldContent = await readFile(
-        `${fullSkill.dirPath}/SKILL.md`, 'utf-8',
-      ).catch(() => null);
+      const rawMd = await readFile(`${full.dirPath}/SKILL.md`, 'utf-8').catch(() => '');
+      if (!rawMd.includes('source: user-created')) {
+        return `Skill "${skill_id}" 是系统或示例 Skill，不能修改。只能修改 Agent 创建的 Skill（source: user-created）。`;
+      }
+
+      const oldContent = rawMd || null;
 
       const fmMatch = oldContent?.match(/^---\s*\n([\s\S]*?)\n---/);
       const fm = fmMatch ? fmMatch[1] : `name: ${skill_id}\ndescription: ${existing.description}`;

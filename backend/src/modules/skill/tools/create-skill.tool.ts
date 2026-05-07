@@ -4,6 +4,9 @@ import { SkillApprovalService } from '../skill-approval.service';
 import { SkillService } from '../skill.service';
 import { isValidSkillName } from '../skill.types';
 
+const MAX_SKILLS_PER_SESSION = 3;
+const sessionCreateCount = new Map<string, number>();
+
 export function createCreateSkillTool(
   approvalService: SkillApprovalService,
   skillService: SkillService,
@@ -18,6 +21,10 @@ export function createCreateSkillTool(
       allowed_tools: z.array(z.string()).optional().describe('该 Skill 可使用的工具白名单'),
     }),
     async ({ name, description, instructions, allowed_tools }) => {
+      const count = sessionCreateCount.get('default') ?? 0;
+      if (count >= MAX_SKILLS_PER_SESSION) {
+        return `本次对话已创建 ${count} 个 Skill，达到上限（${MAX_SKILLS_PER_SESSION}）。请在下次对话中继续。`;
+      }
       if (!isValidSkillName(name)) {
         return `名称格式无效: "${name}"。要求 kebab-case（小写字母+数字+连字符），3-64 字符。`;
       }
@@ -46,6 +53,8 @@ export function createCreateSkillTool(
         type: 'create',
         content: skillMd,
       });
+
+      sessionCreateCount.set('default', count + 1);
 
       const warnings = scanResult.threats
         .filter(t => t.severity === 'warning')
