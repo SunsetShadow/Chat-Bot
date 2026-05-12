@@ -115,11 +115,25 @@ function convertSSEStream(
   let textPartId = "";
   let messageId = "";
 
+  // 心跳超时检测：30s 无事件判定连接断开
+  let heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
+  const HEARTBEAT_TIMEOUT = 30_000;
+
+  const resetHeartbeat = () => {
+    if (heartbeatTimer) clearTimeout(heartbeatTimer);
+    heartbeatTimer = setTimeout(() => {
+      console.warn("[ChatTransport] heartbeat timeout, connection may be stale");
+    }, HEARTBEAT_TIMEOUT);
+  };
+
+  resetHeartbeat();
+
   return new ReadableStream<UIMessageChunk>({
     async pull(controller) {
       try {
         const { done, value } = await reader.read();
         if (done) {
+          if (heartbeatTimer) clearTimeout(heartbeatTimer);
           controller.close();
           return;
         }
@@ -132,6 +146,22 @@ function convertSSEStream(
         }
 
         for (const event of events) {
+          // 收到任何事件都重置心跳计时器（含 heartbeat 事件）
+          resetHeartbeat();
+
+          // 跳过心跳事件，不传递给 UI
+          if (event.event === "heartbeat") continue;
+
+          // 超时事件转为错误
+          if (event.event === "timeout") {
+            if (heartbeatTimer) clearTimeout(heartbeatTimer);
+            controller.enqueue({
+              type: "error",
+              errorText: "响应超时，请重试",
+            });
+            continue;
+          }
+
           // 从 message_start 事件中提取 session_id 并回调
           if (event.event === "message_start" && onSessionCreated) {
             const sessionId = event.data.session_id as string | undefined;
@@ -160,9 +190,8 @@ function convertSSEStream(
             }
           }
 
-          // Skill 审批/推荐事件透传（Phase 1：仅触发 useSkillApproval 刷新）
+          // Skill 审批/推荐事件透传
           if (event.event === "skill_approval" || event.event === "skill_proposal") {
-            // 事件数据不需要传递给 UI，只需要触发审批列表刷新
             // useSkillApproval.notifyFromSSE 由 useAIChat 调用
           }
 
@@ -184,10 +213,12 @@ function convertSSEStream(
           }
         }
       } catch (err) {
+        if (heartbeatTimer) clearTimeout(heartbeatTimer);
         controller.error(err);
       }
     },
     cancel() {
+      if (heartbeatTimer) clearTimeout(heartbeatTimer);
       reader.cancel();
     },
   });
