@@ -64,6 +64,27 @@ export class ChatController {
       aborted = true;
     });
 
+    // 心跳：每 15s 发送一次，保持连接活跃
+    const heartbeat = setInterval(() => {
+      if (aborted) {
+        clearInterval(heartbeat);
+        return;
+      }
+      res.write('event: heartbeat\ndata: {}\n\n');
+    }, 15_000);
+
+    // 全局超时：120s
+    const streamTimeout = setTimeout(() => {
+      if (!aborted) {
+        res.write(
+          `event: timeout\ndata: ${JSON.stringify({ code: 'STREAM_TIMEOUT' })}\n\n`,
+        );
+        aborted = true;
+        clearInterval(heartbeat);
+        res.end();
+      }
+    }, 120_000);
+
     const streamGen = this.chatService.streamCompletion(
       messages,
       systemPrompt,
@@ -89,6 +110,8 @@ export class ChatController {
           );
         }
       } finally {
+        clearInterval(heartbeat);
+        clearTimeout(streamTimeout);
         res.end();
       }
     };
