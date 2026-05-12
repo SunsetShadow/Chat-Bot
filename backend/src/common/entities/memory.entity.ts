@@ -31,4 +31,8 @@ export class MemoryEntity {
 
   @Column({ type: 'timestamp' })
   last_accessed: Date;
+
+  /** 归档标记：归档的记忆不参与查询 */
+  @Column({ default: false })
+  archived: boolean;
 }
