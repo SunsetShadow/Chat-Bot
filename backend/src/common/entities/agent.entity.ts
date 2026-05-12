@@ -47,6 +47,10 @@ export class AgentEntity {
   @Column('simple-array', { default: '' })
   handoff_targets: string[];
 
+  /** 模型 fallback 链：主模型连续失败时依次尝试的备选模型列表 */
+  @Column('simple-array', { default: '' })
+  fallback_models: string[];
+
   /** true = 独立运行，不经过 Supervisor 编排 */
   @Column({ default: false })
   standalone: boolean;

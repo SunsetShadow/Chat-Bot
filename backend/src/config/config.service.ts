@@ -88,4 +88,11 @@ export class AppConfigService {
   get mailFrom(): string {
     return this.configService.get<string>('MAIL_FROM', '');
   }
+
+  get llmTimeoutMs(): number {
+    return parseInt(
+      this.configService.get<string>('LLM_TIMEOUT_MS', '30000'),
+      10,
+    );
+  }
 }
