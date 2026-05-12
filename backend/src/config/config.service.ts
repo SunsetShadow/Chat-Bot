@@ -95,4 +95,12 @@ export class AppConfigService {
       10,
     );
   }
+
+  get lightModel(): string {
+    return this.configService.get<string>('LIGHT_MODEL', '');
+  }
+
+  get mediumModel(): string {
+    return this.configService.get<string>('MEDIUM_MODEL', '');
+  }
 }
