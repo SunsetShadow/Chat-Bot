@@ -397,7 +397,7 @@ export class ChatService {
 
     try {
       const model = new ChatOpenAI({
-        modelName: this.configService.openaiModel,
+        modelName: this.configService.lightModel || this.configService.openaiModel,
         openAIApiKey: this.configService.openaiApiKey,
         configuration: { baseURL: this.configService.openaiBaseUrl || undefined },
         maxTokens: 30,
