@@ -40,7 +40,12 @@ export type StreamEvent =
   | { type: 'avatar_action'; payload: { action: string; [key: string]: unknown } }
   | { type: 'skill_approval'; payload: { approvalId: string; skillName: string; type: string; description: string } }
   | { type: 'skill_proposal'; payload: { name: string; description: string; reason: string } }
-  | { type: 'finish'; finishReason: string };
+  | {
+      type: 'finish';
+      finishReason: string;
+      usage?: { promptTokens: number; completionTokens: number; totalTokens: number };
+      modelName?: string;
+    };
 
 @Injectable()
 export class LangGraphService implements OnModuleInit {
@@ -420,6 +425,7 @@ export class LangGraphService implements OnModuleInit {
     let sawToolOutput = false;
     let currentAgent = '';
     let handoffCount = 0;
+    let streamUsage: { promptTokens: number; completionTokens: number; totalTokens: number } | undefined;
     const handoffPath: string[] = ['supervisor'];
     const toolCalls = new Map<
       string,
@@ -471,7 +477,7 @@ export class LangGraphService implements OnModuleInit {
               type: 'text',
               content: `[系统提示] 检测到 Agent "${agentName}" 被反复调用（连续 3 次），可能存在循环。请尝试简化问题或直接指定助手。`,
             };
-            yield { type: 'finish', finishReason: 'repeated_handoff' };
+            yield { type: 'finish', finishReason: 'repeated_handoff', modelName: this.configService.openaiModel };
             return;
           }
           if (handoffCount > maxHandoffs) {
@@ -479,7 +485,7 @@ export class LangGraphService implements OnModuleInit {
               type: 'text',
               content: `[系统提示] 检测到过多的 Agent 切换（${handoffCount} 次），路由路径：${handoffPath.join(' → ')}。为避免循环已终止流转。请简化问题或指定特定助手。`,
             };
-            yield { type: 'finish', finishReason: 'max_handoffs_exceeded' };
+            yield { type: 'finish', finishReason: 'max_handoffs_exceeded', modelName: this.configService.openaiModel };
             return;
           }
           yield {
@@ -561,6 +567,15 @@ export class LangGraphService implements OnModuleInit {
 
         // response_metadata 表示 AI chunk 流结束，发送所有 tool_input
         if ((aiMsg as any).response_metadata) {
+          const meta = (aiMsg as any).response_metadata;
+          const usageMeta = meta?.tokenUsage || meta?.usage;
+          if (usageMeta) {
+            streamUsage = {
+              promptTokens: usageMeta.promptTokens || usageMeta.prompt_tokens || 0,
+              completionTokens: usageMeta.completionTokens || usageMeta.completion_tokens || 0,
+              totalTokens: usageMeta.totalTokens || usageMeta.total_tokens || 0,
+            };
+          }
           for (const [tcId, tc] of toolCalls) {
             if (!tc.inputEmitted) {
               tc.inputEmitted = true;
@@ -668,7 +683,7 @@ export class LangGraphService implements OnModuleInit {
       }
     }
 
-    yield { type: 'finish', finishReason: 'stop' };
+    yield { type: 'finish', finishReason: 'stop', usage: streamUsage, modelName: this.configService.openaiModel };
   }
 
   private buildMessages(
