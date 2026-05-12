@@ -17,6 +17,7 @@ import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
 import { AI_TTS_STREAM_EVENT } from '../../common/stream-events';
 import { TokenBudgetManager } from '../langgraph/token-budget.manager';
+import { createHash } from 'crypto';
 
 @Injectable()
 export class ChatService {
@@ -34,6 +35,7 @@ export class ChatService {
   ) {}
 
   private tokenBudget = new TokenBudgetManager();
+  private staticPrefixCache = new Map<string, { hash: string; content: string }>();
 
   async createCompletion(dto: CreateCompletionDto) {
     const { message, session_id, stream, agent_id, rule_ids, web_search } = dto;
@@ -290,10 +292,18 @@ export class ChatService {
     await this.sessionRepo.delete(session.id);
   }
 
-  private async buildSystemPrompt(agentId?: string, ruleIds?: string[], webSearch?: boolean): Promise<string> {
-    const parts: string[] = [];
+  /**
+   * 构建静态前缀：Agent system_prompt + 规则
+   * 在 Agent 配置不变时恒定，可被 Prompt Cache 命中
+   */
+  private async buildStaticPrefix(agentId: string, ruleIds?: string[]): Promise<string> {
+    const cacheKey = `${agentId}:${ruleIds?.sort().join(',') || ''}`;
+    const cached = this.staticPrefixCache.get(cacheKey);
+    if (cached) return cached.content;
 
+    const parts: string[] = [];
     const resolvedAgentId = (agentId === 'builtin-general' ? 'ani' : agentId) || 'ani';
+
     try {
       const agent = await this.agentService.findOne(resolvedAgentId);
       if (agent.system_prompt) parts.push(agent.system_prompt);
@@ -301,51 +311,58 @@ export class ChatService {
       console.warn(`[ChatService] Failed to load agent ${resolvedAgentId}:`, e instanceof Error ? e.message : e);
     }
 
-    // 自动注入当前时间，让 Agent 始终感知当前日期
-    const now = new Date();
-    const timeContext = `当前时间：${now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })} ${now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`;
-    parts.push(timeContext);
-
-    if (webSearch) {
-      parts.push(
-        '[联网搜索已开启] 请先判断用户意图：如果用户询问最新信息、新闻、实时数据、近期事件等需要最新数据的请求，调用 web_search tool 搜索相关信息后基于搜索结果回答；对于普通对话、知识问答、代码编写等不需要实时数据的请求，不要调用 web_search tool。',
-      );
-    } else {
-      parts.push(
-        '[联网搜索已关闭] 不要调用 web_search tool。直接用已有知识回答用户问题。',
-      );
-    }
-
-    // 1. 全局规则：强制注入
     const globalRules = await this.ruleService.getGlobalRules();
-
-    // 2. Agent 级 general 规则：优先用前端传的 rule_ids，否则用 Agent 实体的 rule_ids
     let agentRuleIds = ruleIds;
     if (!agentRuleIds || agentRuleIds.length === 0) {
       try {
         const agent = await this.agentService.findOne(resolvedAgentId);
         agentRuleIds = agent.rule_ids || [];
-      } catch {
-        agentRuleIds = [];
-      }
+      } catch { /* empty */ }
     }
     const agentRules = await this.ruleService.getRulesByIds(agentRuleIds);
 
-    // 合并去重（global 优先级高）
     const allRules = [...globalRules];
     const globalIds = new Set(globalRules.map((r) => r.id));
     for (const r of agentRules) {
       if (!globalIds.has(r.id)) allRules.push(r);
     }
-
     if (allRules.length > 0) {
       parts.push(...allRules.map((r) => r.content));
+    }
+
+    const content = parts.join('\n\n');
+    this.staticPrefixCache.set(cacheKey, { hash: createHash('md5').update(content).digest('hex'), content });
+    return content;
+  }
+
+  /**
+   * 构建动态后缀：时间 + 联网搜索 + Memory
+   * 每次请求可能不同，放在后缀不被缓存
+   */
+  private async buildDynamicSuffix(agentId: string, webSearch?: boolean): Promise<string> {
+    const parts: string[] = [];
+    const resolvedAgentId = (agentId === 'builtin-general' ? 'ani' : agentId) || 'ani';
+
+    const now = new Date();
+    parts.push(`当前时间：${now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })} ${now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`);
+
+    if (webSearch) {
+      parts.push('[联网搜索已开启] 请先判断用户意图：如果用户询问最新信息、新闻、实时数据、近期事件等需要最新数据的请求，调用 web_search tool 搜索相关信息后基于搜索结果回答；对于普通对话、知识问答、代码编写等不需要实时数据的请求，不要调用 web_search tool。');
+    } else {
+      parts.push('[联网搜索已关闭] 不要调用 web_search tool。直接用已有知识回答用户问题。');
     }
 
     const memoryContext = await this.memoryService.buildMemoryContext(undefined, resolvedAgentId);
     if (memoryContext) parts.push(memoryContext);
 
     return parts.join('\n\n');
+  }
+
+  private async buildSystemPrompt(agentId?: string, ruleIds?: string[], webSearch?: boolean): Promise<string> {
+    const resolvedAgentId = agentId || 'ani';
+    const staticPrefix = await this.buildStaticPrefix(resolvedAgentId, ruleIds);
+    const dynamicSuffix = await this.buildDynamicSuffix(resolvedAgentId, webSearch);
+    return staticPrefix + '\n\n' + dynamicSuffix;
   }
 
   /**
