@@ -47,13 +47,13 @@ export class TokenUsageService {
     const entity = this.usageRepo.create({
       id: uuidv4(),
       session_id: sessionId,
-      agent_id: agentId || null,
+      agent_id: agentId || undefined,
       model_name: modelName,
       prompt_tokens: promptTokens,
       completion_tokens: completionTokens,
       total_tokens: totalTokens,
-      estimated_cost: estimatedCost,
-    });
+      estimated_cost: estimatedCost ?? undefined,
+    }) as TokenUsageEntity;
 
     return this.usageRepo.save(entity);
   }
