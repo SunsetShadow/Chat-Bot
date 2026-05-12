@@ -99,9 +99,17 @@ export class MemoryService {
     }
   }
 
-  async buildMemoryContext(_sessionId?: string, agentId?: string): Promise<string> {
-    const all = await this.findAll(undefined, undefined, agentId);
-    const sorted = all.sort((a, b) => b.importance - a.importance);
+  async buildMemoryContext(_sessionId?: string, agentId?: string, topK = 20): Promise<string> {
+    const qb = this.memoryRepo.createQueryBuilder('m')
+      .where('m.archived = :archived', { archived: false });
+
+    if (agentId) {
+      qb.andWhere('(m.agent_id = :agentId OR m.agent_id IS NULL)', { agentId });
+    }
+
+    qb.orderBy('m.importance', 'DESC').limit(topK);
+
+    const sorted = await qb.getMany();
     if (sorted.length === 0) return '';
 
     const typeLabel: Record<string, string> = {
@@ -128,5 +136,55 @@ export class MemoryService {
     // Sort by Milvus similarity order
     const idOrder = new Map(ids.map((id, index) => [id, index]));
     return memories.sort((a, b) => idOrder.get(a.id)! - idOrder.get(b.id)!);
+  }
+
+  /**
+   * 定期巡检：降权长期未被召回的记忆，归档过期记忆
+   */
+  async runMaintenance(): Promise<{ demoted: number; archived: number }> {
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+    const hundredEightyDaysAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
+
+    const demoteResult = await this.memoryRepo
+      .createQueryBuilder()
+      .update(MemoryEntity)
+      .set({ importance: () => 'GREATEST(importance - 1, 0)' })
+      .where('last_accessed < :date', { date: ninetyDaysAgo })
+      .andWhere('importance > 0')
+      .andWhere('archived = false')
+      .execute();
+
+    const archiveResult = await this.memoryRepo
+      .createQueryBuilder()
+      .update(MemoryEntity)
+      .set({ archived: true })
+      .where('importance = 0')
+      .andWhere('created_at < :date', { date: hundredEightyDaysAgo })
+      .andWhere('archived = false')
+      .execute();
+
+    this.logger.log(`Memory maintenance: demoted=${demoteResult.affected}, archived=${archiveResult.affected}`);
+
+    return {
+      demoted: demoteResult.affected || 0,
+      archived: archiveResult.affected || 0,
+    };
+  }
+
+  /** 每个会话最多提取的记忆数 */
+  private static readonly MAX_MEMORIES_PER_SESSION = 5;
+  private sessionMemoryCount = new Map<string, number>();
+
+  /** 检查并记录会话记忆写入计数，返回是否允许写入 */
+  checkSessionLimit(sessionId: string): boolean {
+    const current = this.sessionMemoryCount.get(sessionId) || 0;
+    if (current >= MemoryService.MAX_MEMORIES_PER_SESSION) return false;
+    this.sessionMemoryCount.set(sessionId, current + 1);
+    return true;
+  }
+
+  /** 重置会话计数 */
+  resetSessionLimit(sessionId: string): void {
+    this.sessionMemoryCount.delete(sessionId);
   }
 }
