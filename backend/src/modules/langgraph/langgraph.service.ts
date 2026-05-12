@@ -19,6 +19,7 @@ import { buildGraph } from './graph/graph.builder';
 import { buildSupervisorGraph, AgentDefinition } from './graph/supervisor.builder';
 import { CompiledStateGraph } from '@langchain/langgraph';
 import { createSkillLookupTool, createReadSkillReferenceTool } from './tools/skill-lookup.tool';
+import { TokenBudgetManager } from './token-budget.manager';
 
 /**
  * 流式事件类型：文本内容、工具调用各阶段、步骤边界、完成信号
@@ -49,6 +50,7 @@ export class LangGraphService implements OnModuleInit {
   private executorGraph: CompiledStateGraph<any, any, any> | null = null;
   private standaloneGraphs = new Map<string, CompiledStateGraph<any, any, any>>();
   private graphVersion = 0;
+  private tokenBudget = new TokenBudgetManager();
   private rebuildNeeded = false;
 
   /** 不参与 supervisor 路由的 agent ID（仅供内部执行调用） */
@@ -266,9 +268,10 @@ export class LangGraphService implements OnModuleInit {
   }
 
   /**
-   * 为指定模型名创建独立的 ChatOpenAI 实例
+   * 创建带重试和超时的 ChatOpenAI 实例
+   * LangChain 内置 maxRetries 处理 429/500/502/503/504/ECONNRESET
    */
-  private createModel(modelName: string): ChatOpenAI {
+  private createResilientModel(modelName: string): ChatOpenAI {
     return new ChatOpenAI({
       modelName,
       openAIApiKey: this.configService.openaiApiKey,
@@ -276,7 +279,14 @@ export class LangGraphService implements OnModuleInit {
         baseURL: this.configService.openaiBaseUrl || undefined,
       },
       streaming: true,
+      maxRetries: 3,
+      timeout: this.configService.llmTimeoutMs,
     });
+  }
+
+  /** @deprecated 使用 createResilientModel */
+  private createModel(modelName: string): ChatOpenAI {
+    return this.createResilientModel(modelName);
   }
 
   /**
