@@ -16,6 +16,7 @@ import { CreateCompletionDto } from './dto/create-completion.dto';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
 import { AI_TTS_STREAM_EVENT } from '../../common/stream-events';
+import { TokenBudgetManager } from '../langgraph/token-budget.manager';
 
 @Injectable()
 export class ChatService {
@@ -31,6 +32,8 @@ export class ChatService {
     private configService: AppConfigService,
     private eventEmitter: EventEmitter2,
   ) {}
+
+  private tokenBudget = new TokenBudgetManager();
 
   async createCompletion(dto: CreateCompletionDto) {
     const { message, session_id, stream, agent_id, rule_ids, web_search } = dto;
@@ -60,10 +63,20 @@ export class ChatService {
     });
 
     const systemPrompt = await this.buildSystemPrompt(agent_id, rule_ids, web_search);
-    const messages = sessionWithMessages!.messages.map((m) => ({
+    const allMessages = sessionWithMessages!.messages.map((m) => ({
       role: m.role,
       content: m.content,
     }));
+    const resolvedAgentId = (agent_id === 'builtin-general' ? 'ani' : agent_id) || 'ani';
+    let modelName = this.configService.openaiModel;
+    try {
+      const agent = await this.agentService.findOne(resolvedAgentId);
+      if (agent.model_name) modelName = agent.model_name;
+    } catch {
+      // agent not found, fall back to default model
+    }
+    const budget = this.tokenBudget.allocate(modelName, '');
+    const messages = this.tokenBudget.slidingWindow(allMessages, budget.historyTokens);
 
     if (stream) {
       return { session: sessionWithMessages, stream: true, messages, systemPrompt, agent_id };
