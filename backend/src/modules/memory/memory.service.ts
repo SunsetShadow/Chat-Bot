@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
@@ -9,7 +9,7 @@ import { EmbeddingService } from './embedding.service';
 import { MilvusService } from './milvus.service';
 
 @Injectable()
-export class MemoryService {
+export class MemoryService implements OnModuleInit {
   private readonly logger = new Logger(MemoryService.name);
 
   constructor(
@@ -18,6 +18,21 @@ export class MemoryService {
     private embeddingService: EmbeddingService,
     private milvusService: MilvusService,
   ) {}
+
+  async onModuleInit() {
+    // 每 24 小时执行一次巡检（首次延迟 5 分钟，避免启动时立即执行）
+    setTimeout(() => {
+      this.runMaintenance().catch((err) => {
+        this.logger.warn(`Memory maintenance failed: ${err.message}`);
+      });
+      setInterval(() => {
+        this.runMaintenance().catch((err) => {
+          this.logger.warn(`Memory maintenance failed: ${err.message}`);
+        });
+      }, 24 * 60 * 60 * 1000);
+    }, 5 * 60 * 1000);
+    this.logger.log('Memory maintenance scheduler initialized (every 24h)');
+  }
 
   async findAll(type?: string, minImportance?: number, agentId?: string): Promise<MemoryEntity[]> {
     const qb = this.memoryRepo.createQueryBuilder('m');
