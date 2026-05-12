@@ -319,7 +319,7 @@ export class ChatService {
         agentRuleIds = agent.rule_ids || [];
       } catch { /* empty */ }
     }
-    const agentRules = await this.ruleService.getRulesByIds(agentRuleIds);
+    const agentRules = await this.ruleService.getRulesByIds(agentRuleIds || []);
 
     const allRules = [...globalRules];
     const globalIds = new Set(globalRules.map((r) => r.id));
