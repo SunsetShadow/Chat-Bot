@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { ChatService } from './chat.service';
+import { TokenUsageService } from './token-usage.service';
 import { CreateCompletionDto } from './dto/create-completion.dto';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
@@ -18,7 +19,10 @@ import { v4 as uuidv4 } from 'uuid';
 
 @Controller('api/v1/chat')
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly tokenUsageService: TokenUsageService,
+  ) {}
 
   @Post('completions')
   async createCompletion(
@@ -154,5 +158,18 @@ export class ChatController {
   async deleteSession(@Param('id') id: string) {
     await this.chatService.deleteSession(id);
     return { success: true };
+  }
+
+  @Get('usage')
+  async getUsage(
+    @Query('start_date') startDate?: string,
+    @Query('end_date') endDate?: string,
+    @Query('group_by') groupBy?: 'model' | 'agent' | 'day',
+  ) {
+    return this.tokenUsageService.getStats({
+      startDate: startDate ? new Date(startDate) : undefined,
+      endDate: endDate ? new Date(endDate) : undefined,
+      groupBy: groupBy || 'model',
+    });
   }
 }
