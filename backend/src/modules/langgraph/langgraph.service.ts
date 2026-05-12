@@ -420,6 +420,7 @@ export class LangGraphService implements OnModuleInit {
     let sawToolOutput = false;
     let currentAgent = '';
     let handoffCount = 0;
+    const handoffPath: string[] = ['supervisor'];
     const toolCalls = new Map<
       string,
       {
@@ -462,10 +463,21 @@ export class LangGraphService implements OnModuleInit {
           agentName !== 'supervisor'
         ) {
           handoffCount++;
+          handoffPath.push(agentName);
+          // 重复检测：连续 3 次路由到同一 Agent
+          const lastThree = handoffPath.slice(-3);
+          if (lastThree.length === 3 && lastThree.every((t) => t === agentName)) {
+            yield {
+              type: 'text',
+              content: `[系统提示] 检测到 Agent "${agentName}" 被反复调用（连续 3 次），可能存在循环。请尝试简化问题或直接指定助手。`,
+            };
+            yield { type: 'finish', finishReason: 'repeated_handoff' };
+            return;
+          }
           if (handoffCount > maxHandoffs) {
             yield {
               type: 'text',
-              content: `[系统提示] 检测到过多的 Agent 切换（${handoffCount} 次），为避免循环已终止流转。请简化问题或指定特定助手。`,
+              content: `[系统提示] 检测到过多的 Agent 切换（${handoffCount} 次），路由路径：${handoffPath.join(' → ')}。为避免循环已终止流转。请简化问题或指定特定助手。`,
             };
             yield { type: 'finish', finishReason: 'max_handoffs_exceeded' };
             return;
