@@ -17,6 +17,7 @@ import { CreateSessionDto } from './dto/create-session.dto';
 import { UpdateSessionDto } from './dto/update-session.dto';
 import { AI_TTS_STREAM_EVENT } from '../../common/stream-events';
 import { TokenBudgetManager } from '../langgraph/token-budget.manager';
+import { TokenUsageService } from './token-usage.service';
 import { createHash } from 'crypto';
 
 @Injectable()
@@ -32,6 +33,7 @@ export class ChatService {
     private langGraphService: LangGraphService,
     private configService: AppConfigService,
     private eventEmitter: EventEmitter2,
+    private tokenUsageService: TokenUsageService,
   ) {}
 
   private tokenBudget = new TokenBudgetManager();
@@ -195,6 +197,15 @@ export class ChatService {
 
           case 'finish':
             yield { event: 'message_done', data: { ...base, finish_reason: event.finishReason } };
+            if (event.usage && event.usage.totalTokens > 0) {
+              this.tokenUsageService.record({
+                sessionId,
+                agentId: preferredAgent,
+                modelName: event.modelName || '',
+                promptTokens: event.usage.promptTokens,
+                completionTokens: event.usage.completionTokens,
+              }).catch(() => {});
+            }
             break;
         }
       }
