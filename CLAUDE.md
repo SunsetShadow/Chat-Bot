@@ -63,10 +63,16 @@ docker compose --env-file .env.mac up -d   # Mac
   → SSE 流（Supervisor 工具调用/文本/ToolNode 错误均过滤，仅 Worker 结果透传）
        skill_approval / skill_proposal SSE 事件: Agent 创建/推荐 Skill → 前端审批通知
        Handoff 计数保护：Agent 切换超过 max_turns（默认 5）时自动终止，防止无限循环
+       SSE 心跳：15s 间隔发送 heartbeat，120s 整体超时，前端 30s 无事件判定断连
+       Token 追踪：stream finish 携带 usage_metadata → TokenUsageService 异步记录 → GET /usage 查询
+  Prompt 结构（Prompt Cache 友好）:
+      buildStaticPrefix() — Agent system_prompt + 规则，hash 缓存，Agent 配置不变时恒定
+      buildDynamicSuffix() — 时间 + 联网搜索 + Memory（每次请求可能不同）
   记忆系统（agent_id 隔离）:
       全局记忆（agent_id=NULL）→ 所有 Agent 可见
       Agent 专属记忆 → 仅该 Agent 可见（通过 prompt hint 引导 LLM 传入 agent_id）
       查询: buildMemoryContext(agentId) → WHERE agent_id = :id OR agent_id IS NULL
+      治理: top-k=20 限制 + 90天降权 + 180天归档 + 每会话最多 5 条写入
     → ChatTransport → UIMessageChunk → Vue 响应式渲染
 
 语音通道（独立于 SSE）:
@@ -109,6 +115,7 @@ Avatar 通道（Ani 专属身体，行为状态机驱动）:
 | [docs/specs/message-rendering](docs/specs/message-rendering/spec.md) | 消息渲染规范 |
 | [docs/superpowers/specs/2026-04-29-ani-avatar-voice-design.md](docs/superpowers/specs/2026-04-29-ani-avatar-voice-design.md) | Ani Avatar + Voice 联动设计（行为状态机、情绪联动、口型同步、多模型支持） |
 | [docs/specs/security](docs/specs/security/spec.md) | 安全规范（输入验证、安全头、速率限制、路径沙箱） |
+| [docs/superpowers/specs/2026-05-11-agent-runtime-resilience-design.md](docs/superpowers/specs/2026-05-11-agent-runtime-resilience-design.md) | Agent Runtime 韧性优化设计（Phase 1 稳定性、Phase 2 Context 治理、Phase 3 成本优化） |
 | [docs/plans/](docs/plans/) | 未来演进计划 |
 
 ## 已知问题

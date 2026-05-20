@@ -40,20 +40,19 @@ export class TokenUsageService {
     promptTokens: number;
     completionTokens: number;
   }): Promise<TokenUsageEntity> {
-    const { sessionId, agentId, modelName, promptTokens, completionTokens } = params;
-    const totalTokens = promptTokens + completionTokens;
-    const estimatedCost = this.calculateCost(modelName, promptTokens, completionTokens);
+    const totalTokens = params.promptTokens + params.completionTokens;
+    const estimatedCost = this.calculateCost(params.modelName, params.promptTokens, params.completionTokens);
 
     const entity = this.usageRepo.create({
       id: uuidv4(),
-      session_id: sessionId,
-      agent_id: agentId || undefined,
-      model_name: modelName,
-      prompt_tokens: promptTokens,
-      completion_tokens: completionTokens,
+      session_id: params.sessionId,
+      agent_id: params.agentId || undefined,
+      model_name: params.modelName,
+      prompt_tokens: params.promptTokens,
+      completion_tokens: params.completionTokens,
       total_tokens: totalTokens,
       estimated_cost: estimatedCost ?? undefined,
-    }) as TokenUsageEntity;
+    });
 
     return this.usageRepo.save(entity);
   }
@@ -82,13 +81,15 @@ export class TokenUsageService {
         .addSelect('SUM(u.total_tokens)', 'total_tokens')
         .addSelect('SUM(u.estimated_cost)', 'total_cost')
         .addSelect('COUNT(u.id)', 'request_count')
-        .groupBy('u.model_name');
+        .groupBy('u.model_name')
+        .orderBy('total_tokens', 'DESC');
     } else if (groupBy === 'agent') {
       qb.select('u.agent_id', 'agent_id')
         .addSelect('SUM(u.total_tokens)', 'total_tokens')
         .addSelect('SUM(u.estimated_cost)', 'total_cost')
         .addSelect('COUNT(u.id)', 'request_count')
-        .groupBy('u.agent_id');
+        .groupBy('u.agent_id')
+        .orderBy('total_tokens', 'DESC');
     } else if (groupBy === 'day') {
       qb.select("DATE(u.created_at)", 'date')
         .addSelect('SUM(u.total_tokens)', 'total_tokens')

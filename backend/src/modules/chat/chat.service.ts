@@ -38,6 +38,7 @@ export class ChatService {
 
   private tokenBudget = new TokenBudgetManager();
   private staticPrefixCache = new Map<string, { hash: string; content: string }>();
+  private static readonly MAX_PREFIX_CACHE_SIZE = 50;
 
   async createCompletion(dto: CreateCompletionDto) {
     const { message, session_id, stream, agent_id, rule_ids, web_search } = dto;
@@ -204,7 +205,7 @@ export class ChatService {
                 modelName: event.modelName || '',
                 promptTokens: event.usage.promptTokens,
                 completionTokens: event.usage.completionTokens,
-              }).catch(() => {});
+              }).catch((e) => console.warn('[ChatService] Token usage record failed:', e instanceof Error ? e.message : e));
             }
             break;
         }
@@ -342,6 +343,10 @@ export class ChatService {
     }
 
     const content = parts.join('\n\n');
+    if (this.staticPrefixCache.size >= ChatService.MAX_PREFIX_CACHE_SIZE) {
+      const firstKey = this.staticPrefixCache.keys().next().value;
+      if (firstKey) this.staticPrefixCache.delete(firstKey);
+    }
     this.staticPrefixCache.set(cacheKey, { hash: createHash('md5').update(content).digest('hex'), content });
     return content;
   }
