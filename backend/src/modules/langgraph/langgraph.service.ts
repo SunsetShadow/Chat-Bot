@@ -113,9 +113,6 @@ export class LangGraphService implements OnModuleInit {
     }
 
     const allTools = this.toolRegistry.getAll();
-    const skillIndex = await this.skillService.buildSkillIndex(
-      new Set(this.toolRegistry.getAllNames()),
-    );
 
     const definitions: AgentDefinition[] = await Promise.all(
       agents
@@ -123,7 +120,7 @@ export class LangGraphService implements OnModuleInit {
         .map(async (a) => {
           const hintTools = await this.getHintTools(a);
           const effectiveTools = this.ensureSkillTools(a.tools || [], a.is_system);
-          const prompt = await this.resolveAgentPrompt(a, skillIndex);
+          const prompt = await this.resolveAgentPrompt(a);
           return {
             id: a.id,
             name: a.name,
@@ -260,9 +257,13 @@ export class LangGraphService implements OnModuleInit {
     return result;
   }
 
-  private async resolveAgentPrompt(agent: AgentEntity, precomputedIndex?: string): Promise<string> {
+  private async resolveAgentPrompt(agent: AgentEntity): Promise<string> {
     let prompt = agent.system_prompt || '';
-    const skillIndex = precomputedIndex ?? await this.skillService.buildSkillIndex();
+    const skillFilter = agent.skills?.length ? agent.skills : undefined;
+    const skillIndex = await this.skillService.buildSkillIndex(
+      new Set(this.toolRegistry.getAllNames()),
+      skillFilter,
+    );
     if (skillIndex) prompt += '\n\n' + skillIndex;
 
     // Phase 3: 注入 Patch 建议

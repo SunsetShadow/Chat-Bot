@@ -105,22 +105,32 @@ export class SkillService implements OnModuleInit {
     return { instructions: s.instructions, dirPath: s.dirPath };
   }
 
-  /** 构建全局 skill 索引（缓存，refresh 时清除），带 Token 预算管理 + 条件激活 */
-  async buildSkillIndex(availableToolNames?: Set<string>): Promise<string> {
-    if (this.cachedIndex) return this.cachedIndex;
+  /**
+   * 构建 skill 索引（缓存，refresh 时清除），带 Token 预算管理 + 条件激活 + Agent 粒度过滤
+   * @param availableToolNames 已注册工具名集合，用于条件激活过滤
+   * @param allowedSkillIds Agent 配置的 skills 列表，非空时仅返回匹配的 skill；空/undefined = 全部
+   */
+  async buildSkillIndex(availableToolNames?: Set<string>, allowedSkillIds?: string[]): Promise<string> {
+    if ((!allowedSkillIds || allowedSkillIds.length === 0) && this.cachedIndex) return this.cachedIndex;
     if (this.skills.length === 0) return '';
 
     const curator = this.curatorService;
-    const nonArchived = curator
+    let pool = curator
       ? this.skills.filter(s => curator.getLifecycleState(s.id) !== 'archived')
       : this.skills;
 
-    if (nonArchived.length === 0) return '';
+    if (pool.length === 0) return '';
+
+    // Agent 粒度过滤
+    if (allowedSkillIds && allowedSkillIds.length > 0) {
+      const allowed = new Set(allowedSkillIds);
+      pool = pool.filter(s => allowed.has(s.id));
+    }
 
     // 条件激活过滤
     const activeSkills = availableToolNames
-      ? filterActiveSkills(nonArchived, availableToolNames)
-      : nonArchived;
+      ? filterActiveSkills(pool, availableToolNames)
+      : pool;
 
     if (activeSkills.length === 0) return '';
 
@@ -141,8 +151,12 @@ export class SkillService implements OnModuleInit {
       index = `${header}\n${compactEntries.join(separator)}\n${footer}`;
     }
 
-    this.cachedIndex = index;
-    return this.cachedIndex;
+    // 仅缓存无过滤的全量索引
+    if (!allowedSkillIds || allowedSkillIds.length === 0) {
+      this.cachedIndex = index;
+    }
+
+    return index;
   }
 
   async getUsage(skillId: string) {
